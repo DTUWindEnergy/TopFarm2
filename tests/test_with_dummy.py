@@ -5,19 +5,19 @@ Created on 16. apr. 2018
 '''
 import unittest
 import numpy as np
-from topfarm import TopFarm
+from topfarm.topfarm import TopFarm
 
 
 class Test(unittest.TestCase):
 
     def test_topfarm_with_dummy(self):
-        from cost_models.dummy import DummyCost, DummyCostPlotComp
+        from topfarm.cost_models.dummy import DummyCost, DummyCostPlotComp
 
         eps = 1e-6
         optimal = [(3, -3), (7, -7), (4, -3), (3, -7)]
         initial = [[6, 0], [6, -8], [1, 1], [-1, -8]]
         boundary = [(0, 0), (6, 0), (6, -10), (0, -10)]
-        plot = False
+        plot = True
         plot_comp = None
         if plot:
             plot_comp = DummyCostPlotComp(optimal)

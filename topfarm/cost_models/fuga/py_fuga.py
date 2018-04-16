@@ -5,10 +5,10 @@ Created on 23. mar. 2018
 '''
 import numpy as np
 from ctypes import *
-from cost_models.fuga.pascal_dll import PascalDLL
+from topfarm.cost_models.fuga.pascal_dll import PascalDLL
 import ctypes
 from openmdao.core.explicitcomponent import ExplicitComponent
-from cost_models.cost_model_wrappers import AEPCostModelComponent
+from topfarm.cost_models.cost_model_wrappers import AEPCostModelComponent
 
 
 
@@ -18,12 +18,12 @@ c_int_p = POINTER(ctypes.c_int32)
 
 
 class PyFuga(object):
-    #def __init__(self, dll_path, farms_dir, farm_name='Horns Rev 1', turbine_model_path='./LUT/',
-    #             mast_position=(0,0,70), z0=0.0001, zi=400, zeta0=0, wind_atlas_path='Horns Rev 1\hornsrev.lib'):
+#    def __init__(self, dll_path, farms_dir, farm_name='Horns Rev 1', turbine_model_path='./LUT/',
+#                 mast_position=(0,0,70), z0=0.0001, zi=400, zeta0=0, wind_atlas_path='Horns Rev 1\hornsrev.lib'):
     def __init__(self):
-        path = r'C:\mmpe\programming\pascal\Fuga\Colonel\FugaLib/'
+        path = r'C:\Sandbox\Topfarm\Colonel\FugaLib/'
         self.lib = PascalDLL(path + 'FugaLib.dll')
-
+#
         self.lib.setup(path + '../LUT/Farms/', 'Horns Rev 1', path + '../LUT/',
                        0., 0., 70.,
                        0.0001, 400., 0.,
@@ -96,7 +96,7 @@ class PyFuga(object):
 
 if __name__ == '__main__':
 
-    path = r'C:\mmpe\programming\pascal\Fuga\Colonel/'
+    path = r'C:\Sandbox\Topfarm\Colonel/'
     dll_path = path + 'FugaLib/FugaLib.dll'
     farms_dir = path + 'LUT/Farms/'
     farm_name = 'Horns Rev 1'
@@ -104,8 +104,8 @@ if __name__ == '__main__':
     mast_position = (0., 0., 70.)
     z0, zi, zeta0 = 0.0001, 400., 0.,
     wind_atlas_path = 'Horns Rev 1\hornsrev.lib'
-
-    pyFuga = PyFuga(dll_path, farms_dir, farm_name, turbine_model_path, mast_position, z0,zi,zeta0, wind_atlas_path)
+    pyFuga = PyFuga()
+#    pyFuga = PyFuga(dll_path, farms_dir, farm_name, turbine_model_path, mast_position, z0,zi,zeta0, wind_atlas_path)
     print(pyFuga.get_no_tubines())
     print(pyFuga.get_aep([0, 0], [0, 1000]))
     print(pyFuga.get_aep([0, 1000], [0, 0]))
