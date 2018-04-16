@@ -6,3 +6,5 @@
 /.project
 /.pydevproject
 /cost_models/__pycache__/*.pyc
+*.pyc
+/cost_models/fuga/pascal_test
