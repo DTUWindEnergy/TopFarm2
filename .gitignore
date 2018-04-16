@@ -3,3 +3,5 @@
 /archieve
 /constraint_components/__pycache__/*.pyc
 /example_data/__pycache__/*.pyc
+/.project
+/.pydevproject
