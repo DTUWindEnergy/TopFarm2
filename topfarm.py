@@ -79,7 +79,7 @@ class TopFarm(object):
         return self.problem['cost'][0]
 
     def get_turbine_positions(self):
-        return np.array([self.problem['turbineX'], self.problem['turbineY']])
+        return np.array([self.problem['turbineX'], self.problem['turbineY']]).T
 
 
 if __name__ == '__main__':
