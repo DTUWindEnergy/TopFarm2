@@ -11,12 +11,16 @@ import numpy as np
 class Test(unittest.TestCase):
 
     def testAEP(self):
-        pyFuga = PyFuga()
-        np.testing.assert_array_almost_equal(pyFuga.get_aep([0, 0], [0, 1000]), (19.580917067710224, 19.643449032894644, 0.5590697809801386))
-        np.testing.assert_array_almost_equal(pyFuga.get_aep([0, 1000], [0, 0]), (19.5418066445245, 19.643449032894644, 0.5579531092916332))
-        np.testing.assert_array_almost_equal(pyFuga.get_aep_gradients([0, 0], [0, 100]), [[0.00259933, -0.00259933],
-                                                                                          [-0.0087804,  0.0087804],
-                                                                                          [0.,  0.]])
+        path = r'C:\mmpe\programming\pascal\Fuga\Colonel/'
+        pyFuga = PyFuga(path + "FugaLib/FugaLib.dll", path + "LUT/Farms/", "Horns Rev 1", path + "LUT/",
+                        (0, 0, 70), 0.0001, 400, 0, 'Horns Rev 1\hornsrev0.lib')
+
+        np.testing.assert_array_almost_equal(pyFuga.get_aep([0, 0], [0, 200]), [14.044704, 16.753474, 0.401041, 0.838316])
+        np.testing.assert_array_almost_equal(pyFuga.get_aep([0, 200], [0, 0]), [16.714122, 16.753474, 0.477265, 0.997651])
+        np.testing.assert_array_almost_equal(pyFuga.get_aep([0, 200], [0, 200]), [17.072517, 16.753474, 0.487499, 1.019043])
+        np.testing.assert_array_almost_equal(pyFuga.get_aep_gradients([0, 200], [0, 200]), [[0.002905, -0.002905],
+                                                                                            [-0.001673, 0.001673],
+                                                                                            [0., 0.]])
 
 
 if __name__ == "__main__":

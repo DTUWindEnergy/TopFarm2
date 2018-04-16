@@ -18,16 +18,24 @@ c_int_p = POINTER(ctypes.c_int32)
 
 
 class PyFuga(object):
-    #def __init__(self, dll_path, farms_dir, farm_name='Horns Rev 1', turbine_model_path='./LUT/',
-    #             mast_position=(0,0,70), z0=0.0001, zi=400, zeta0=0, wind_atlas_path='Horns Rev 1\hornsrev.lib'):
-    def __init__(self):
+    def __init__(self, dll_path, farms_dir, farm_name='Horns Rev 1', turbine_model_path='./LUT/',
+                 mast_position=(0,0,70), z0=0.0001, zi=400, zeta0=0, wind_atlas_path='Horns Rev 1\hornsrev.lib'):
+        
+        self.lib = PascalDLL(dll_path)
+        self.lib.setup(farms_dir, farm_name, turbine_model_path,
+                       float(mast_position[0]), float(mast_position[1]), float(mast_position[2]),
+                       float(z0),float(zi),float(zeta0),
+                       wind_atlas_path)
+
+    
+    def __init__old(self):
         path = r'C:\mmpe\programming\pascal\Fuga\Colonel\FugaLib/'
         self.lib = PascalDLL(path + 'FugaLib.dll')
 
         self.lib.setup(path + '../LUT/Farms/', 'Horns Rev 1', path + '../LUT/',
                        0., 0., 70.,
                        0.0001, 400., 0.,
-                       'Horns Rev 1\hornsrev.lib')
+                       'Horns Rev 1\hornsrev0.lib')
 
     def get_no_tubines(self):
         no_turbines_p = c_int_p(c_int(0))
@@ -49,8 +57,8 @@ class PyFuga(object):
         capacity_p = c_double_p(c_double(0))
         self.lib.getAEP(AEPNet_p, AEPGros_p, capacity_p)
         #print(tb_x, tb_y, AEPNet_p.contents.value, (15.850434458235156 - AEPNet_p.contents.value) / .000001)
-        print(AEPNet_p.contents.value)
-        return (AEPNet_p.contents.value, AEPGros_p.contents.value, capacity_p.contents.value)
+        net, gros, cap = [p.contents.value for p in [AEPNet_p, AEPGros_p, capacity_p]]
+        return (net, gros, cap, net/gros)
 
     def get_aep_gradients(self, tb_x, tb_y):
         self.move_turbines(tb_x, tb_y)
