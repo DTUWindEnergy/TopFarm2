@@ -5,3 +5,4 @@
 /example_data/__pycache__/*.pyc
 /.project
 /.pydevproject
+/cost_models/__pycache__/*.pyc

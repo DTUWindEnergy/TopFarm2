@@ -1,9 +1,8 @@
 from openmdao.api import Problem, ScipyOptimizeDriver, IndepVarComp
-from core.constraint_components.boundary_component import BoundaryComp
-from core.constraint_components.spacing_component import SpacingComp
+from constraint_components.boundary_component import BoundaryComp
+from constraint_components.spacing_component import SpacingComp
 import numpy as np
-from core.plotting import PlotComp
-from wetb.utils.timing import print_time
+from plotting import PlotComp
 import time
 
 
@@ -64,7 +63,6 @@ class TopFarm(object):
                 raise Warning("Mismatch between finite difference derivative of '%s' wrt. '%s' and derivative computed in '%s' is: %f" %
                               (worst[0], worst[1], comp, err))
 
-    @print_time
     def evaluate(self):
         t = time.time()
         self.problem.run_model()
