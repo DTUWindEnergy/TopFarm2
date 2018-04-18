@@ -9,6 +9,9 @@ from cost_models.fuga.pascal_dll import PascalDLL
 import ctypes
 from openmdao.core.explicitcomponent import ExplicitComponent
 from cost_models.cost_model_wrappers import AEPCostModelComponent
+import os
+from tempfile import NamedTemporaryFile, mkstemp
+import atexit
 
 
 
@@ -18,15 +21,44 @@ c_int_p = POINTER(ctypes.c_int32)
 
 
 class PyFuga(object):
-    def __init__(self, dll_path, farms_dir, farm_name='Horns Rev 1', turbine_model_path='./LUT/',
-                 mast_position=(0,0,70), z0=0.0001, zi=400, zeta0=0, wind_atlas_path='Horns Rev 1\hornsrev.lib'):
-        
+    interface_version = 2
+    def __init__(self, dll_path, logfile='', 
+                 farm_name='Horns Rev 1', 
+                 turbine_model_path='./LUT/', turbine_model_name='Vestas_V80_(2_MW_offshore)[h=67.00]',
+                 tb_x= [423974, 424033], tb_y=[6151447,6150889],
+                 mast_position=(0,0,70), z0=0.0001, zi=400, zeta0=0, 
+                 farms_dir='./LUT/', wind_atlas_path='Horns Rev 1\hornsrev.lib'):
+        atexit.register(self.cleanup)
+        self.stdout_filename = NamedTemporaryFile().name + ".txt"
         self.lib = PascalDLL(dll_path)
-        self.lib.setup(farms_dir, farm_name, turbine_model_path,
-                       float(mast_position[0]), float(mast_position[1]), float(mast_position[2]),
-                       float(z0),float(zi),float(zeta0),
-                       wind_atlas_path)
+        self.lib.CheckInterfaceVersion(self.interface_version)
+        self.lib.Setup(self.stdout_filename, float(mast_position[0]), float(mast_position[1]), float(mast_position[2]),
+                       float(z0),float(zi),float(zeta0))        
+        
+        tb_x_ctype = np.array(tb_x, dtype=np.float).ctypes
+        tb_y_ctype = np.array(tb_y, dtype=np.float).ctypes
+        assert len(tb_x) ==len(tb_y)
 
+        self.lib.AddWindFarm(farm_name, turbine_model_path,turbine_model_name,
+                             len(tb_x), tb_x_ctype.data_as(c_double_p), tb_y_ctype.data_as(c_double_p))
+
+        assert os.path.isfile(farms_dir + wind_atlas_path), farms_dir + wind_atlas_path 
+        self.lib.SetupWindClimate(farms_dir, wind_atlas_path)
+        
+        assert len(tb_x) == self.get_no_tubines(), self.log + "\n%d"%self.get_no_tubines()
+
+        
+#         self.lib.setup_old(farms_dir, farm_name, turbine_model_path,
+#                        float(mast_position[0]), float(mast_position[1]), float(mast_position[2]),
+#                        float(z0),float(zi),float(zeta0),
+#                        wind_atlas_path)
+
+
+    
+    def cleanup(self): 
+        self.lib.Exit()
+        if os.path.isfile(self.stdout_filename):
+            os.remove(self.stdout_filename)
     
     def __init__old(self):
         path = r'C:\mmpe\programming\pascal\Fuga\Colonel\FugaLib/'
@@ -74,7 +106,10 @@ class PyFuga(object):
         return AEPCostModelComponent(n_wt,
                                      lambda *args: self.get_aep(*args)[0],  # only aep
                                      lambda *args: self.get_aep_gradients(*args)[:2])  # only dAEPdx and dAEPdy
-
+    @property
+    def log(self):
+        with open(self.stdout_filename) as fid:
+            return fid.read()
 
 #         self.execute("""seed=0
 # initialize
