@@ -1,0 +1,4 @@
+-e git+https://github.com/FUSED-Wind/windIO.git#egg=windio
+-e git+https://github.com/OpenMDAO/OpenMDAO.git#egg=openmdao
+bokeh==0.12.14
+ipywidgets
