@@ -80,7 +80,7 @@ RUN dpkg -i *.deb
 RUN apt-get clean \
  && apt-get autoremove -y
 
-RUN mkdir /install
+#RUN mkdir /install
 WORKDIR   /install
 COPY fuga/*.pas /install/
 COPY fuga/*.lpr /install/
