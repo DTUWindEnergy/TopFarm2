@@ -3,16 +3,19 @@ Created on 16. apr. 2018
 
 @author: mmpe
 '''
-import unittest
-from topfarm.cost_models.fuga.py_fuga import PyFuga
-import numpy as np
 from threading import Thread
 import threading
 import time
-from cost_models.fuga.pascal_dll import PascalDLL
+import unittest
+
+import numpy as np
+from topfarm.cost_models.fuga.pascal_dll import PascalDLL
+from topfarm.cost_models.fuga.py_fuga import PyFuga
+import os
+from topfarm.cost_models.fuga import py_fuga
 
 
-fuga_path = r'C:\mmpe\programming\pascal\Fuga\Colonel/'
+fuga_path = os.path.abspath(os.path.dirname(py_fuga.__file__)) + '/Colonel/'
 
 def test_parallel(id):
             pyFuga = PyFuga(fuga_path + "FugaLib/FugaLib.dll",
@@ -32,12 +35,11 @@ def test_parallel(id):
 class Test(unittest.TestCase):
 
     def get_fuga(self):
-        return PyFuga(fuga_path + "FugaLib/FugaLib.dll",
-                      farm_name='Horns Rev 1',
+        return PyFuga(farm_name='Horns Rev 1',
                       turbine_model_path=fuga_path + 'LUT/', turbine_model_name='Vestas_V80_(2_MW_offshore)[h=67.00]',
                       tb_x=[423974, 424033], tb_y=[6151447, 6150889],
                       mast_position=(0, 0, 70), z0=0.0001, zi=400, zeta0=0,
-                      farms_dir=fuga_path + 'LUT/Farms/', wind_atlas_path='Horns Rev 1\hornsrev0.lib')
+                      farms_dir=fuga_path + 'LUT/Farms/', wind_atlas_path='Horns Rev 1\hornsrev_north_only.lib')
         
     
 
@@ -61,7 +63,7 @@ class Test(unittest.TestCase):
         np.testing.assert_array_almost_equal(pyFuga.get_aep_gradients([0, 200], [0, 200]), [[0.002905, -0.002905],
                                                                                             [-0.001673, 0.001673],
                                                                                             [0., 0.]])
-        print (pyFuga.log)
+        #print (pyFuga.log)
  
     def test_parallel(self):
         from multiprocessing import Pool
