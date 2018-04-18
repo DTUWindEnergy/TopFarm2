@@ -3,13 +3,12 @@ Created on 23. mar. 2018
 
 @author: mmpe
 '''
+from _ctypes import POINTER
 import atexit
-from ctypes import *
+from ctypes import c_double, c_int
 import ctypes
 import os
-from tempfile import NamedTemporaryFile, mkstemp
-
-from openmdao.core.explicitcomponent import ExplicitComponent
+from tempfile import NamedTemporaryFile
 
 import numpy as np
 from topfarm.cost_models.cost_model_wrappers import AEPCostModelComponent
@@ -30,7 +29,8 @@ class PyFuga(object):
                  mast_position=(0, 0, 70), z0=0.0001, zi=400, zeta0=0,
                  farms_dir='./LUT/', wind_atlas_path='Horns Rev 1\hornsrev.lib'):
         atexit.register(self.cleanup)
-        self.stdout_filename = NamedTemporaryFile().name + ".txt"
+        with NamedTemporaryFile() as f:
+            self.stdout_filename = f.name + ".txt"
         self.lib = PascalDLL(os.path.dirname(__file__) + "/Colonel/FugaLib/FugaLib.dll")
         self.lib.CheckInterfaceVersion(self.interface_version)
         self.lib.Setup(self.stdout_filename, float(mast_position[0]), float(mast_position[1]), float(mast_position[2]),
@@ -55,7 +55,9 @@ class PyFuga(object):
 #                        wind_atlas_path)
 
     def cleanup(self):
-        self.lib.Exit()
+        if hasattr(self, 'lib'):
+            self.lib.Exit()
+            del self.lib
         if os.path.isfile(self.stdout_filename):
             os.remove(self.stdout_filename)
 
