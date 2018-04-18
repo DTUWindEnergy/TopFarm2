@@ -4,7 +4,7 @@ Created on 16. apr. 2018
 @author: mmpe
 '''
 import unittest
-from cost_models.fuga.py_fuga import PyFuga
+from topfarm.cost_models.fuga.py_fuga import PyFuga
 import numpy as np
 from threading import Thread
 import threading

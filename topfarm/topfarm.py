@@ -1,8 +1,8 @@
 from openmdao.api import Problem, ScipyOptimizeDriver, IndepVarComp
-from constraint_components.boundary_component import BoundaryComp
-from constraint_components.spacing_component import SpacingComp
+from topfarm.constraint_components.boundary_component import BoundaryComp
+from topfarm.constraint_components.spacing_component import SpacingComp
 import numpy as np
-from plotting import PlotComp
+from topfarm.plotting import PlotComp
 import time
 
 
