@@ -22,7 +22,7 @@ WORKDIR /install
 #ARG REQUIREMENTS
 
 # Install python library requirements to run the notebooks
-COPY requirements2.txt /install
+COPY docker/requirements2.txt /install
 RUN pip install --upgrade pip \
  && pip install -r /install/requirements2.txt
 
@@ -43,16 +43,18 @@ ENV IPOPT_DIR $POSDIR/pyoptsparse/pyIPOPT/Ipopt
 RUN hg clone https://bitbucket.org/mdolab/pyoptsparse $POSDIR
 
 # Install Ipopt
-COPY install_ipopt2.sh /install
-COPY ma27ad.f /install
+COPY docker/install_ipopt2.sh /install
+run pwd
+run ls
+COPY docker/ma27ad.f /install
 RUN /install/install_ipopt2.sh
 ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:$IPOPT_DIR/lib
 
 # Install SNOPT
-COPY snopt/* $POSDIR/pyoptsparse/pySNOPT/source/
+# COPY snopt/* $POSDIR/pyoptsparse/pySNOPT/source/
 
 ## Install PyOptSparse
-#COPY install_pyoptsparse.sh /install
+#COPY docker/install_pyoptsparse.sh /install
 WORKDIR $POSDIR
 RUN python setup.py install
 
@@ -74,21 +76,22 @@ RUN python setup.py install
 
 RUN mkdir /deb
 WORKDIR /deb
-COPY *.deb /deb/
+COPY docker/*.deb /deb/
 RUN dpkg -i *.deb
 
 RUN apt-get clean \
  && apt-get autoremove -y
 
 #RUN mkdir /install
+RUN mkdir /install/source
+RUN mkdir /install/FugaLib
 WORKDIR   /install
-COPY fuga/*.pas /install/
-COPY fuga/*.lpr /install/
-COPY fuga/*.lpi /install/
-
+COPY topfarm/cost_models/fuga/Colonel/source/*.pas /install/source/
+COPY topfarm/cost_models/fuga/Colonel/FugaLib/FugaLib.lpr /install/FugaLib/
+COPY topfarm/cost_models/fuga/Colonel/FugaLib/FugaLib.lpi /install/FugaLib
 
 ## Build
-#RUN lazbuild ColonelLazarus.lpr
+RUN lazbuild /install/FugaLib/FugaLib.lpr
 
 #RUN curl -sL https://deb.nodesource.com/setup_8.x | bash -
 #RUN apt-get update -y && apt-get install -y nodejs
