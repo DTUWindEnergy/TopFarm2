@@ -1,4 +1,4 @@
-FROM continuumio/anaconda:latest
+FROM continuumio/anaconda3:latest
 MAINTAINER Pierre-Elouan Rethore <pe@retho.re>
 
 RUN apt-get update                                               \

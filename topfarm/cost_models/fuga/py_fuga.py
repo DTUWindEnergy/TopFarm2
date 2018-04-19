@@ -75,7 +75,7 @@ class PyFuga(object):
 
     def get_no_tubines(self):
         no_turbines_p = c_int_p(c_int(0))
-        self.lib.getNoTurbines(no_turbines_p)
+        self.lib.GetNoTurbines(no_turbines_p)
         return no_turbines_p.contents.value
 
     def move_turbines(self, tb_x, tb_y):
@@ -91,7 +91,7 @@ class PyFuga(object):
         AEPNet_p = c_double_p(c_double(0))
         AEPGros_p = c_double_p(c_double(0))
         capacity_p = c_double_p(c_double(0))
-        self.lib.getAEP(AEPNet_p, AEPGros_p, capacity_p)
+        self.lib.GetAEP(AEPNet_p, AEPGros_p, capacity_p)
         #print(tb_x, tb_y, AEPNet_p.contents.value, (15.850434458235156 - AEPNet_p.contents.value) / .000001)
         net, gros, cap = [p.contents.value for p in [AEPNet_p, AEPGros_p, capacity_p]]
         return (net, gros, cap, net / gros)
@@ -101,7 +101,7 @@ class PyFuga(object):
 
         dAEPdxyz = np.zeros(len(tb_x)), np.zeros(len(tb_x)), np.zeros(len(tb_x))
         dAEPdxyz_ctype = [dAEP.ctypes for dAEP in dAEPdxyz]
-        self.lib.getAEPGradients(*[dAEP_ctype.data_as(c_double_p) for dAEP_ctype in dAEPdxyz_ctype])
+        self.lib.GetAEPGradients(*[dAEP_ctype.data_as(c_double_p) for dAEP_ctype in dAEPdxyz_ctype])
         #print(tb_x, tb_y, dAEPdxyz)
         return np.array(dAEPdxyz)
 

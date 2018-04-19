@@ -38,10 +38,10 @@ class Test(unittest.TestCase):
                       turbine_model_path=fuga_path + 'LUT/', turbine_model_name='Vestas_V80_(2_MW_offshore)[h=67.00]',
                       tb_x=[423974, 424033], tb_y=[6151447, 6150889],
                       mast_position=(0, 0, 70), z0=0.0001, zi=400, zeta0=0,
-                      farms_dir=fuga_path + 'LUT/Farms/', wind_atlas_path='Horns Rev 1\hornsrev_north_only.lib')
+                      farms_dir=fuga_path + 'LUT/Farms/', wind_atlas_path='Horns Rev 1/hornsrev_north_only.lib')
 
     def testCheckVersion(self):
-        lib = PascalDLL(fuga_path + "FugaLib/FugaLib.dll")
+        lib = PascalDLL(fuga_path + "FugaLib/FugaLib.%s"%('so','dll')[os.name=='nt'])
         self.assertRaisesRegex(Exception, "This version of FugaLib supports interface version ", lib.CheckInterfaceVersion, 1)
         # PyFuga(fuga_path + "FugaLib/FugaLib.dll", fuga_path + "LUT/Farms/", "Horns Rev 1", fuga_path + "LUT/",
         #                (0, 0, 70), 0.0001, 400, 0, 'Horns Rev 1\hornsrev0.lib')
