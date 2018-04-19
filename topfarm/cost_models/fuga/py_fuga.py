@@ -22,7 +22,7 @@ c_int_p = POINTER(ctypes.c_int32)
 class PyFuga(object):
     interface_version = 2
 
-    def __init__(self, logfile='',
+    def __init__(self, 
                  farm_name='Horns Rev 1',
                  turbine_model_path='./LUT/', turbine_model_name='Vestas_V80_(2_MW_offshore)[h=67.00]',
                  tb_x=[423974, 424033], tb_y=[6151447, 6150889],
@@ -31,7 +31,7 @@ class PyFuga(object):
         atexit.register(self.cleanup)
         with NamedTemporaryFile() as f:
             self.stdout_filename = f.name + ".txt"
-        self.lib = PascalDLL(os.path.dirname(__file__) + "/Colonel/FugaLib/FugaLib.dll")
+        self.lib = PascalDLL(os.path.dirname(__file__) + "/Colonel/FugaLib/FugaLib.%s"%('so','dll')[os.name=='nt'])
         self.lib.CheckInterfaceVersion(self.interface_version)
         self.lib.Setup(self.stdout_filename, float(mast_position[0]), float(mast_position[1]), float(mast_position[2]),
                        float(z0), float(zi), float(zeta0))
@@ -141,16 +141,13 @@ class PyFuga(object):
 
 if __name__ == '__main__':
 
-    path = r'Colonel/'
-    dll_path = path + 'FugaLib/FugaLib.dll'
-    farms_dir = path + 'LUT/Farms/'
-    farm_name = 'Horns Rev 1'
-    turbine_model_path = path + 'LUT/'
-    mast_position = (0., 0., 70.)
-    z0, zi, zeta0 = 0.0001, 400., 0.,
-    wind_atlas_path = 'Horns Rev 1\hornsrev.lib'
+    fuga_path = os.path.abspath(".") + '/Colonel/'
+    pyFuga = PyFuga(farm_name='Horns Rev 1',
+                    turbine_model_path=fuga_path + 'LUT/', turbine_model_name='Vestas_V80_(2_MW_offshore)[h=67.00]',
+                    tb_x=[423974, 424033], tb_y=[6151447, 6150889],
+                    mast_position=(0, 0, 70), z0=0.0001, zi=400, zeta0=0,
+                    farms_dir=fuga_path + 'LUT/Farms/', wind_atlas_path='Horns Rev 1\hornsrev.lib')
 
-    pyFuga = PyFuga(dll_path, farms_dir, farm_name, turbine_model_path, mast_position, z0, zi, zeta0, wind_atlas_path)
     print(pyFuga.get_no_tubines())
     print(pyFuga.get_aep([0, 0], [0, 1000]))
     print(pyFuga.get_aep([0, 1000], [0, 0]))

@@ -19,8 +19,7 @@ fuga_path = os.path.abspath(os.path.dirname(py_fuga.__file__)) + '/Colonel/'
 
 
 def test_parallel(id):
-    pyFuga = PyFuga(fuga_path + "FugaLib/FugaLib.dll",
-                    farm_name='Horns Rev 1',
+    pyFuga = PyFuga(farm_name='Horns Rev 1',
                     turbine_model_path=fuga_path + 'LUT/', turbine_model_name='Vestas_V80_(2_MW_offshore)[h=67.00]',
                     tb_x=[423974, 424033], tb_y=[6151447, 6150889],
                     mast_position=(0, 0, 70), z0=0.0001, zi=400, zeta0=0,
@@ -63,7 +62,7 @@ class Test(unittest.TestCase):
                                                                                             [-0.001673, 0.001673],
                                                                                             [0., 0.]])
         pyFuga.cleanup()
-
+        
 #     def test_parallel(self):
 #         from multiprocessing import Pool
 #
