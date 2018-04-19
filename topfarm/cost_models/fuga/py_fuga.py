@@ -3,14 +3,16 @@ Created on 23. mar. 2018
 
 @author: mmpe
 '''
-import numpy as np
-from ctypes import *
-from topfarm.cost_models.fuga.pascal_dll import PascalDLL
+from _ctypes import POINTER
+import atexit
+from ctypes import c_double, c_int
 import ctypes
-from openmdao.core.explicitcomponent import ExplicitComponent
+import os
+from tempfile import NamedTemporaryFile
+
+import numpy as np
 from topfarm.cost_models.cost_model_wrappers import AEPCostModelComponent
-
-
+from topfarm.cost_models.fuga.pascal_dll import PascalDLL
 
 
 c_double_p = POINTER(c_double)
@@ -18,16 +20,55 @@ c_int_p = POINTER(ctypes.c_int32)
 
 
 class PyFuga(object):
-#    def __init__(self, dll_path, farms_dir, farm_name='Horns Rev 1', turbine_model_path='./LUT/',
-#                 mast_position=(0,0,70), z0=0.0001, zi=400, zeta0=0, wind_atlas_path='Horns Rev 1\hornsrev.lib'):
-    def __init__(self):
-        path = r'C:\Sandbox\Topfarm\Colonel\FugaLib/'
+    interface_version = 2
+
+    def __init__(self, 
+                 farm_name='Horns Rev 1',
+                 turbine_model_path='./LUT/', turbine_model_name='Vestas_V80_(2_MW_offshore)[h=67.00]',
+                 tb_x=[423974, 424033], tb_y=[6151447, 6150889],
+                 mast_position=(0, 0, 70), z0=0.0001, zi=400, zeta0=0,
+                 farms_dir='./LUT/', wind_atlas_path='Horns Rev 1\hornsrev.lib'):
+        atexit.register(self.cleanup)
+        with NamedTemporaryFile() as f:
+            self.stdout_filename = f.name + ".txt"
+        self.lib = PascalDLL(os.path.dirname(__file__) + "/Colonel/FugaLib/FugaLib.%s"%('so','dll')[os.name=='nt'])
+        self.lib.CheckInterfaceVersion(self.interface_version)
+        self.lib.Setup(self.stdout_filename, float(mast_position[0]), float(mast_position[1]), float(mast_position[2]),
+                       float(z0), float(zi), float(zeta0))
+
+        tb_x_ctype = np.array(tb_x, dtype=np.float).ctypes
+        tb_y_ctype = np.array(tb_y, dtype=np.float).ctypes
+        assert len(tb_x) == len(tb_y)
+
+        self.lib.AddWindFarm(farm_name, turbine_model_path, turbine_model_name,
+                             len(tb_x), tb_x_ctype.data_as(c_double_p), tb_y_ctype.data_as(c_double_p))
+
+        assert os.path.isfile(farms_dir + wind_atlas_path), farms_dir + wind_atlas_path
+        self.lib.SetupWindClimate(farms_dir, wind_atlas_path)
+
+        assert len(tb_x) == self.get_no_tubines(), self.log + "\n%d" % self.get_no_tubines()
+
+
+#         self.lib.setup_old(farms_dir, farm_name, turbine_model_path,
+#                        float(mast_position[0]), float(mast_position[1]), float(mast_position[2]),
+#                        float(z0),float(zi),float(zeta0),
+#                        wind_atlas_path)
+
+    def cleanup(self):
+        if hasattr(self, 'lib'):
+            self.lib.Exit()
+            del self.lib
+        if os.path.isfile(self.stdout_filename):
+            os.remove(self.stdout_filename)
+
+    def __init__old(self):
+        path = r'C:\mmpe\programming\pascal\Fuga\Colonel\FugaLib/'
         self.lib = PascalDLL(path + 'FugaLib.dll')
-#
+
         self.lib.setup(path + '../LUT/Farms/', 'Horns Rev 1', path + '../LUT/',
                        0., 0., 70.,
                        0.0001, 400., 0.,
-                       'Horns Rev 1\hornsrev.lib')
+                       'Horns Rev 1\hornsrev0.lib')
 
     def get_no_tubines(self):
         no_turbines_p = c_int_p(c_int(0))
@@ -40,7 +81,7 @@ class PyFuga(object):
         tb_y_ctype = np.array(tb_y, dtype=np.float).ctypes
 
         self.lib.MoveTurbines(tb_x_ctype.data_as(c_double_p), tb_y_ctype.data_as(c_double_p))
-        
+
     def get_aep(self, tb_x, tb_y):
         self.move_turbines(tb_x, tb_y)
 
@@ -49,8 +90,8 @@ class PyFuga(object):
         capacity_p = c_double_p(c_double(0))
         self.lib.getAEP(AEPNet_p, AEPGros_p, capacity_p)
         #print(tb_x, tb_y, AEPNet_p.contents.value, (15.850434458235156 - AEPNet_p.contents.value) / .000001)
-        print(AEPNet_p.contents.value)
-        return (AEPNet_p.contents.value, AEPGros_p.contents.value, capacity_p.contents.value)
+        net, gros, cap = [p.contents.value for p in [AEPNet_p, AEPGros_p, capacity_p]]
+        return (net, gros, cap, net / gros)
 
     def get_aep_gradients(self, tb_x, tb_y):
         self.move_turbines(tb_x, tb_y)
@@ -67,6 +108,10 @@ class PyFuga(object):
                                      lambda *args: self.get_aep(*args)[0],  # only aep
                                      lambda *args: self.get_aep_gradients(*args)[:2])  # only dAEPdx and dAEPdy
 
+    @property
+    def log(self):
+        with open(self.stdout_filename) as fid:
+            return fid.read()
 
 #         self.execute("""seed=0
 # initialize
@@ -96,16 +141,13 @@ class PyFuga(object):
 
 if __name__ == '__main__':
 
-    path = r'C:\Sandbox\Topfarm\Colonel/'
-    dll_path = path + 'FugaLib/FugaLib.dll'
-    farms_dir = path + 'LUT/Farms/'
-    farm_name = 'Horns Rev 1'
-    turbine_model_path = path + 'LUT/'
-    mast_position = (0., 0., 70.)
-    z0, zi, zeta0 = 0.0001, 400., 0.,
-    wind_atlas_path = 'Horns Rev 1\hornsrev.lib'
-    pyFuga = PyFuga()
-#    pyFuga = PyFuga(dll_path, farms_dir, farm_name, turbine_model_path, mast_position, z0,zi,zeta0, wind_atlas_path)
+    fuga_path = os.path.abspath(".") + '/Colonel/'
+    pyFuga = PyFuga(farm_name='Horns Rev 1',
+                    turbine_model_path=fuga_path + 'LUT/', turbine_model_name='Vestas_V80_(2_MW_offshore)[h=67.00]',
+                    tb_x=[423974, 424033], tb_y=[6151447, 6150889],
+                    mast_position=(0, 0, 70), z0=0.0001, zi=400, zeta0=0,
+                    farms_dir=fuga_path + 'LUT/Farms/', wind_atlas_path='Horns Rev 1\hornsrev.lib')
+
     print(pyFuga.get_no_tubines())
     print(pyFuga.get_aep([0, 0], [0, 1000]))
     print(pyFuga.get_aep([0, 1000], [0, 0]))
