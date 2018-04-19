@@ -56,7 +56,10 @@ class PyFuga(object):
 
     def cleanup(self):
         if hasattr(self, 'lib'):
-            self.lib.Exit()
+            try:
+                self.lib.Exit() # raises exception
+            except:
+                pass
             del self.lib
         if os.path.isfile(self.stdout_filename):
             os.remove(self.stdout_filename)
