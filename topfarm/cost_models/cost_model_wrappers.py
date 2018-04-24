@@ -4,7 +4,7 @@ import numpy as np
 
 
 class CostModelComponent(ExplicitComponent):
-    def __init__(self, n_wt, cost_function, cost_gradient_function):
+    def __init__(self, n_wt, cost_function, cost_gradient_function=None):
         super().__init__()
         self.cost_function = cost_function
         self.cost_gradient_function = cost_gradient_function
@@ -17,19 +17,24 @@ class CostModelComponent(ExplicitComponent):
         self.add_output('cost', val=0.0)
 
         # Finite difference all partials.
-        self.declare_partials('cost', '*')
+        if self.cost_gradient_function:
+            self.declare_partials('cost', '*')
+        else:
+            self.declare_partials('cost', '*', method='fd')
+        
 
     def compute(self, inputs, outputs):
         x = inputs['turbineX']
         y = inputs['turbineY']
-        outputs['cost'] = self.cost_function(x, y)
+        outputs['cost'] = self.cost_function(np.array([x, y]).T)
 
     def compute_partials(self, inputs, J):
-        x = inputs['turbineX']
-        y = inputs['turbineY']
-        dCostdx, dCostdy = self.cost_gradient_function(x, y)
-        J['cost', 'turbineX'] = dCostdx
-        J['cost', 'turbineY'] = dCostdy
+        if self.cost_gradient_function:
+            x = inputs['turbineX']
+            y = inputs['turbineY']
+            dCostdx, dCostdy = self.cost_gradient_function(np.array([x, y]).T)
+            J['cost', 'turbineX'] = dCostdx
+            J['cost', 'turbineY'] = dCostdy
 
 
 class AEPCostModelComponent(CostModelComponent):
@@ -38,6 +43,7 @@ class AEPCostModelComponent(CostModelComponent):
         outputs['cost'] *= -1
 
     def compute_partials(self, inputs, J):
-        CostModelComponent.compute_partials(self, inputs, J)
-        J['cost', 'turbineX'] *= -1
-        J['cost', 'turbineY'] *= -1
+        if self.cost_gradient_function:
+            CostModelComponent.compute_partials(self, inputs, J)
+            J['cost', 'turbineX'] *= -1
+            J['cost', 'turbineY'] *= -1
