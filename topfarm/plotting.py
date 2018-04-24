@@ -9,10 +9,9 @@ class PlotComp(ExplicitComponent):
     """
     colors = ['b', 'r', 'm', 'c', 'g', 'y', 'orange', 'indigo', 'grey'] * 100
 
-    def __init__(self, memory=10, plot_every=5):
+    def __init__(self, memory=10):
         ExplicitComponent.__init__(self)
         self.memory = memory
-        self.plot_every = plot_every
         self.history = []
         self.counter = 0
 
@@ -47,20 +46,17 @@ class PlotComp(ExplicitComponent):
         x = inputs['turbineX']
         y = inputs['turbineY']
         cost = inputs['cost']
-        if self.history:
-            self.history = [(x.copy(), y.copy())] + self.history[:self.memory]
-        else:
-            self.history = [(x.copy(), y.copy())]
-        if self.counter % self.plot_every == 0:
-            boundary = inputs['boundary']
-            self.init_plot(boundary)
-            plt.title(cost)
+        self.history = [(x.copy(), y.copy())] + self.history[:self.memory]
+        
+        boundary = inputs['boundary']
+        self.init_plot(boundary)
+        plt.title(cost)
 
-            history_arr = np.array(self.history)
-            for i, c, x_, y_ in zip(range(len(x)), self.colors, x, y):
-                plt.plot(history_arr[:, 0, i], history_arr[:, 1, i], '.-', color=c, lw=1)
-                plt.plot(x_, y_, 'o', color=c, ms=5)
-                plt.plot(x_, y_, 'x' + 'k', ms=4)
+        history_arr = np.array(self.history)
+        for i, c, x_, y_ in zip(range(len(x)), self.colors, x, y):
+            plt.plot(history_arr[:, 0, i], history_arr[:, 1, i], '.-', color=c, lw=1)
+            plt.plot(x_, y_, 'o', color=c, ms=5)
+            plt.plot(x_, y_, 'x' + 'k', ms=4)
 
-            plt.pause(.01)
+        plt.pause(.01)
         self.counter += 1

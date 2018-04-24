@@ -57,8 +57,8 @@ class DummyCost(ExplicitComponent):
         J['cost', 'turbineY'] = (2 * y - 2 * np.array(self.optimal)[:, 1])
 
 class DummyCostPlotComp(PlotComp):
-    def __init__(self, optimal):
-        super().__init__()
+    def __init__(self, optimal, memory=10):
+        super().__init__(memory)
         self.optimal = optimal
         
     def init_plot(self, boundary):
