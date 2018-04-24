@@ -22,7 +22,7 @@ c_int_p = POINTER(ctypes.c_int32)
 class PyFuga(object):
     interface_version = 2
 
-    def __init__(self, 
+    def __init__(self,
                  farm_name='Horns Rev 1',
                  turbine_model_path='./LUT/', turbine_model_name='Vestas_V80_(2_MW_offshore)[h=67.00]',
                  tb_x=[423974, 424033], tb_y=[6151447, 6150889],
@@ -31,7 +31,7 @@ class PyFuga(object):
         atexit.register(self.cleanup)
         with NamedTemporaryFile() as f:
             self.stdout_filename = f.name + ".txt"
-        self.lib = PascalDLL(os.path.dirname(__file__) + "/Colonel/FugaLib/FugaLib.%s"%('so','dll')[os.name=='nt'])
+        self.lib = PascalDLL(os.path.dirname(__file__) + "/Colonel/FugaLib/FugaLib.%s" % ('so', 'dll')[os.name == 'nt'])
         self.lib.CheckInterfaceVersion(self.interface_version)
         self.lib.Setup(self.stdout_filename, float(mast_position[0]), float(mast_position[1]), float(mast_position[2]),
                        float(z0), float(zi), float(zeta0))
@@ -57,7 +57,7 @@ class PyFuga(object):
     def cleanup(self):
         if hasattr(self, 'lib'):
             try:
-                self.lib.Exit() # raises exception
+                self.lib.Exit()  # raises exception
             except:
                 pass
             del self.lib
@@ -85,9 +85,10 @@ class PyFuga(object):
 
         self.lib.MoveTurbines(tb_x_ctype.data_as(c_double_p), tb_y_ctype.data_as(c_double_p))
 
-    def get_aep(self, tb_x, tb_y):
-        self.move_turbines(tb_x, tb_y)
-
+    def get_aep(self, turbine_positions=None):
+        if turbine_positions is not None:
+            self.move_turbines(turbine_positions[:,0], turbine_positions[:,1])
+        
         AEPNet_p = c_double_p(c_double(0))
         AEPGros_p = c_double_p(c_double(0))
         capacity_p = c_double_p(c_double(0))
@@ -96,10 +97,12 @@ class PyFuga(object):
         net, gros, cap = [p.contents.value for p in [AEPNet_p, AEPGros_p, capacity_p]]
         return (net, gros, cap, net / gros)
 
-    def get_aep_gradients(self, tb_x, tb_y):
-        self.move_turbines(tb_x, tb_y)
-
-        dAEPdxyz = np.zeros(len(tb_x)), np.zeros(len(tb_x)), np.zeros(len(tb_x))
+    def get_aep_gradients(self, turbine_positions=None):
+        if turbine_positions is not None:
+            self.move_turbines(turbine_positions[:,0], turbine_positions[:,1])
+    
+        n_wt = turbine_positions.shape[0]
+        dAEPdxyz = np.zeros(n_wt), np.zeros(n_wt), np.zeros(n_wt)
         dAEPdxyz_ctype = [dAEP.ctypes for dAEP in dAEPdxyz]
         self.lib.GetAEPGradients(*[dAEP_ctype.data_as(c_double_p) for dAEP_ctype in dAEPdxyz_ctype])
         #print(tb_x, tb_y, dAEPdxyz)
