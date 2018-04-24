@@ -9,11 +9,11 @@ import numpy as np
 class WindResource(object):
     def __init__(self, f, a, k, ti):
         wdir = np.linspace(0, 360, len(f), endpoint=False)
-        indexes = np.argmin((np.broadcast_to(np.arange(360), (len(f), 360)).T - wdir) % 360, 1)
-        self.f = f[indexes] / (360 / len(f))
-        self.a = a[indexes]
-        self.k = k[indexes]
-        self.ti = ti[indexes]
+        indexes = np.argmin((np.tile(np.arange(360),(len(f),1)).T - wdir + (360/len(f)/2)) % 360, 1)
+        self.f = np.array(f)[indexes] / (360 / len(f))
+        self.a = np.array(a)[indexes]
+        self.k = np.array(k)[indexes]
+        self.ti = np.array(ti)[indexes]
 
     def weibull_weight(self, WS, A, k):
         cdf = lambda ws, A=A, k=k: 1 - np.exp(-(ws / A) ** k)
@@ -24,6 +24,7 @@ class WindResource(object):
         # f(turbine_positions, wdir, wsp) -> WS[nWT,nWdir,nWsp], TI[nWT,nWdir,nWsp), Weight[nWdir,nWsp]
         WD, WS = np.meshgrid(wdir, wsp)
         weight = self.weibull_weight(WS, self.a[WD], self.k[WD]) * self.f[wdir]
+        WD,WS = np.tile(WD,(len(turbine_positions),1,1)), np.tile(WS,(len(turbine_positions),1,1)) 
         return WD, WS, self.ti[WD], weight
 
 
