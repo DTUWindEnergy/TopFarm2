@@ -27,10 +27,11 @@ class PyFuga(object):
                  turbine_model_path='./LUT/', turbine_model_name='Vestas_V80_(2_MW_offshore)[h=67.00]',
                  tb_x=[423974, 424033], tb_y=[6151447, 6150889],
                  mast_position=(0, 0, 70), z0=0.0001, zi=400, zeta0=0,
-                 farms_dir='./LUT/', wind_atlas_path='Horns Rev 1\hornsrev.lib'):
+                 farms_dir='./LUT/', wind_atlas_path='Horns Rev 1\hornsrev.lib', climate_interpolation=True):
         atexit.register(self.cleanup)
         with NamedTemporaryFile() as f:
-            self.stdout_filename = f.name + ".txt"
+            self.stdout_filename = f.name + "pyfuga.txt"
+            
         self.lib = PascalDLL(os.path.dirname(__file__) + "/Colonel/FugaLib/FugaLib.%s" % ('so', 'dll')[os.name == 'nt'])
         self.lib.CheckInterfaceVersion(self.interface_version)
         self.lib.Setup(self.stdout_filename, float(mast_position[0]), float(mast_position[1]), float(mast_position[2]),
@@ -44,7 +45,7 @@ class PyFuga(object):
                              len(tb_x), tb_x_ctype.data_as(c_double_p), tb_y_ctype.data_as(c_double_p))
 
         assert os.path.isfile(farms_dir + wind_atlas_path), farms_dir + wind_atlas_path
-        self.lib.SetupWindClimate(farms_dir, wind_atlas_path)
+        self.lib.SetupWindClimate(farms_dir, wind_atlas_path, climate_interpolation)
 
         assert len(tb_x) == self.get_no_tubines(), self.log + "\n%d" % self.get_no_tubines()
 
@@ -61,8 +62,13 @@ class PyFuga(object):
             except:
                 pass
             del self.lib
-        if os.path.isfile(self.stdout_filename):
-            os.remove(self.stdout_filename)
+        tmp_folder = os.path.dirname(self.stdout_filename)
+        for f in os.listdir(tmp_folder):
+            if f.endswith('pyfuga.txt'):
+                try:
+                    os.remove(os.path.join(tmp_folder, f))
+                except Exception:
+                    pass
 
     def __init__old(self):
         path = r'C:\mmpe\programming\pascal\Fuga\Colonel\FugaLib/'
