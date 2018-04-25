@@ -6,6 +6,7 @@ from topfarm.plotting import PlotComp
 from topfarm.topfarm import TopFarm
 
 
+
 class DummyCost(ExplicitComponent):
     """
     Evaluates the equation f(x,y) = (x-optimal_x)^2 + (y+optimal_y)^2 - 3.

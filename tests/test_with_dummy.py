@@ -25,7 +25,7 @@ class Test(unittest.TestCase):
         tf.evaluate()
         tf.optimize()
 
-        tb_pos = tf.get_turbine_positions()
+        tb_pos = tf.turbine_positions
         self.assertGreater(sum((tb_pos[2] - tb_pos[0])**2), 2**2 - eps)
         np.testing.assert_array_almost_equal(tb_pos[3], optimal[3], 3)
         self.assertLess(tb_pos[1][0], 6 + eps)
