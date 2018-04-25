@@ -1,8 +1,25 @@
+import time
+
+import matplotlib
 from openmdao.core.explicitcomponent import ExplicitComponent
-import numpy as np
+
 import matplotlib.pyplot as plt
+import numpy as np
 
 
+def mypause(interval):
+    # pause without show
+    backend = plt.rcParams['backend']
+    if backend in matplotlib.rcsetup.interactive_bk:
+        figManager = matplotlib._pylab_helpers.Gcf.get_active()
+        if figManager is not None:
+            canvas = figManager.canvas
+            if canvas.figure.stale:
+                canvas.draw()
+            canvas.start_event_loop(interval)
+            return
+        
+        
 class PlotComp(ExplicitComponent):
     """
     Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3.
@@ -57,6 +74,9 @@ class PlotComp(ExplicitComponent):
             plt.plot(history_arr[:, 0, i], history_arr[:, 1, i], '.-', color=c, lw=1)
             plt.plot(x_, y_, 'o', color=c, ms=5)
             plt.plot(x_, y_, 'x' + 'k', ms=4)
-
-        plt.pause(.01)
+        
+        if self.counter ==0:
+            plt.pause(.01)
+        mypause(0.01)
+        
         self.counter += 1
