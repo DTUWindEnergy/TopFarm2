@@ -107,7 +107,7 @@ class PyFuga(object):
         if turbine_positions is not None:
             self.move_turbines(turbine_positions[:,0], turbine_positions[:,1])
     
-        n_wt = turbine_positions.shape[0]
+        n_wt = self.get_no_tubines()
         dAEPdxyz = np.zeros(n_wt), np.zeros(n_wt), np.zeros(n_wt)
         dAEPdxyz_ctype = [dAEP.ctypes for dAEP in dAEPdxyz]
         self.lib.GetAEPGradients(*[dAEP_ctype.data_as(c_double_p) for dAEP_ctype in dAEPdxyz_ctype])

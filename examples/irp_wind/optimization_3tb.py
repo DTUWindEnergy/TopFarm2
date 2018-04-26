@@ -26,7 +26,8 @@ def optimize_AEP_FusedWake_GCL():
     aep_calc = AEPCalculator(wr, wm)
     init_pos = initial_position.copy()
     init_pos[:, 0] += [-20, 0, 20]
-    tf = TopFarm(init_pos, aep_calc.get_TopFarm_cost_component(), minSpacing * D, boundary=boundary, plot_comp=plot_comp)
+    tf = TopFarm(init_pos, aep_calc.get_TopFarm_cost_component(), minSpacing * D, boundary=boundary, plot_comp=plot_comp,
+                             driver_options={'optimizer': 'SLSQP'})
     tf.evaluate()
     print(tf.get_cost())
     tf.optimize()
@@ -46,8 +47,9 @@ def optimize_AEP_Fuga():
 
     init_pos = initial_position.copy()
     init_pos[:, 0] += [-20, 0, 20]
-    tf = TopFarm(init_pos, pyFuga.get_TopFarm_cost_component(), minSpacing * D, boundary=boundary, plot_comp=plot_comp)
-
+    tf = TopFarm(init_pos, pyFuga.get_TopFarm_cost_component(), minSpacing * D, boundary=boundary, plot_comp=plot_comp,
+                 driver_options={'optimizer': 'SLSQP'})
+    print (pyFuga.get_aep_gradients())
     save_plot('initial.png', tf, True)
     tf.evaluate()
     print(tf.get_cost())
@@ -58,6 +60,7 @@ def optimize_AEP_Fuga():
 
 
 def save_plot(filename, tf, initial=False):
+    return
     import matplotlib.pyplot as plt
     plt.figure(figsize=(3, 3))
     plt.axis('equal')
