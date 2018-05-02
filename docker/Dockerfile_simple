@@ -7,16 +7,19 @@ MAINTAINER Jenni Rinker <rink@dtu.dk>
 
 # get list of update linux files and install lib for matplotlib
 #   (anaconda3:5.0.0 image doesn't have the library)
-RUN apt update && \
-    apt install libgl1-mesa-glx -y
+#    also install "make" because image doesn't have it either
+RUN apt-get update && \
+    apt-get install make && \
+    apt-get install libgl1-mesa-glx -y
 
 
-# use conde to update itself and install packages not in the
+# use conda to update itself and install packages not in the
 #   anaconda3 image
 RUN conda update -y conda &&\
     conda install -y sphinx_rtd_theme && \
     conda install -y pytest-cov && \
     conda clean -y --all
 
-# use pip to install openmdao (nocache to save space)
-RUN pip install --no-cache-dir openmdao
+# update pip then install openmdao (nocache to save space)
+RUN pip install --upgrade pip &&\
+    pip install --no-cache-dir openmdao
