@@ -1,8 +1,0 @@
-# WindIO for ???
--e git+https://github.com/FUSED-Wind/windIO.git#egg=windio
-# OpenMDAO for optimization
--e git+https://github.com/OpenMDAO/OpenMDAO.git#egg=openmdao
-# sphinx read-the-docs theme for documentation
-sphinx_rtd_theme
-# pytest-cov for coverage report
-pytest-cov
