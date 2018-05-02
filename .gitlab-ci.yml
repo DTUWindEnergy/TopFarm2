@@ -1,4 +1,4 @@
-image: nedadtu/pungi-ci:latest  # use Neil Davis's pungi image from dockerhub
+image: rinkdtu/topfarm-ci:firsttry  # use Neil Davis's pungi image from dockerhub
 
 # ===== TEST TOPFARM =====
 test_topfarm:  # name the job what we like
