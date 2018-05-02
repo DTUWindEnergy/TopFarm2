@@ -1,0 +1,25 @@
+# ==================================================================
+# Creating a simple docker image for TOPFARM testing and docs
+# ==================================================================
+
+# set the base image
+FROM continuumio/anaconda3:latest
+
+# define the maintainer
+MAINTAINER Jennifer Rinker <rink@dtu.dk>
+
+# update the application repository list
+RUN apt-get update                                               \
+ && apt-get install -y                                           \
+    build-essential \
+    gcc \
+    gfortran
+
+# create an "install" directory and make it the working directory
+RUN mkdir /install
+WORKDIR /install
+
+# copy reqs file to /install and install everything
+COPY ./requirements_simple.txt /install
+RUN pip install --upgrade pip \
+ && pip install -r /install/requirements_simple.txt
