@@ -1,5 +1,25 @@
 image: nedadtu/pungi-ci:latest  # use Neil Davis's pungi image from dockerhub
 
+# ===== TEST TOPFARM =====
+test_topfarm:  # name the job what we like
+  stage:  # build, test, deploy defined by default [2]
+    test
+  script:
+  #- REPO_URL="git@${SITE_URL}:WAsP/waspy.git"
+  #- REPO_DIR=thirdparty/waspy
+  #- rm -fr $REPO_DIR
+  #- git clone $REPO_URL $REPO_DIR
+  #- cd $REPO_DIR
+  #- python setup.py install
+  #- cd -
+  # - python setup.py install
+  - cd tests; py.test --cov-report term-missing:skip-covered --cov=topfarm
+  only:  # only run for these branches
+  - master
+  - test_ci
+  tags:
+  - python
+
 
 # ===== BUILD DOCS AND PUSH TO PUBLIC WEBSITE =====
 pages:  # "pages" is a job specifically for GitLab pages [1]
