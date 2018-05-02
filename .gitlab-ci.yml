@@ -1,0 +1,23 @@
+image: nedadtu/pungi-ci:latest  # use Neil Davis's pungi image from dockerhub
+
+
+# ===== BUILD DOCS AND PUSH TO PUBLIC WEBSITE =====
+pages:  # "pages" is a job specifically for GitLab pages [1]
+  stage:  # build, test, deploy defined by default [2]
+    deploy
+  script:
+  - cd docs; make html  # use sphinx to build docs
+  - cd ../; mv docs/build/html public/  # move build to public page
+  artifacts:  # required for GitLab pages [1]
+    paths:
+    - public
+  only:  # only run for these branches
+  - master
+  - test_ci
+  tags:  # select which runners can do this job [3]
+  - python
+
+
+# [1] GitLab page: https://docs.gitlab.com/ee/ci/yaml/#pages
+# [2] CI stages: https://docs.gitlab.com/ee/ci/yaml/#stages
+# [3] Tags: https://docs.gitlab.com/ee/ci/yaml/#tags

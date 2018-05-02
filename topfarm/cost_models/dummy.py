@@ -6,10 +6,8 @@ from topfarm.plotting import PlotComp
 from topfarm.topfarm import TopFarm
 
 
-
 class DummyCost(ExplicitComponent):
-    """
-    Evaluates the equation f(x,y) = (x-optimal_x)^2 + (y+optimal_y)^2 - 3.
+    """Evaluates the equation f(x,y) = (x-optimal_x)^2 + (y+optimal_y)^2 - 3.
     """
 
     def __init__(self, optimal_positions):
@@ -36,7 +34,6 @@ class DummyCost(ExplicitComponent):
         self.declare_partials('cost', '*')
         #self.declare_partials('*', '*', method='fd')
 
-        
     def compute(self, inputs, outputs):
         """
         f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3
@@ -45,7 +42,7 @@ class DummyCost(ExplicitComponent):
         """
         x = inputs['turbineX']
         y = inputs['turbineY']
-        
+
         #print(x, y, sum(self.cost(x, y)))
         outputs['cost'] = np.sum(self.cost(x, y))
 
@@ -54,6 +51,51 @@ class DummyCost(ExplicitComponent):
         y = inputs['turbineY']
         #J['aep', 'turbineX'] = -(2 * x - 2 * np.array(self.optimal)[:, 0] + y - np.array(self.optimal)[:, 1])
         #J['aep', 'turbineY'] = -(2 * y - 2 * np.array(self.optimal)[:, 1] + x - np.array(self.optimal)[:, 0])
+        J['cost', 'turbineX'] = (2 * x - 2 * np.array(self.optimal)[:, 0])
+        J['cost', 'turbineY'] = (2 * y - 2 * np.array(self.optimal)[:, 1])
+
+
+class DummyCost_v2(ExplicitComponent):
+    """Sum of squared error between current positions and optimal positions
+
+        Evaluates the equation
+        f(x,y) = SUM(x_i - optx_i)^2 + SUM(y_i + opty_i)^2.
+    """
+
+    def __init__(self, optimal_positions):
+        """Pass an Nx2 array (or list of lists) of optimal positions"""
+        ExplicitComponent.__init__(self)
+        self.optimal = np.array(optimal_positions)
+        self.N = self.optimal.shape[0]
+        self.history = []
+
+    def cost(self, x, y):
+        """Evaluate cost function"""
+        opt_x, opt_y = self.optimal.T
+        return np.sum((x - opt_x)**2 + (y - opt_y)**2)
+
+    def setup(self):
+        self.add_input('turbineX', val=np.zeros(self.N), units='m')
+        self.add_input('turbineY', val=np.zeros(self.N), units='m')
+
+        self.add_output('cost', val=0.0)
+
+        # Finite difference all partials.
+        self.declare_partials('cost', '*')
+        # self.declare_partials('*', '*', method='fd')
+
+    def compute(self, inputs, outputs):
+        """
+        f(x,y) = SUM(x_i - optx_i)^2 + SUM(y_i + opty_i)^2
+        """
+        x = inputs['turbineX']
+        y = inputs['turbineY']
+
+        outputs['cost'] = self.cost(x, y)
+
+    def compute_partials(self, inputs, J):
+        x = inputs['turbineX']
+        y = inputs['turbineY']
         J['cost', 'turbineX'] = (2 * x - 2 * np.array(self.optimal)[:, 0])
         J['cost', 'turbineY'] = (2 * y - 2 * np.array(self.optimal)[:, 1])
 
