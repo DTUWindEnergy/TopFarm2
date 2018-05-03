@@ -1,0 +1,25 @@
+# ==================================================================
+# Creating a simple docker image for TOPFARM testing and docs
+# ==================================================================
+FROM continuumio/anaconda3:latest
+MAINTAINER Jenni Rinker <rink@dtu.dk>
+
+
+# get list of update linux files and install lib for matplotlib
+#   (anaconda3:5.0.0 image doesn't have the library)
+#    also install "make" because image doesn't have it either
+RUN apt-get update && \
+    apt-get install make && \
+    apt-get install libgl1-mesa-glx -y
+
+
+# use conda to update itself and install packages not in the
+#   anaconda3 image
+RUN conda update -y conda &&\
+    conda install -y sphinx_rtd_theme && \
+    conda install -y pytest-cov && \
+    conda clean -y --all
+
+# update pip then install openmdao (nocache to save space)
+RUN pip install --upgrade pip &&\
+    pip install --no-cache-dir openmdao

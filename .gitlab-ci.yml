@@ -1,13 +1,28 @@
-image: nedadtu/pungi-ci:latest  # use Neil Davis's pungi image from dockerhub
+# ===== DEFINE DOCKER IMAGE =====
+# 2018.05.03 dockerhub image generated using docker/Dockerfile_simple
+image: rinkdtu/topfarm-ci:latest
+
+
+# ===== TEST TOPFARM =====
+test_topfarm:  # name the job what we like
+  stage:  # build, test, deploy defined by default [2]
+    test
+  script:
+  - cd tests; py.test --cov-report term-missing:skip-covered --cov=topfarm
+  only:  # only run for these branches
+  - master
+  - test_ci
+  tags:  # select which runners can do this job [3]
+  - python
 
 
 # ===== BUILD DOCS AND PUSH TO PUBLIC WEBSITE =====
 pages:  # "pages" is a job specifically for GitLab pages [1]
   stage:  # build, test, deploy defined by default [2]
     deploy
-  script:
-  - cd docs; make html  # use sphinx to build docs
-  - cd ../; mv docs/build/html public/  # move build to public page
+  script:  # use sphinx to build docs, move to public page
+  - cd docs; make html
+  - cd ../; mv docs/build/html public/
   artifacts:  # required for GitLab pages [1]
     paths:
     - public
