@@ -16,8 +16,8 @@ class AEPCalculator(object):
 
     def __init__(self, wind_resource, wake_model, wdir=np.arange(360), wsp=np.arange(3, 25)):
         """
-        wind_resource: f(turbine_positions, wdir, wsp) -> WS[nWT,nWdir,nWsp], TI[nWT,nWdir,nWsp), Weight[nWdir,nWsp]
-        wake_model: f(turbine_positions, WS[nWT,nWdir,nWsp], TI[nWT,nWdir,nWsp) -> power[nWdir,nWsp]
+        wind_resource: f(turbine_positions, wdir, wsp) -> WD[nWT,nWdir,nWsp], WS[nWT,nWdir,nWsp], TI[nWT,nWdir,nWsp), Weight[nWdir,nWsp]
+        wake_model: f(turbine_positions, WD[nWT,nWdir,nWsp], WS[nWT,nWdir,nWsp], TI[nWT,nWdir,nWsp) -> power[nWdir,nWsp] (W)
         """
         self.wind_resource = wind_resource
         self.wake_model = wake_model
