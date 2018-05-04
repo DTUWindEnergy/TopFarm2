@@ -9,9 +9,6 @@ test_topfarm:  # name the job what we like
     test
   script:
   - cd tests; py.test --cov-report term-missing:skip-covered --cov=topfarm
-  only:  # only run for these branches
-  - master
-  - test_ci
   tags:  # select which runners can do this job [3]
   - python
 
@@ -28,7 +25,6 @@ pages:  # "pages" is a job specifically for GitLab pages [1]
     - public
   only:  # only run for these branches
   - master
-  - test_ci
   tags:  # select which runners can do this job [3]
   - python
 
