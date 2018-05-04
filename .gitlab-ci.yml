@@ -19,7 +19,7 @@ test_topfarm:  # name the job what we like
     test
   script:
   - dir
-  - cd tests; 
+  - cd tests
   - py.test --cov-report term-missing:skip-covered --cov=topfarm
   tags:  # select which runners can do this job [3]
   - CPAV_old_PC
