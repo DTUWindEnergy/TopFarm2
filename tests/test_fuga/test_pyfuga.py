@@ -18,7 +18,7 @@ from topfarm.cost_models.fuga import py_fuga
 fuga_path = os.path.abspath(os.path.dirname(py_fuga.__file__)) + '/Colonel/'
 
 
-def test_parallel(id):
+def _test_parallel(id):
     pyFuga = PyFuga(farm_name='Horns Rev 1',
                     turbine_model_path=fuga_path + 'LUT/', turbine_model_name='Vestas_V80_(2_MW_offshore)[h=67.00]',
                     tb_x=[423974, 424033], tb_y=[6151447, 6150889],
@@ -84,11 +84,11 @@ class Test(unittest.TestCase):
                                                                                                           [0.000000e+00, 0.000000e+00]])
         pyFuga.cleanup()
 
-    def _test_parallel(self):
-        from multiprocessing import Pool
-
-        with Pool(5) as p:
-            print(p.map(test_parallel, [1, 2]))
+#     def test_parallel(self):
+#         from multiprocessing import Pool
+# 
+#         with Pool(5) as p:
+#             print(p.map(_test_parallel, [1, 2]))
 
 
 if __name__ == "__main__":
