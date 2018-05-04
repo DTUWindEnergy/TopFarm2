@@ -7,7 +7,7 @@ Setup file for Topfarm2
 from setuptools import setup
 
 setup(name='topfarm', 
-      version='1.0',  
+      version='2.0',  
       description='Topfarm - Wind farm optimization using OpenMDAO',
       url='https://gitlab.windenergy.dtu.dk/TOPFARM/topfarm2',
       author='MMPE, PIRE, MIKF, RINK',  
@@ -15,6 +15,12 @@ setup(name='topfarm',
       license='GNU GPL',
       packages=['topfarm'
 				],
+	  install_requires=[
+        'openmdao',
+		'pytest',
+		'pytest-cov',
+		'matplotlib'		
+      ],
 #	  files= ['plotting.py',
 #			  'topfarm.py',
 #			  ],
