@@ -20,7 +20,7 @@ test_topfarm_windows:  # name the job what we like
   stage:  # build, test, deploy defined by default [2]
     test
   script:
-  - activate pyTopfarm
+  #- activate pyTopfarm
   - cd tests
   - py.test --cov-report term-missing:skip-covered --cov=topfarm
   tags:  # select which runners can do this job [3]
