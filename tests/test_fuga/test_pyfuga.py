@@ -18,7 +18,7 @@ from topfarm.cost_models.fuga import py_fuga
 fuga_path = os.path.abspath(os.path.dirname(py_fuga.__file__)) + '/Colonel/'
 
 
-def test_parallel(id):
+def _test_parallel(id):
     pyFuga = PyFuga(farm_name='Horns Rev 1',
                     turbine_model_path=fuga_path + 'LUT/', turbine_model_name='Vestas_V80_(2_MW_offshore)[h=67.00]',
                     tb_x=[423974, 424033], tb_y=[6151447, 6150889],
@@ -33,13 +33,9 @@ def test_parallel(id):
 
 class Test(unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        super(Test, cls).setUpClass()
-
-    @classmethod
-    def tearDownClass(cls):
-        super(Test, cls).tearDownClass()
+    def lib_missing(self):
+        lib_path = os.path.dirname(py_fuga.__file__) + "/Colonel/FugaLib/FugaLib.%s" % ('so', 'dll')[os.name == 'nt']
+        return os.path.isfile(lib_path) is False
 
     def get_fuga(self, tb_x=[423974, 424033], tb_y=[6151447, 6150889]):
         return PyFuga(farm_name='Horns Rev 1',
@@ -49,12 +45,14 @@ class Test(unittest.TestCase):
                       farms_dir=fuga_path + 'LUT/Farms/', wind_atlas_path='Horns Rev 1/hornsrev_north_only.lib', climate_interpolation=False)
 
     def testCheckVersion(self):
+        if self.lib_missing(): return
         lib = PascalDLL(fuga_path + "FugaLib/FugaLib.%s" % ('so', 'dll')[os.name == 'nt'])
         self.assertRaisesRegex(Exception, "This version of FugaLib supports interface version ", lib.CheckInterfaceVersion, 1)
-        # PyFuga(fuga_path + "FugaLib/FugaLib.dll", fuga_path + "LUT/Farms/", "Horns Rev 1", fuga_path + "LUT/",
-        #                (0, 0, 70), 0.0001, 400, 0, 'Horns Rev 1\hornsrev0.lib')
+        pyFuga = self.get_fuga()  # check that current interface version match
+        pyFuga.cleanup()
 
     def testSetup(self):
+        if self.lib_missing(): return
         pyFuga = self.get_fuga()
         self.assertEqual(pyFuga.get_no_tubines(), 2)
         self.assertIn("Loading", pyFuga.log)
@@ -65,10 +63,13 @@ class Test(unittest.TestCase):
         pyFuga.cleanup()
 
     def testAEP_one_tb(self):
+        if self.lib_missing(): return
         pyFuga = self.get_fuga([0], [0])
         np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0], [0]]).T), [7.44121, 7.44121, 0.424962, 1.])
+        pyFuga.cleanup()
 
     def testAEP(self):
+        if self.lib_missing(): return
         pyFuga = self.get_fuga()
 
         np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0, 200], [0, 0]]).T), [14.848055, 14.882419, 0.423981, 0.997691])
@@ -85,11 +86,10 @@ class Test(unittest.TestCase):
 
 #     def test_parallel(self):
 #         from multiprocessing import Pool
-#
+# 
 #         with Pool(5) as p:
-#             print(p.map(test_parallel, [1, 2]))
+#             print(p.map(_test_parallel, [1, 2]))
 
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'Test.testAEP']
     unittest.main()
