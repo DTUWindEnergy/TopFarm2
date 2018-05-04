@@ -7,7 +7,7 @@ from topfarm.cost_models.dummy import DummyCost
 import unittest
 
 
-class TestWithDummy(unittest.TestCase):  # unittest version
+class Test(unittest.TestCase):  # unittest version
 
     def test_optimize_4tb(self):
         """Optimize 4-turbine layout and check final positions

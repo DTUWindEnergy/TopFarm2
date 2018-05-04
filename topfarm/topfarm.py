@@ -5,7 +5,6 @@ from openmdao.api import Problem, ScipyOptimizeDriver, IndepVarComp
 import numpy as np
 from topfarm.constraint_components.boundary_component import BoundaryComp
 from topfarm.constraint_components.spacing_component import SpacingComp
-import warnings
 
 
 class TopFarm(object):
@@ -68,9 +67,7 @@ class TopFarm(object):
 
     def evaluate(self):
         t = time.time()
-        with warnings.catch_warnings():  # suppress OpenMDAO/SLSQP warnings
-            warnings.filterwarnings('ignore', "Inefficient choice of derivative mode.  You chose 'rev' for a problem with")
-            self.problem.run_model()
+        self.problem.run_model()
         print ("Evaluated in\t%.3fs" % (time.time() - t))
         return self.get_cost(), self.turbine_positions
 
