@@ -1,6 +1,9 @@
 import numpy as np
 from openmdao.api import Group, IndepVarComp, ExecComp, ExplicitComponent, Problem
 from scipy.spatial import ConvexHull
+from shapely.geometry.polygon import Polygon, LinearRing
+from shapely.geometry.point import Point
+from shapely.geometry.multipoint import MultiPoint
 
 
 class BoundaryComp(ExplicitComponent):
@@ -14,7 +17,6 @@ class BoundaryComp(ExplicitComponent):
         self.nVertices = self.vertices.shape[0]
 
     def calculate_boundary_and_normals(self, vertices, boundary_type):
-
         if boundary_type == 'convex_hull':
             # find the points that actually comprise a convex hull
             hull = ConvexHull(list(vertices))
@@ -147,3 +149,56 @@ class BoundaryComp(ExplicitComponent):
         # return Jacobian dict
         partials['boundaryDistances', 'turbineX'] = dfaceDistance_dx
         partials['boundaryDistances', 'turbineY'] = dfaceDistance_dy
+
+
+
+class PolygonBoundaryComp(BoundaryComp):
+
+    def __init__(self, vertices, nTurbines):
+
+        super(BoundaryComp, self).__init__()
+
+        self.nTurbines = nTurbines
+        self.vertices = np.array(vertices)
+        self.nVertices = self.vertices.shape[0]
+        self.polygon = Polygon(self.vertices)
+        self.linearRing = LinearRing(self.polygon.exterior.coords)
+
+
+    def setup(self):
+
+        # Explicitly size input arrays
+        self.add_input('turbineX', np.zeros(self.nTurbines), units='m',
+                       desc='x coordinates of turbines in global ref. frame')
+        self.add_input('turbineY', np.zeros(self.nTurbines), units='m',
+                       desc='y coordinates of turbines in global ref. frame')
+
+        # Explicitly size output array
+        # (vector with positive elements if turbines outside of hull)
+        self.add_output('boundaryDistances', np.zeros([self.nTurbines]),
+                        desc="signed shortest distance to boundary; + is inside")
+
+        # self.declare_partials('boundaryDistances', ['turbineX', 'turbineY'])
+        self.declare_partials('boundaryDistances', ['turbineX', 'turbineY'], method='fd')
+
+  
+    def compute(self, inputs, outputs):
+
+        turbineX = inputs['turbineX']
+        turbineY = inputs['turbineY']
+
+        distances = []
+        for x, y in zip(turbineX, turbineY):
+            point = Point(x, y)
+            d = self.linearRing.project(point)
+            p = self.linearRing.interpolate(d)
+            closest_point_on_boundary = list(p.coords)[0]
+            distances.append([-1, 1][self.polygon.contains(point)] * point.distance(p))
+        print (np.array([turbineX,turbineY]).T)
+        print (distances)
+        print ()
+        outputs['boundaryDistances'] = distances
+        
+    def compute_partials(self, inputs, partials):
+        return
+  

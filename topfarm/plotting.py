@@ -18,8 +18,8 @@ def mypause(interval):
                 canvas.draw()
             canvas.start_event_loop(interval)
             return
-        
-        
+
+
 class PlotComp(ExplicitComponent):
     """
     Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3.
@@ -64,7 +64,7 @@ class PlotComp(ExplicitComponent):
         y = inputs['turbineY']
         cost = inputs['cost']
         self.history = [(x.copy(), y.copy())] + self.history[:self.memory]
-        
+
         boundary = inputs['boundary']
         self.init_plot(boundary)
         plt.title(cost)
@@ -74,9 +74,9 @@ class PlotComp(ExplicitComponent):
             plt.plot(history_arr[:, 0, i], history_arr[:, 1, i], '.-', color=c, lw=1)
             plt.plot(x_, y_, 'o', color=c, ms=5)
             plt.plot(x_, y_, 'x' + 'k', ms=4)
-        
-        if self.counter ==0:
+
+        if self.counter == 0:
             plt.pause(.01)
         mypause(0.01)
-        
+
         self.counter += 1
