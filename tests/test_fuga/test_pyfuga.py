@@ -84,11 +84,11 @@ class Test(unittest.TestCase):
                                                                                                           [0.000000e+00, 0.000000e+00]])
         pyFuga.cleanup()
 
-#     def test_parallel(self):
-#         from multiprocessing import Pool
-#
-#         with Pool(5) as p:
-#             print(p.map(test_parallel, [1, 2]))
+    def _test_parallel(self):
+        from multiprocessing import Pool
+
+        with Pool(5) as p:
+            print(p.map(test_parallel, [1, 2]))
 
 
 if __name__ == "__main__":
