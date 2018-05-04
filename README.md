@@ -6,10 +6,10 @@
 Install windows
 ---------------
 
-conda create -n pyTopfarm python=3.6
+```conda create -n pyTopfarm python=3.6
 activate pyTopfarm
 git clone
 cd Topfarm2
 pip install -e .
 cd tests
-python -m pytest
+python -m pytest````
