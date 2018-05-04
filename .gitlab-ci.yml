@@ -14,7 +14,9 @@ test_topfarm:  # name the job what we like
 
 
 # ===== TEST TOPFARM on Windows =====
-test_topfarm:  # name the job what we like
+test_topfarm_windows:  # name the job what we like
+  variables:
+    GIT_SUBMODULE_STRATEGY: normal
   stage:  # build, test, deploy defined by default [2]
     test
   script:
