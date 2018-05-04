@@ -31,8 +31,12 @@ class PyFuga(object):
         atexit.register(self.cleanup)
         with NamedTemporaryFile() as f:
             self.stdout_filename = f.name + "pyfuga.txt"
-            
-        self.lib = PascalDLL(os.path.dirname(__file__) + "/Colonel/FugaLib/FugaLib.%s" % ('so', 'dll')[os.name == 'nt'])
+
+        lib_path = os.path.dirname(__file__) + "/Colonel/FugaLib/FugaLib.%s" % ('so', 'dll')[os.name == 'nt']
+        if os.path.isfile(lib_path):
+            raise Exception("Fuga lib cannot be found: '%s'" % lib_path)
+
+        self.lib = PascalDLL(lib_path)
         self.lib.CheckInterfaceVersion(self.interface_version)
         self.lib.Setup(self.stdout_filename, float(mast_position[0]), float(mast_position[1]), float(mast_position[2]),
                        float(z0), float(zi), float(zeta0))
@@ -93,8 +97,8 @@ class PyFuga(object):
 
     def get_aep(self, turbine_positions=None):
         if turbine_positions is not None:
-            self.move_turbines(turbine_positions[:,0], turbine_positions[:,1])
-        
+            self.move_turbines(turbine_positions[:, 0], turbine_positions[:, 1])
+
         AEPNet_p = c_double_p(c_double(0))
         AEPGros_p = c_double_p(c_double(0))
         capacity_p = c_double_p(c_double(0))
@@ -105,8 +109,8 @@ class PyFuga(object):
 
     def get_aep_gradients(self, turbine_positions=None):
         if turbine_positions is not None:
-            self.move_turbines(turbine_positions[:,0], turbine_positions[:,1])
-    
+            self.move_turbines(turbine_positions[:, 0], turbine_positions[:, 1])
+
         n_wt = self.get_no_tubines()
         dAEPdxyz = np.zeros(n_wt), np.zeros(n_wt), np.zeros(n_wt)
         dAEPdxyz_ctype = [dAEP.ctypes for dAEP in dAEPdxyz]

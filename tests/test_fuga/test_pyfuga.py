@@ -45,12 +45,14 @@ class Test(unittest.TestCase):
                       farms_dir=fuga_path + 'LUT/Farms/', wind_atlas_path='Horns Rev 1/hornsrev_north_only.lib', climate_interpolation=False)
 
     def testCheckVersion(self):
+        if self.lib_missing(): return
         lib = PascalDLL(fuga_path + "FugaLib/FugaLib.%s" % ('so', 'dll')[os.name == 'nt'])
         self.assertRaisesRegex(Exception, "This version of FugaLib supports interface version ", lib.CheckInterfaceVersion, 1)
         pyFuga = self.get_fuga()  # check that current interface version match
         pyFuga.cleanup()
 
     def testSetup(self):
+        if self.lib_missing(): return
         pyFuga = self.get_fuga()
         self.assertEqual(pyFuga.get_no_tubines(), 2)
         self.assertIn("Loading", pyFuga.log)
@@ -61,11 +63,13 @@ class Test(unittest.TestCase):
         pyFuga.cleanup()
 
     def testAEP_one_tb(self):
+        if self.lib_missing(): return
         pyFuga = self.get_fuga([0], [0])
         np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0], [0]]).T), [7.44121, 7.44121, 0.424962, 1.])
         pyFuga.cleanup()
 
     def testAEP(self):
+        if self.lib_missing(): return
         pyFuga = self.get_fuga()
 
         np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0, 200], [0, 0]]).T), [14.848055, 14.882419, 0.423981, 0.997691])
