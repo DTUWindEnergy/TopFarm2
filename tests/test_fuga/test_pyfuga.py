@@ -33,13 +33,9 @@ def test_parallel(id):
 
 class Test(unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        super(Test, cls).setUpClass()
-
-    @classmethod
-    def tearDownClass(cls):
-        super(Test, cls).tearDownClass()
+    def lib_missing(self):
+        lib_path = os.path.dirname(py_fuga.__file__) + "/Colonel/FugaLib/FugaLib.%s" % ('so', 'dll')[os.name == 'nt']
+        return os.path.isfile(lib_path)
 
     def get_fuga(self, tb_x=[423974, 424033], tb_y=[6151447, 6150889]):
         return PyFuga(farm_name='Horns Rev 1',
@@ -51,8 +47,8 @@ class Test(unittest.TestCase):
     def testCheckVersion(self):
         lib = PascalDLL(fuga_path + "FugaLib/FugaLib.%s" % ('so', 'dll')[os.name == 'nt'])
         self.assertRaisesRegex(Exception, "This version of FugaLib supports interface version ", lib.CheckInterfaceVersion, 1)
-        # PyFuga(fuga_path + "FugaLib/FugaLib.dll", fuga_path + "LUT/Farms/", "Horns Rev 1", fuga_path + "LUT/",
-        #                (0, 0, 70), 0.0001, 400, 0, 'Horns Rev 1\hornsrev0.lib')
+        pyFuga = self.get_fuga()  # check that current interface version match
+        pyFuga.cleanup()
 
     def testSetup(self):
         pyFuga = self.get_fuga()
@@ -67,6 +63,7 @@ class Test(unittest.TestCase):
     def testAEP_one_tb(self):
         pyFuga = self.get_fuga([0], [0])
         np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0], [0]]).T), [7.44121, 7.44121, 0.424962, 1.])
+        pyFuga.cleanup()
 
     def testAEP(self):
         pyFuga = self.get_fuga()
@@ -91,5 +88,4 @@ class Test(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'Test.testAEP']
     unittest.main()
