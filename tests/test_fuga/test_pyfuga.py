@@ -35,7 +35,7 @@ class Test(unittest.TestCase):
 
     def lib_missing(self):
         lib_path = os.path.dirname(py_fuga.__file__) + "/Colonel/FugaLib/FugaLib.%s" % ('so', 'dll')[os.name == 'nt']
-        return os.path.isfile(lib_path)
+        return os.path.isfile(lib_path) is False
 
     def get_fuga(self, tb_x=[423974, 424033], tb_y=[6151447, 6150889]):
         return PyFuga(farm_name='Horns Rev 1',

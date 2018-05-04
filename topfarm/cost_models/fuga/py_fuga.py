@@ -33,7 +33,7 @@ class PyFuga(object):
             self.stdout_filename = f.name + "pyfuga.txt"
 
         lib_path = os.path.dirname(__file__) + "/Colonel/FugaLib/FugaLib.%s" % ('so', 'dll')[os.name == 'nt']
-        if os.path.isfile(lib_path):
+        if os.path.isfile(lib_path) is False:
             raise Exception("Fuga lib cannot be found: '%s'" % lib_path)
 
         self.lib = PascalDLL(lib_path)
