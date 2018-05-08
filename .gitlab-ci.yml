@@ -1,5 +1,5 @@
-# ===== DEFINE DOCKER IMAGE =====
-# 2018.05.03 dockerhub image generated using docker/Dockerfile_simple
+# ===== DEFINE DEFAULT DOCKER IMAGE =====
+# dockerhub image generated using docker/Dockerfile_simple
 image: rinkdtu/topfarm-ci:latest
 
 
@@ -9,7 +9,7 @@ test_topfarm:  # name the job what we like
     test
   script:
   - cd tests; py.test --cov-report term-missing:skip-covered --cov=topfarm
-  tags:  # select which runners can do this job [3]
+  tags:  # only runners with this tag can do the job [3]
   - python
 
 
@@ -19,10 +19,10 @@ test_topfarm_windows:  # name the job what we like
     GIT_SUBMODULE_STRATEGY: normal
   stage:  # build, test, deploy defined by default [2]
     test
-  script:
+  script:  # runs on windows machine due to tag below
   - cd tests
   - c:/Anaconda3/envs/pyTopfarm/python.exe -m pytest --cov-report term-missing:skip-covered --cov=topfarm
-  tags:  # select which runners can do this job [3]
+  tags:  # tag for shared runner on windows machine
   - CPAV_old_PC
 
 # ===== BUILD DOCS AND PUSH TO PUBLIC WEBSITE =====
@@ -37,7 +37,7 @@ pages:  # "pages" is a job specifically for GitLab pages [1]
     - public
   only:  # only run for these branches
   - master
-  tags:  # select which runners can do this job [3]
+  tags:  # only runners with this tag can do the job [3]
   - python
 
 
