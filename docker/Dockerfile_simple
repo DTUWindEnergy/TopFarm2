@@ -8,18 +8,22 @@ MAINTAINER Jenni Rinker <rink@dtu.dk>
 # get list of update linux files and install lib for matplotlib
 #   (anaconda3:5.0.0 image doesn't have the library)
 #    also install "make" because image doesn't have it either
+#   also install gcc and gfortran for fused-wake/wind-io
 RUN apt-get update && \
     apt-get install make && \
-    apt-get install libgl1-mesa-glx -y
+    apt-get install libgl1-mesa-glx -y && \
+    apt-get install gcc gfortran -y
 
 
 # use conda to update itself and install packages not in the
 #   anaconda3 image
-RUN conda update -y conda &&\
+RUN conda update -y conda && \
     conda install -y sphinx_rtd_theme && \
     conda install -y pytest-cov && \
     conda clean -y --all
 
-# update pip then install openmdao (nocache to save space)
-RUN pip install --upgrade pip &&\
-    pip install --no-cache-dir openmdao
+# update pip then install openmdao, windio and fused-wake (nocache to save space)
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir openmdao && \
+    pip install --no-cache-dir git+https://github.com/rethore/windIO.git && \
+    pip install --no-cache-dir git+https://github.com/FUSED-Wind/FUSED-Wake.git
