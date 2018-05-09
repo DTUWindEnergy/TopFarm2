@@ -8,6 +8,7 @@ class BoundaryComp(ExplicitComponent):
     def __init__(self, vertices, nTurbines, boundary_type='convex_hull'):
         super(BoundaryComp, self).__init__()
         self.nTurbines = nTurbines
+        self.vertices = np.array(vertices)
         self.nVertices = self.vertices.shape[0]
         self.calculate_boundary_and_normals(vertices, boundary_type)
         self.calculate_gradients()
