@@ -1,9 +1,6 @@
 import numpy as np
 from openmdao.api import Group, IndepVarComp, ExecComp, ExplicitComponent, Problem
 from scipy.spatial import ConvexHull
-from shapely.geometry.polygon import Polygon, LinearRing
-from shapely.geometry.point import Point
-from shapely.geometry.multipoint import MultiPoint
 
 
 class BoundaryComp(ExplicitComponent):
@@ -154,97 +151,6 @@ class BoundaryComp(ExplicitComponent):
         partials['boundaryDistances', 'turbineY'] = self.dfaceDistance_dy
 
 
-from collections import OrderedDict
-
-
-class DistanceCacheDict(OrderedDict):
-    def __init__(self, *args, **kwds):
-        self.size_limit = kwds.pop("size_limit", None)
-        OrderedDict.__init__(self, *args, **kwds)
-        self._check_size_limit()
-
-    def __setitem__(self, key, value):
-        OrderedDict.__setitem__(self, key, value)
-        self._check_size_limit()
-
-    def _check_size_limit(self):
-        if self.size_limit is not None:
-            while len(self) > self.size_limit:
-                self.popitem(last=False)
-
-
-class PolygonBoundaryCompShapeLy(BoundaryComp):
-
-    def __init__(self, vertices, nTurbines):
-
-        super(BoundaryComp, self).__init__()
-
-        self.nTurbines = nTurbines
-        self.vertices = np.array(vertices)
-        self.nVertices = self.vertices.shape[0]
-        self.polygon = Polygon(self.vertices)
-        self.linearRing = LinearRing(self.polygon.exterior.coords)
-        self.c = 0
-        self.cache = DistanceCacheDict(size_limit=nTurbines * 2)
-        self.get_key = lambda x, y: "%f;%f" % (x, y)
-
-    def setup(self):
-
-        # Explicitly size input arrays
-        self.add_input('turbineX', np.zeros(self.nTurbines), units='m',
-                       desc='x coordinates of turbines in global ref. frame')
-        self.add_input('turbineY', np.zeros(self.nTurbines), units='m',
-                       desc='y coordinates of turbines in global ref. frame')
-
-        # Explicitly size output array
-        # (vector with positive elements if turbines outside of hull)
-        self.add_output('boundaryDistances', np.zeros([self.nTurbines]),
-                        desc="signed shortest distance to boundary; + is inside")
-
-        self.declare_partials('boundaryDistances', ['turbineX', 'turbineY'])
-
-    def calc_distance(self, x, y):
-        point = Point(x, y)
-        d = self.linearRing.project(point)
-        p = self.linearRing.interpolate(d)
-        closest_point_on_boundary = list(p.coords)[0]
-        vec = np.array([x - closest_point_on_boundary[0], y - closest_point_on_boundary[1]])
-        distance = [-1, 1][self.polygon.contains(point)] * np.sum(vec**2)
-        ddist_dx = 2 * vec[0]
-        ddist_dy = 2 * vec[1]
-
-        self.cache[self.get_key(x, y)] = distance, ddist_dx, ddist_dy
-        self.c += 1
-        print('c', self.c)
-        return distance, ddist_dx, ddist_dy
-
-    def get_distance(self, x, y):
-        k = self.get_key(x, y)
-        return (self.cache[k] if k in self.cache else self.calc_distance(x, y))[0]
-
-    def get_dDistance_dxy(self, x, y):
-        k = self.get_key(x, y)
-        return (self.cache[k] if k in self.cache else self.calc_distance(x, y))[1:]
-
-    def compute(self, inputs, outputs):
-
-        turbineX = inputs['turbineX']
-        turbineY = inputs['turbineY']
-        outputs['boundaryDistances'] = [self.get_distance(x, y) for x, y in zip(turbineX, turbineY)]
-
-    def compute_partials(self, inputs, partials):
-        # return Jacobian dict
-        turbineX = inputs['turbineX']
-        turbineY = inputs['turbineY']
-        dDistance_dx, dDistance_dy = list(zip([self.get_dDistance_dxy(x, y) for x, y in zip(turbineX, turbineY)]))
-
-        partials['boundaryDistances', 'turbineX'] = np.diagflat(dDistance_dx)
-        partials['boundaryDistances', 'turbineY'] = np.diagflat(dDistance_dy)
-
-
-def deg(x): return x / np.pi * 180
-
-
 class PolygonBoundaryComp(BoundaryComp):
 
     def __init__(self, vertices, nTurbines):
@@ -300,7 +206,8 @@ class PolygonBoundaryComp(BoundaryComp):
         """
 
         X, Y = [np.tile(xy, (len(self.x1), 1)).T for xy in [x, y]]  # dim = (ntb, nEdges)
-        X1, Y1, X2, Y2, ddist_dX, ddist_dY = [np.tile(xy, (len(x), 1)) for xy in [self.x1, self.y1, self.x2, self.y2, self.dEdgeDist_dx, self.dEdgeDist_dy]]
+        X1, Y1, X2, Y2, ddist_dX, ddist_dY = [np.tile(xy, (len(x), 1))
+                                              for xy in [self.x1, self.y1, self.x2, self.y2, self.dEdgeDist_dx, self.dEdgeDist_dy]]
 
         # perpendicular distance to edge (dot product)
         d12 = (self.x1 - X) * self.edge_unit_vec[0] + (self.y1 - Y) * self.edge_unit_vec[1]
@@ -339,30 +246,15 @@ class PolygonBoundaryComp(BoundaryComp):
 
         distance[use_xy1] = sign_use_xy1 * d1[use_xy1]
         distance[use_xy2] = sign_use_xy2 * d2[use_xy2]
-        
-        
-        
 
         length = np.sqrt((X1[use_xy1] - X[use_xy1])**2 + (Y1[use_xy1] - Y[use_xy1])**2)
         ddist_dX[use_xy1] = sign_use_xy1 * (2 * X[use_xy1] - 2 * X1[use_xy1]) / (2 * length)
         ddist_dY[use_xy1] = sign_use_xy1 * (2 * Y[use_xy1] - 2 * Y1[use_xy1]) / (2 * length)
-        
+
         length = np.sqrt((X2[use_xy2] - X[use_xy2])**2 + (Y2[use_xy2] - Y[use_xy2])**2)
         ddist_dX[use_xy2] = sign_use_xy2 * (2 * X[use_xy2] - 2 * X2[use_xy2]) / (2 * length)
         ddist_dY[use_xy2] = sign_use_xy2 * (2 * Y[use_xy2] - 2 * Y2[use_xy2]) / (2 * length)
-    
 
         closest_edge_index = np.argmin(np.abs(distance), 1)
-
-#         ddist_dx = np.choose(closest_edge_index, self.dEdgeDist_dx)
-#         ddist_dy = np.choose(closest_edge_index, self.dEdgeDist_dy)
-# 
-#         for use_xy, x_p, y_p in [(use_xy1, self.x1, self.y1), (use_xy2, self.x2, self.y2)]:
-#             tb_i = np.choose(closest_edge_index, use_xy.T)  # index of tb that is closer to start/end-point of edge
-#             pt_i = np.where(use_xy[tb_i])[1]  # index of points
-#             length = np.sqrt((x_p[pt_i] - x[tb_i])**2 + (y_p[pt_i] - y[tb_i])**2)
-#             sign = np.sign(np.choose(pt_i, d12[tb_i].T))
-#             ddist_dx[tb_i] = sign * (2 * x[tb_i] - 2 * x_p[pt_i]) / (2 * length)
-#             ddist_dy[tb_i] = sign * (2 * y[tb_i] - 2 * y_p[pt_i]) / (2 * length)
 
         return [np.choose(closest_edge_index, v.T) for v in [distance, ddist_dX, ddist_dY]]
