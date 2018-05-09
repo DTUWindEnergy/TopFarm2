@@ -26,9 +26,10 @@ class PlotComp(ExplicitComponent):
     """
     colors = ['b', 'r', 'm', 'c', 'g', 'y', 'orange', 'indigo', 'grey'] * 100
 
-    def __init__(self, memory=10):
+    def __init__(self, memory=10, delay=0.001):
         ExplicitComponent.__init__(self)
         self.memory = memory
+        self.delay = delay 
         self.history = []
         self.counter = 0
 
@@ -77,6 +78,6 @@ class PlotComp(ExplicitComponent):
 
         if self.counter == 0:
             plt.pause(.01)
-        mypause(0.01)
+        mypause(self.delay)
 
         self.counter += 1
