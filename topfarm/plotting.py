@@ -21,9 +21,6 @@ def mypause(interval):
 
 
 class PlotComp(ExplicitComponent):
-    """
-    Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3.
-    """
     colors = ['b', 'r', 'm', 'c', 'g', 'y', 'orange', 'indigo', 'grey'] * 100
 
     def __init__(self, memory=10, delay=0.001):
@@ -56,11 +53,6 @@ class PlotComp(ExplicitComponent):
         plt.ylim(ylim)
 
     def compute(self, inputs, outputs):
-        """
-        f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3
-
-        Optimal solution (minimum): x = 6.6667; y = -7.3333
-        """
         x = inputs['turbineX']
         y = inputs['turbineY']
         cost = inputs['cost']
@@ -81,3 +73,20 @@ class PlotComp(ExplicitComponent):
         mypause(self.delay)
 
         self.counter += 1
+        
+class NoPlot(PlotComp):
+    def __init__(self, *args, **kwargs):
+        ExplicitComponent.__init__(self)
+        
+    def show(self):
+        pass
+
+    def setup(self):
+        self.add_input('turbineX', np.zeros(self.n_wt), units='m')
+        self.add_input('turbineY', np.zeros(self.n_wt), units='m')
+        self.add_input('cost', 0.)
+        self.add_input('boundary', np.zeros((self.n_vertices, 2)), units='m')
+
+    
+    def compute(self, inputs, outputs):
+        pass

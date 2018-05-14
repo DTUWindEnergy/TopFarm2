@@ -190,8 +190,26 @@ class PolygonBoundaryComp(BoundaryComp):
 
         self.dEdgeDist_dx = -self.dy / self.length
         self.dEdgeDist_dy = self.dx / self.length
+        self._cache_input = None
+        self._cache_output = None
 
-    def calc_distance(self, x, y):
+    def setup(self):
+
+        # Explicitly size input arrays
+        self.add_input('turbineX', np.zeros(self.nTurbines), units='m',
+                       desc='x coordinates of turbines in global ref. frame')
+        self.add_input('turbineY', np.zeros(self.nTurbines), units='m',
+                       desc='y coordinates of turbines in global ref. frame')
+
+        # Explicitly size output array
+        # (vector with positive elements if turbines outside of hull)
+        self.add_output('boundaryDistances', np.zeros(self.nTurbines),
+                        desc="signed perpendicular distance from each turbine to each face CCW; + is inside")
+
+        self.declare_partials('boundaryDistances', ['turbineX', 'turbineY'])
+        #self.declare_partials('boundaryDistances', ['boundaryVertices', 'boundaryNormals'], method='fd')
+
+    def calc_distance_and_gradients(self, x, y):
         """
         distance point(x,y) to edge((x1,y1)->(x2,y2))
         +/-: inside/outside 
@@ -205,7 +223,9 @@ class PolygonBoundaryComp(BoundaryComp):
             ddist_dx = sign * 2*x-2*x1 / (2 * distance^.5)
             ddist_dy = sign * 2*y-2*y1 / (2 * distance^.5)
         """
-
+        if np.all(np.array([x, y]) == self._cache_input):
+            return self._cache_output
+        
         X, Y = [np.tile(xy, (len(self.x1), 1)).T for xy in [x, y]]  # dim = (ntb, nEdges)
         X1, Y1, X2, Y2, ddist_dX, ddist_dY = [np.tile(xy, (len(x), 1))
                                               for xy in [self.x1, self.y1, self.x2, self.y2, self.dEdgeDist_dx, self.dEdgeDist_dy]]
@@ -258,4 +278,20 @@ class PolygonBoundaryComp(BoundaryComp):
 
         closest_edge_index = np.argmin(np.abs(distance), 1)
 
-        return [np.choose(closest_edge_index, v.T) for v in [distance, ddist_dX, ddist_dY]]
+        self._cache_input = np.array([x,y])
+        self._cache_output = [np.choose(closest_edge_index, v.T) for v in [distance, ddist_dX, ddist_dY]]
+        return self._cache_output
+
+    def compute(self, inputs, outputs):
+        turbineX = inputs['turbineX']
+        turbineY = inputs['turbineY']
+
+        outputs['boundaryDistances'] = self.calc_distance_and_gradients(turbineX, turbineY)[0]
+
+    def compute_partials(self, inputs, partials):
+        turbineX = inputs['turbineX']
+        turbineY = inputs['turbineY']
+
+        _, dx, dy = self.calc_distance_and_gradients(turbineX, turbineY)
+        partials['boundaryDistances', 'turbineX'] = np.diagflat(dx)
+        partials['boundaryDistances', 'turbineY'] = np.diagflat(dy)
