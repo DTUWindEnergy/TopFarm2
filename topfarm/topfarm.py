@@ -3,7 +3,8 @@ import time
 from openmdao.api import Problem, ScipyOptimizeDriver, IndepVarComp
 
 import numpy as np
-from topfarm.constraint_components.boundary_component import BoundaryComp
+from topfarm.constraint_components.boundary_component import BoundaryComp,\
+    PolygonBoundaryComp
 from topfarm.constraint_components.spacing_component import SpacingComp
 import warnings
 
@@ -20,9 +21,12 @@ class TopFarm(object):
                  driver_options={'optimizer': 'SLSQP'}):
 
         self.initial_positions = turbines = np.array(turbines)
-        
+
         n_wt = turbines.shape[0]
-        self.boundardy_comp = BoundaryComp(boundary, n_wt, boundary_type)
+        if boundary_type == 'polygon':
+            self.boundardy_comp = PolygonBoundaryComp(boundary, n_wt)
+        else:
+            self.boundardy_comp = BoundaryComp(boundary, n_wt, boundary_type)
         self.problem = prob = Problem()
         indeps = prob.model.add_subsystem('indeps', IndepVarComp(), promotes=['*'])
         indeps.add_output('turbineX', turbines[:, 0], units='m')
@@ -45,6 +49,7 @@ class TopFarm(object):
             plot_comp.n_wt = n_wt
             plot_comp.n_vertices = self.boundardy_comp.vertices.shape[0]
             prob.model.add_subsystem('plot_comp', plot_comp, promotes=['*'])
+
         self.plot_comp = plot_comp
         prob.model.add_constraint('wtSeparationSquared', lower=np.zeros(int(((n_wt - 1.) * n_wt / 2.))) + (min_spacing)**2)
         prob.model.add_constraint('boundaryDistances', lower=np.zeros(self.boundardy_comp.nVertices * n_wt))
@@ -71,13 +76,13 @@ class TopFarm(object):
         with warnings.catch_warnings():  # suppress OpenMDAO/SLSQP warnings
             warnings.filterwarnings('ignore', "Inefficient choice of derivative mode.  You chose 'rev' for a problem with")
             self.problem.run_model()
-        print ("Evaluated in\t%.3fs" % (time.time() - t))
+        print("Evaluated in\t%.3fs" % (time.time() - t))
         return self.get_cost(), self.turbine_positions
 
     def optimize(self):
         t = time.time()
         self.problem.run_driver()
-        print ("Optimized in\t%.3fs" % (time.time() - t))
+        print("Optimized in\t%.3fs" % (time.time() - t))
         return np.array([self.problem['turbineX'], self.problem['turbineY']]).T
 
     def get_cost(self):
@@ -86,7 +91,7 @@ class TopFarm(object):
     @property
     def boundary(self):
         b = self.boundardy_comp.vertices
-        return np.r_[b,b[:1]]
+        return np.r_[b, b[:1]]
 
     @property
     def turbine_positions(self):
@@ -96,7 +101,7 @@ class TopFarm(object):
 if __name__ == '__main__':
     from topfarm.cost_models.dummy import DummyCostPlotComp, DummyCost
     from topfarm.plotting import PlotComp
-    
+
     n_wt = 4
     random_offset = 5
     optimal = [(3, -3), (7, -7), (4, -3), (3, -7), (-3, -3), (-7, -7), (-4, -3), (-3, -7)][:n_wt]

@@ -18,17 +18,15 @@ def mypause(interval):
                 canvas.draw()
             canvas.start_event_loop(interval)
             return
-        
-        
+
+
 class PlotComp(ExplicitComponent):
-    """
-    Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3.
-    """
     colors = ['b', 'r', 'm', 'c', 'g', 'y', 'orange', 'indigo', 'grey'] * 100
 
-    def __init__(self, memory=10):
+    def __init__(self, memory=10, delay=0.001):
         ExplicitComponent.__init__(self)
         self.memory = memory
+        self.delay = delay 
         self.history = []
         self.counter = 0
 
@@ -55,16 +53,11 @@ class PlotComp(ExplicitComponent):
         plt.ylim(ylim)
 
     def compute(self, inputs, outputs):
-        """
-        f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3
-
-        Optimal solution (minimum): x = 6.6667; y = -7.3333
-        """
         x = inputs['turbineX']
         y = inputs['turbineY']
         cost = inputs['cost']
         self.history = [(x.copy(), y.copy())] + self.history[:self.memory]
-        
+
         boundary = inputs['boundary']
         self.init_plot(boundary)
         plt.title(cost)
@@ -74,9 +67,26 @@ class PlotComp(ExplicitComponent):
             plt.plot(history_arr[:, 0, i], history_arr[:, 1, i], '.-', color=c, lw=1)
             plt.plot(x_, y_, 'o', color=c, ms=5)
             plt.plot(x_, y_, 'x' + 'k', ms=4)
-        
-        if self.counter ==0:
+
+        if self.counter == 0:
             plt.pause(.01)
-        mypause(0.01)
-        
+        mypause(self.delay)
+
         self.counter += 1
+        
+class NoPlot(PlotComp):
+    def __init__(self, *args, **kwargs):
+        ExplicitComponent.__init__(self)
+        
+    def show(self):
+        pass
+
+    def setup(self):
+        self.add_input('turbineX', np.zeros(self.n_wt), units='m')
+        self.add_input('turbineY', np.zeros(self.n_wt), units='m')
+        self.add_input('cost', 0.)
+        self.add_input('boundary', np.zeros((self.n_vertices, 2)), units='m')
+
+    
+    def compute(self, inputs, outputs):
+        pass

@@ -45,9 +45,10 @@ class DummyCost(ExplicitComponent):
 
 
 class DummyCostPlotComp(PlotComp):
-    def __init__(self, optimal, memory=10):
-        super().__init__(memory)
+    def __init__(self, optimal, memory=10, delay=0.001):
+        super().__init__(memory, delay)
         self.optimal = optimal
+        
 
     def init_plot(self, boundary):
         PlotComp.init_plot(self, boundary)
