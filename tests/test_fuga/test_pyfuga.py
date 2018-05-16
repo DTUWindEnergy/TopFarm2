@@ -13,6 +13,7 @@ from topfarm.cost_models.fuga.pascal_dll import PascalDLL
 from topfarm.cost_models.fuga.py_fuga import PyFuga
 import os
 from topfarm.cost_models.fuga import py_fuga
+import sys
 
 
 fuga_path = os.path.abspath(os.path.dirname(py_fuga.__file__)) + '/Colonel/'
@@ -36,7 +37,10 @@ class Test(unittest.TestCase):
 
     def lib_missing(self):
         lib_path = os.path.dirname(py_fuga.__file__) + "/Colonel/FugaLib/FugaLib.%s" % ('so', 'dll')[os.name == 'nt']
-        return os.path.isfile(lib_path) is False
+        if os.path.isfile(lib_path) is False:
+            sys.stderr.write("Fugalib '%s' not found\n"%lib_path)
+            return True
+        return False
 
     def get_fuga(self, tb_x=[423974, 424033], tb_y=[6151447, 6150889]):
         pyFuga = PyFuga()
