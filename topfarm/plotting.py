@@ -23,10 +23,11 @@ def mypause(interval):
 class PlotComp(ExplicitComponent):
     colors = ['b', 'r', 'm', 'c', 'g', 'y', 'orange', 'indigo', 'grey'] * 100
 
-    def __init__(self, memory=10, delay=0.001):
+    def __init__(self, memory=10, delay=0.001, plot_initial=True):
         ExplicitComponent.__init__(self)
         self.memory = memory
-        self.delay = delay 
+        self.delay = delay
+        self.plot_initial = plot_initial
         self.history = []
         self.counter = 0
 
@@ -55,6 +56,8 @@ class PlotComp(ExplicitComponent):
     def compute(self, inputs, outputs):
         x = inputs['turbineX']
         y = inputs['turbineY']
+        if not hasattr(self, "initial"):
+            self.initial = np.array([x, y]).T
         cost = inputs['cost']
         self.history = [(x.copy(), y.copy())] + self.history[:self.memory]
 
@@ -64,7 +67,9 @@ class PlotComp(ExplicitComponent):
 
         history_arr = np.array(self.history)
         for i, c, x_, y_ in zip(range(len(x)), self.colors, x, y):
-            plt.plot(history_arr[:, 0, i], history_arr[:, 1, i], '.-', color=c, lw=1)
+            if self.plot_initial:
+                plt.plot([self.initial[i, 0], x_], [self.initial[i, 1], y_], '-', color=c, lw=1)
+            plt.plot(history_arr[:, 0, i], history_arr[:, 1, i], '.--', color=c, lw=1)
             plt.plot(x_, y_, 'o', color=c, ms=5)
             plt.plot(x_, y_, 'x' + 'k', ms=4)
 
@@ -73,11 +78,12 @@ class PlotComp(ExplicitComponent):
         mypause(self.delay)
 
         self.counter += 1
-        
+
+
 class NoPlot(PlotComp):
     def __init__(self, *args, **kwargs):
         ExplicitComponent.__init__(self)
-        
+
     def show(self):
         pass
 
@@ -87,6 +93,5 @@ class NoPlot(PlotComp):
         self.add_input('cost', 0.)
         self.add_input('boundary', np.zeros((self.n_vertices, 2)), units='m')
 
-    
     def compute(self, inputs, outputs):
         pass
