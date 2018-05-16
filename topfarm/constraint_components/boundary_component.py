@@ -9,8 +9,8 @@ class BoundaryComp(ExplicitComponent):
         super(BoundaryComp, self).__init__()
         self.nTurbines = nTurbines
         self.vertices = np.array(vertices)
-        self.nVertices = self.vertices.shape[0]
         self.calculate_boundary_and_normals(vertices, boundary_type)
+        self.nVertices = self.vertices.shape[0]
         self.calculate_gradients()
 
     def calculate_boundary_and_normals(self, vertices, boundary_type):
