@@ -54,7 +54,7 @@ class TopFarm(object):
         prob.model.add_constraint('wtSeparationSquared', lower=np.zeros(int(((n_wt - 1.) * n_wt / 2.))) + (min_spacing)**2)
         prob.model.add_constraint('boundaryDistances', lower=np.zeros(self.boundardy_comp.nVertices * n_wt))
 
-        prob.setup()
+        prob.setup(check=True, mode='fwd')
 
     def check(self, all=False, tol=1e-3):
         """Check gradient computations"""
