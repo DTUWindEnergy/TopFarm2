@@ -65,20 +65,20 @@ class Test(unittest.TestCase):
     def testAEP_one_tb(self):
         if self.lib_missing(): return
         pyFuga = self.get_fuga([0], [0])
-        np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0], [0]]).T), [7.44121, 7.44121, 0.424962, 1.])
+        np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0], [0]]).T), [7.450272, 7.450272, 0.424962, 1.])
         pyFuga.cleanup()
 
     def testAEP(self):
         if self.lib_missing(): return
         pyFuga = self.get_fuga()
 
-        np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0, 200], [0, 0]]).T), [14.848055, 14.882419, 0.423981, 0.997691])
+        np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0, 200], [0, 0]]).T), [14.866138, 14.900544, 0.423981, 0.997691])
         np.testing.assert_array_almost_equal(pyFuga.get_aep_gradients(np.array([[0, 200], [0, 0]]).T), 0)
-        np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0, 0], [0, 200]]).T), [12.110134, 14.882419, 0.3458, 0.813721])
-        np.testing.assert_array_almost_equal(pyFuga.get_aep_gradients(np.array([[0, 0], [0, 200]]).T), [[-0.001792, 0.001792],
-                                                                                                        [-0.008116, 0.008116],
+        np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0, 0], [0, 200]]).T), [12.124883, 14.900544, 0.3458, 0.813721])
+        np.testing.assert_array_almost_equal(pyFuga.get_aep_gradients(np.array([[0, 0], [0, 200]]).T), [[-0.001794, 0.001794],
+                                                                                                        [-0.008126, 0.008126],
                                                                                                         [0., 0.]])
-        np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0, 200], [0, 200]]).T), [14.846827, 14.882419, 0.423946, 0.997608])
+        np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0, 200], [0, 200]]).T), [14.864909, 14.900544, 0.423946, 0.997608])
         np.testing.assert_array_almost_equal(pyFuga.get_aep_gradients(np.array([[0, 200], [0, 200]]).T), [[-5.165553e-06, 5.165553e-06],
                                                                                                           [1.599768e-06, -1.599768e-06],
                                                                                                           [0.000000e+00, 0.000000e+00]])
