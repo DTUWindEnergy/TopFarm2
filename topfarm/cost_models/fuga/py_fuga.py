@@ -78,7 +78,7 @@ class PyFuga(object):
         return no_turbines_p.contents.value
 
     def move_turbines(self, tb_x, tb_y):
-        assert len(tb_x) == len(tb_y) == self.get_no_tubines()
+        assert len(tb_x) == len(tb_y) == self.get_no_tubines(), (len(tb_x) ,len(tb_y), self.get_no_tubines())
         tb_x_ctype = np.array(tb_x, dtype=np.float).ctypes
         tb_y_ctype = np.array(tb_y, dtype=np.float).ctypes
 
