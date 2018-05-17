@@ -9,6 +9,7 @@ import time
 import unittest
 
 import numpy as np
+import pytest
 from topfarm.cost_models.fuga.pascal_dll import PascalDLL
 from topfarm.cost_models.fuga.py_fuga import PyFuga
 import os
@@ -37,9 +38,10 @@ class Test(unittest.TestCase):
 
     def lib_missing(self):
         lib_path = os.path.dirname(py_fuga.__file__) + "/Colonel/FugaLib/FugaLib.%s" % ('so', 'dll')[os.name == 'nt']
+        
         if os.path.isfile(lib_path) is False:
-            sys.stderr.write("Fugalib '%s' not found\n"%lib_path)
-            return True
+            pytest.xfail("Fugalib missing")
+            raise Warning("Fugalib '%s' not found\n"%lib_path)
         return False
 
     def get_fuga(self, tb_x=[423974, 424033], tb_y=[6151447, 6150889]):
