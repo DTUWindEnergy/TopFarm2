@@ -5,6 +5,8 @@ Created on 25. apr. 2018
 '''
 import os
 import numpy as np
+from tests.test_files import tfp
+
 
 def read_lib(filename):
     with open(filename) as fid:
@@ -13,7 +15,7 @@ def read_lib(filename):
     descriptor = lines[0]
     nRoughnessClasses, nHeights, nSectorslib = map(int, lines[2].split())
     z0ref_lst = list(map(float, lines[4].split()))
-    
+
     # TODO: Implement for specified z0 and height
 
 #
@@ -38,9 +40,13 @@ def read_lib(filename):
 #           readln(fil);
 #         end;
 #       end;
-    f,A,k = [np.array(lines[i].split()[:nSectorslib], dtype=np.float) for i in [8, 10, 12]]
-    return f/100,A,k
+    f, A, k = [np.array(lines[i].split()[:nSectorslib], dtype=np.float) for i in [8, 10, 12]]
+    return f / 100, A, k
 
 
-if __name__ == '__main__':
-    print(read_lib(os.path.dirname(__file__) + "/Colonel/LUT/Farms/Horns Rev 1/hornsrev2.lib"))
+def try_me():
+    if __name__ == '__main__':
+        print(read_lib(tfp + "fuga_files/hornsrev2.lib"))
+
+
+try_me()

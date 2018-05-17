@@ -21,13 +21,13 @@ class DummyCost(ExplicitComponent):
 
     def cost(self, x, y):
         """Evaluate cost function"""
-        
+
     def setup(self):
         self.add_input('turbineX', val=np.zeros(self.N), units='m')
         self.add_input('turbineY', val=np.zeros(self.N), units='m')
         self.add_output('cost', val=0.0)
         self.declare_partials('cost', '*')
-        
+
     def compute(self, inputs, outputs):
         """
         f(x,y) = SUM(x_i - optx_i)^2 + SUM(y_i + opty_i)^2
@@ -48,7 +48,6 @@ class DummyCostPlotComp(PlotComp):
     def __init__(self, optimal, memory=10, delay=0.001):
         super().__init__(memory, delay)
         self.optimal = optimal
-        
 
     def init_plot(self, boundary):
         PlotComp.init_plot(self, boundary)
@@ -57,18 +56,23 @@ class DummyCostPlotComp(PlotComp):
             plt.plot(optx, opty, 'o', color=c, ms=8)
 
 
-if __name__ == '__main__':
-    n_wt = 4
-    random_offset = 5
-    optimal = [(3, -3), (7, -7), (4, -3), (3, -7), (-3, -3), (-7, -7), (-4, -3), (-3, -7)][:n_wt]
-    rotorDiameter = 1.0
-    minSpacing = 2.0
+def try_me():
+    if __name__ == '__main__':
+        n_wt = 4
+        random_offset = 5
+        optimal = [(3, -3), (7, -7), (4, -3), (3, -7), (-3, -3), (-7, -7), (-4, -3), (-3, -7)][:n_wt]
+        rotorDiameter = 1.0
+        minSpacing = 2.0
 
-    turbines = np.array(optimal) + np.random.randint(-random_offset, random_offset, (n_wt, 2))
-    plot_comp = DummyCostPlotComp(optimal)
+        turbines = np.array(optimal) + np.random.randint(-random_offset, random_offset, (n_wt, 2))
+        plot_comp = DummyCostPlotComp(optimal)
 
-    boundary = [(0, 0), (6, 0), (6, -10), (0, -10)]
-    tf = TopFarm(turbines, DummyCost(optimal), minSpacing * rotorDiameter, boundary=boundary, plot_comp=plot_comp)
-    # tf.check()
-    tf.optimize()
-    plot_comp.show()
+        boundary = [(0, 0), (6, 0), (6, -10), (0, -10)]
+        tf = TopFarm(turbines, DummyCost(optimal), minSpacing * rotorDiameter, boundary=boundary, plot_comp=plot_comp)
+        # tf.check()
+        tf.optimize()
+        # plot_comp.show()
+        
+
+
+try_me()
