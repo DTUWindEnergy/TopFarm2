@@ -18,16 +18,13 @@ from topfarm.cost_models.fuga.pascal_dll import PascalDLL
 c_double_p = POINTER(c_double)
 c_int_p = POINTER(ctypes.c_int32)
 
+fuga_path = os.path.abspath(os.path.dirname(__file__)) + '/Colonel/'
+
 
 class PyFuga(object):
-    interface_version = 2
+    interface_version = 3
 
-    def __init__(self,
-                 farm_name='Horns Rev 1',
-                 turbine_model_path='./LUT/', turbine_model_name='Vestas_V80_(2_MW_offshore)[h=67.00]',
-                 tb_x=[423974, 424033], tb_y=[6151447, 6150889],
-                 mast_position=(0, 0, 70), z0=0.0001, zi=400, zeta0=0,
-                 farms_dir='./LUT/', wind_atlas_path='Horns Rev 1\hornsrev.lib', climate_interpolation=True):
+    def __init__(self):
         atexit.register(self.cleanup)
         with NamedTemporaryFile() as f:
             self.stdout_filename = f.name + "pyfuga.txt"
@@ -38,7 +35,14 @@ class PyFuga(object):
 
         self.lib = PascalDLL(lib_path)
         self.lib.CheckInterfaceVersion(self.interface_version)
-        self.lib.Setup(self.stdout_filename, float(mast_position[0]), float(mast_position[1]), float(mast_position[2]),
+        self.lib.Initialize(self.stdout_filename)
+
+    def setup(self, farm_name='Horns Rev 1',
+              turbine_model_path='./LUT/', turbine_model_name='Vestas_V80_(2_MW_offshore)[h=67.00]',
+              tb_x=[423974, 424033], tb_y=[6151447, 6150889],
+              mast_position=(0, 0, 70), z0=0.0001, zi=400, zeta0=0,
+              farms_dir='./LUT/', wind_atlas_path='Horns Rev 1\hornsrev.lib', climate_interpolation=True):
+        self.lib.Setup(float(mast_position[0]), float(mast_position[1]), float(mast_position[2]),
                        float(z0), float(zi), float(zeta0))
 
         tb_x_ctype = np.array(tb_x, dtype=np.float).ctypes
@@ -51,13 +55,7 @@ class PyFuga(object):
         assert os.path.isfile(farms_dir + wind_atlas_path), farms_dir + wind_atlas_path
         self.lib.SetupWindClimate(farms_dir, wind_atlas_path, climate_interpolation)
 
-        assert len(tb_x) == self.get_no_tubines(), self.log + "\n%d" % self.get_no_tubines()
-
-
-#         self.lib.setup_old(farms_dir, farm_name, turbine_model_path,
-#                        float(mast_position[0]), float(mast_position[1]), float(mast_position[2]),
-#                        float(z0),float(zi),float(zeta0),
-#                        wind_atlas_path)
+        #assert len(tb_x) == self.get_no_tubines(), self.log + "\n%d!=%d" % (self.get_no_tubines(),len(tb_x))
 
     def cleanup(self):
         if hasattr(self, 'lib'):
@@ -74,22 +72,13 @@ class PyFuga(object):
                 except Exception:
                     pass
 
-    def __init__old(self):
-        path = r'C:\mmpe\programming\pascal\Fuga\Colonel\FugaLib/'
-        self.lib = PascalDLL(path + 'FugaLib.dll')
-
-        self.lib.setup(path + '../LUT/Farms/', 'Horns Rev 1', path + '../LUT/',
-                       0., 0., 70.,
-                       0.0001, 400., 0.,
-                       'Horns Rev 1\hornsrev0.lib')
-
     def get_no_tubines(self):
         no_turbines_p = c_int_p(c_int(0))
         self.lib.GetNoTurbines(no_turbines_p)
         return no_turbines_p.contents.value
 
     def move_turbines(self, tb_x, tb_y):
-        assert len(tb_x) == len(tb_y) == self.get_no_tubines()
+        assert len(tb_x) == len(tb_y) == self.get_no_tubines(), (len(tb_x) ,len(tb_y), self.get_no_tubines())
         tb_x_ctype = np.array(tb_x, dtype=np.float).ctypes
         tb_y_ctype = np.array(tb_y, dtype=np.float).ctypes
 
