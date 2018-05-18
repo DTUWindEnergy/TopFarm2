@@ -35,7 +35,7 @@ class BoundaryComp(ExplicitComponent):
             r = range_ / 2
             vertices = np.array([(x_c - r[0], y_c - r[1]), (x_c + r[0], y_c - r[1]), (x_c + r[0], y_c + r[1]), (x_c - r[0], y_c + r[1])])
         else:
-            raise NotImplementedError
+            raise NotImplementedError("Boundary type '%s' is not implemented"%boundary_type)
 
         # get the real number of vertices
         nVertices = vertices.shape[0]

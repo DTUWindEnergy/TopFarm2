@@ -14,7 +14,7 @@ from topfarm.cost_models.fuga.pascal_dll import PascalDLL
 from topfarm.cost_models.fuga.py_fuga import PyFuga
 import os
 from topfarm.cost_models.fuga import py_fuga
-import sys
+from topfarm import TopFarm
 
 
 fuga_path = os.path.abspath(os.path.dirname(py_fuga.__file__)) + '/Colonel/'
@@ -38,10 +38,10 @@ class Test(unittest.TestCase):
 
     def lib_missing(self):
         lib_path = os.path.dirname(py_fuga.__file__) + "/Colonel/FugaLib/FugaLib.%s" % ('so', 'dll')[os.name == 'nt']
-        
+
         if os.path.isfile(lib_path) is False:
             pytest.xfail("Fugalib missing")
-            raise Warning("Fugalib '%s' not found\n"%lib_path)
+            raise Warning("Fugalib '%s' not found\n" % lib_path)
         return False
 
     def get_fuga(self, tb_x=[423974, 424033], tb_y=[6151447, 6150889]):
@@ -96,6 +96,23 @@ class Test(unittest.TestCase):
                                                                                                           [1.599768e-06, -1.599768e-06],
                                                                                                           [0.000000e+00, 0.000000e+00]])
         pyFuga.cleanup()
+
+    def testAEP_topfarm(self):
+        if self.lib_missing():
+            return
+        pyFuga = self.get_fuga()
+        init_pos = [[0, 0], [200, 0]]
+        tf = TopFarm(init_pos, pyFuga.get_TopFarm_cost_component(), 160, init_pos, boundary_type='square')
+        tf.evaluate()
+        np.testing.assert_array_almost_equal(tf.get_cost(), -14.866138)
+
+    def test_pyfuga_cmd(self):
+        if self.lib_missing():
+            return
+        pyFuga = PyFuga()
+        pyFuga.execute(r'echo "ColonelInit"')
+        self.assertEqual(pyFuga.log.strip().split("\n")[-1], 'ColonelInit')
+
 
 #     def test_parallel(self):
 #         from multiprocessing import Pool

@@ -2,7 +2,6 @@ from openmdao.core.explicitcomponent import ExplicitComponent
 import numpy as np
 
 
-
 class CostModelComponent(ExplicitComponent):
     def __init__(self, n_wt, cost_function, cost_gradient_function=None):
         super().__init__()
@@ -21,7 +20,6 @@ class CostModelComponent(ExplicitComponent):
             self.declare_partials('cost', '*')
         else:
             self.declare_partials('cost', '*', method='fd')
-        
 
     def compute(self, inputs, outputs):
         x = inputs['turbineX']

@@ -3,12 +3,11 @@ Created on 25. apr. 2018
 
 @author: mmpe
 '''
-import os
 import unittest
-from topfarm.cost_models.fuga.lib_reader import read_lib
 import numpy as np
-from topfarm.cost_models.fuga import py_fuga
 from tests.test_files import testfilepath
+from topfarm.cost_models.fuga import py_fuga, lib_reader
+from topfarm.cost_models.fuga.lib_reader import read_lib
 
 
 class Test(unittest.TestCase):

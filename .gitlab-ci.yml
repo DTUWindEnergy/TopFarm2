@@ -8,7 +8,7 @@ test_topfarm:  # name the job what we like
   stage:  # build, test, deploy defined by default [2]
     test
   script:
-  - cd tests; py.test --cov-report term-missing:skip-covered --cov=topfarm
+  - cd tests; py.test
   tags:  # only runners with this tag can do the job [3]
   - python
 
