@@ -3,7 +3,7 @@ from openmdao.core.explicitcomponent import ExplicitComponent
 import matplotlib.pyplot as plt
 import numpy as np
 from topfarm.plotting import PlotComp
-from topfarm.topfarm import TopFarm
+from topfarm import TopFarm
 
 
 class DummyCost(ExplicitComponent):

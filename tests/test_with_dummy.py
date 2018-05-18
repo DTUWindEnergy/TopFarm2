@@ -1,7 +1,7 @@
 """Tests for TOPFARM
 """
 import os
-from topfarm.topfarm import TopFarm
+from topfarm import TopFarm
 import unittest
 import warnings
 

@@ -78,7 +78,7 @@ class PyFuga(object):
         return no_turbines_p.contents.value
 
     def move_turbines(self, tb_x, tb_y):
-        assert len(tb_x) == len(tb_y) == self.get_no_tubines(), (len(tb_x) ,len(tb_y), self.get_no_tubines())
+        assert len(tb_x) == len(tb_y) == self.get_no_tubines(), (len(tb_x), len(tb_y), self.get_no_tubines())
         tb_x_ctype = np.array(tb_x, dtype=np.float).ctypes
         tb_y_ctype = np.array(tb_y, dtype=np.float).ctypes
 
@@ -144,19 +144,19 @@ class PyFuga(object):
         print("#" + str(res) + "#")
 
 
-if __name__ == '__main__':
+def try_me():
+    if __name__ == '__main__':
+        pyFuga = PyFuga()
+        pyFuga.setup(farm_name='Horns Rev 1',
+                     turbine_model_path=fuga_path + 'LUT/', turbine_model_name='Vestas_V80_(2_MW_offshore)[h=67.00]',
+                     tb_x=[423974, 424033], tb_y=[6151447, 6150889],
+                     mast_position=(0, 0, 70), z0=0.0001, zi=400, zeta0=0,
+                     farms_dir=fuga_path + 'LUT/Farms/', wind_atlas_path='Horns Rev 1\hornsrev.lib')
 
-    fuga_path = os.path.abspath(".") + '/Colonel/'
-    pyFuga = PyFuga(farm_name='Horns Rev 1',
-                    turbine_model_path=fuga_path + 'LUT/', turbine_model_name='Vestas_V80_(2_MW_offshore)[h=67.00]',
-                    tb_x=[423974, 424033], tb_y=[6151447, 6150889],
-                    mast_position=(0, 0, 70), z0=0.0001, zi=400, zeta0=0,
-                    farms_dir=fuga_path + 'LUT/Farms/', wind_atlas_path='Horns Rev 1\hornsrev.lib')
+        print(pyFuga.get_no_tubines())
+        print(pyFuga.get_aep(np.array([[0, 0], [0, 1000]])))
+        print(pyFuga.get_aep(np.array([[0, 1000], [0, 0]])))
+        print(pyFuga.get_aep_gradients(np.array([[0, 0], [0, 100]])))
 
-    print(pyFuga.get_no_tubines())
-    print(pyFuga.get_aep([0, 0], [0, 1000]))
-    print(pyFuga.get_aep([0, 1000], [0, 0]))
-    print(pyFuga.get_aep_gradients([0, 0], [0, 100]))
-    print(pyFuga.get_aep([0, 0], [0, 100]))
-    print(pyFuga.get_aep([0, 0], [0, 101]))
-    print(pyFuga.get_aep_gradients([0, 0], [0, 200]))
+
+try_me()

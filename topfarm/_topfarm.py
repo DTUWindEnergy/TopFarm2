@@ -6,6 +6,7 @@ import numpy as np
 from topfarm.constraint_components.boundary_component import BoundaryComp,\
     PolygonBoundaryComp
 from topfarm.constraint_components.spacing_component import SpacingComp
+from topfarm.plotting import PlotComp
 import warnings
 
 
@@ -59,14 +60,14 @@ class TopFarm(object):
     def check(self, all=False, tol=1e-3):
         """Check gradient computations"""
         comp_name_lst = [comp.pathname for comp in self.problem.model.system_iter()
-                         if (comp._has_compute_partials and
-                             comp.pathname not in ['spacing_comp', 'bound_comp', 'plot_comp'] or all)]
+                         if comp._has_compute_partials and
+                         (comp.pathname not in ['spacing_comp', 'bound_comp', 'plot_comp'] or (all and comp.pathname != 'plot_comp'))]
         print("checking %s" % ", ".join(comp_name_lst))
         res = self.problem.check_partials(comps=comp_name_lst, compact_print=True)
         for comp in comp_name_lst:
             var_pair = list(res[comp].keys())
             worst = var_pair[np.argmax([res[comp][k]['rel error'].forward for k in var_pair])]
-            err = res['cost_comp'][worst]['rel error'].forward
+            err = res[comp][worst]['rel error'].forward
             if err > tol:
                 raise Warning("Mismatch between finite difference derivative of '%s' wrt. '%s' and derivative computed in '%s' is: %f" %
                               (worst[0], worst[1], comp, err))
@@ -98,21 +99,24 @@ class TopFarm(object):
         return np.array([self.problem['turbineX'], self.problem['turbineY']]).T
 
 
-if __name__ == '__main__':
-    from topfarm.cost_models.dummy import DummyCostPlotComp, DummyCost
-    from topfarm.plotting import PlotComp
+def try_me():
+    if __name__ == '__main__':
+        from topfarm.cost_models.dummy import DummyCostPlotComp, DummyCost
 
-    n_wt = 4
-    random_offset = 5
-    optimal = [(3, -3), (7, -7), (4, -3), (3, -7), (-3, -3), (-7, -7), (-4, -3), (-3, -7)][:n_wt]
-    rotorDiameter = 1.0
-    minSpacing = 2.0
+        n_wt = 4
+        random_offset = 5
+        optimal = [(3, -3), (7, -7), (4, -3), (3, -7), (-3, -3), (-7, -7), (-4, -3), (-3, -7)][:n_wt]
+        rotorDiameter = 1.0
+        minSpacing = 2.0
 
-    turbines = np.array(optimal) + np.random.randint(-random_offset, random_offset, (n_wt, 2))
-    plot_comp = DummyCostPlotComp(optimal)
+        turbines = np.array(optimal) + np.random.randint(-random_offset, random_offset, (n_wt, 2))
+        plot_comp = DummyCostPlotComp(optimal)
 
-    boundary = [(0, 0), (6, 0), (6, -10), (0, -10)]
-    tf = TopFarm(turbines, DummyCost(optimal), minSpacing * rotorDiameter, boundary=boundary, plot_comp=plot_comp)
-    # tf.check()
-    tf.optimize()
-    plot_comp.show()
+        boundary = [(0, 0), (6, 0), (6, -10), (0, -10)]
+        tf = TopFarm(turbines, DummyCost(optimal), minSpacing * rotorDiameter, boundary=boundary, plot_comp=plot_comp)
+        # tf.check()
+        tf.optimize()
+        # plot_comp.show()
+
+
+try_me()
