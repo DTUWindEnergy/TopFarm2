@@ -14,8 +14,7 @@ from topfarm.cost_models.fuga.pascal_dll import PascalDLL
 from topfarm.cost_models.fuga.py_fuga import PyFuga
 import os
 from topfarm.cost_models.fuga import py_fuga
-import sys
-from topfarm._topfarm import TopFarm
+from topfarm import TopFarm
 
 
 fuga_path = os.path.abspath(os.path.dirname(py_fuga.__file__)) + '/Colonel/'

@@ -3,16 +3,11 @@ Created on 25. apr. 2018
 
 @author: mmpe
 '''
-import os
 import unittest
-
-import mock
-
 import numpy as np
 from tests.test_files import testfilepath
 from topfarm.cost_models.fuga import py_fuga, lib_reader
 from topfarm.cost_models.fuga.lib_reader import read_lib
-import importlib
 
 
 class Test(unittest.TestCase):
@@ -25,11 +20,6 @@ class Test(unittest.TestCase):
                                                  9.584007, 10.51499, 11.39895, 11.68746, 11.63732, 10.08803])
         np.testing.assert_array_almost_equal(k, [2.392578, 2.447266, 2.412109, 2.591797, 2.755859, 2.595703,
                                                  2.583984, 2.548828, 2.470703, 2.607422, 2.626953, 2.326172])
-
-    def test_main(self):
-        with mock.patch.object(lib_reader, "__name__", "__main__"):
-            lib_reader.try_me()
-            
 
 
 if __name__ == "__main__":
