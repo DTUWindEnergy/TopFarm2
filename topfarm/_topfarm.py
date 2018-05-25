@@ -1,7 +1,6 @@
 import time
 import numpy as np
 import warnings
-from wetb.utils.timing import print_time
 with warnings.catch_warnings():
     warnings.simplefilter('ignore', FutureWarning)
     from openmdao.api import Problem, ScipyOptimizeDriver, IndepVarComp
