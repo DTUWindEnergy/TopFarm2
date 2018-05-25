@@ -33,9 +33,7 @@ class Test(unittest.TestCase):  # unittest version
         # when
         tf = TopFarm(initial, DummyCost(desired), min_spacing,
                      boundary=boundary)
-        with warnings.catch_warnings():  # suppress OpenMDAO/SLSQP warnings
-            warnings.simplefilter('ignore')
-            tf.optimize()
+        tf.optimize()
         tb_pos = tf.turbine_positions
 
         # then
