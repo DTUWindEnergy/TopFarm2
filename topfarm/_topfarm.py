@@ -1,13 +1,13 @@
 import time
-
-from openmdao.api import Problem, ScipyOptimizeDriver, IndepVarComp
-
 import numpy as np
+import warnings
+with warnings.catch_warnings():
+    warnings.simplefilter('ignore', FutureWarning)
+    from openmdao.api import Problem, ScipyOptimizeDriver, IndepVarComp
 from topfarm.constraint_components.boundary_component import BoundaryComp,\
     PolygonBoundaryComp
 from topfarm.constraint_components.spacing_component import SpacingComp
 from topfarm.plotting import PlotComp
-import warnings
 
 
 class TopFarm(object):
@@ -74,11 +74,15 @@ class TopFarm(object):
 
     def evaluate(self):
         t = time.time()
-        with warnings.catch_warnings():  # suppress OpenMDAO/SLSQP warnings
-            warnings.filterwarnings('ignore', "Inefficient choice of derivative mode.  You chose 'rev' for a problem with")
-            self.problem.run_model()
+        self.problem.run_model()
         print("Evaluated in\t%.3fs" % (time.time() - t))
         return self.get_cost(), self.turbine_positions
+
+    def evaluate_gradients(self):
+        t = time.time()
+        res = self.problem.compute_totals(['cost'], wrt=['turbineX', 'turbineY'], return_format='dict')
+        print("Gradients evaluated in\t%.3fs" % (time.time() - t))
+        return res
 
     def optimize(self):
         t = time.time()
