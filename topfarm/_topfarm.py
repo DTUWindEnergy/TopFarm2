@@ -38,8 +38,12 @@ class TopFarm(object):
 
         #prob.driver.options['optimizer'] = optimizer
         prob.driver.options.update(driver_options)
-        prob.model.add_design_var('turbineX', lower=np.nan, upper=np.nan)
-        prob.model.add_design_var('turbineY', lower=np.nan, upper=np.nan)
+        if driver_options['optimizer']=='SLSQP':
+            design_var_kwargs = {'lower': np.nan, 'upper': np.nan}
+        else:
+            design_var_kwargs = {}
+        prob.model.add_design_var('turbineX', **design_var_kwargs)
+        prob.model.add_design_var('turbineY', **design_var_kwargs)
         prob.model.add_objective('cost')
 
         prob.model.add_subsystem('spacing_comp', SpacingComp(nTurbines=n_wt), promotes=['*'])
