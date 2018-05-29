@@ -30,16 +30,23 @@ class TopFarm(object):
             self.boundary_comp = BoundaryComp(boundary, n_wt, boundary_type)
         self.problem = prob = Problem()
         indeps = prob.model.add_subsystem('indeps', IndepVarComp(), promotes=['*'])
-        indeps.add_output('turbineX', turbines[:, 0], units='m')
-        indeps.add_output('turbineY', turbines[:, 1], units='m')
+        min_x, min_y = self.boundary_comp.vertices.min(0)
+        mean_x, mean_y = self.boundary_comp.vertices.mean(0)
+        if driver_options['optimizer'] == 'SLSQP':
+            min_x, min_y, mean_x, mean_y = 0, 0, 1, 1  # scaling disturbs SLSQP
+        indeps.add_output('turbineX', turbines[:, 0], units='m', ref0=min_x, ref=mean_x)
+        indeps.add_output('turbineY', turbines[:, 1], units='m', ref0=min_y, ref=mean_y)
         indeps.add_output('boundary', self.boundary_comp.vertices, units='m')
         prob.model.add_subsystem('cost_comp', cost_comp, promotes=['*'])
         prob.driver = ScipyOptimizeDriver()
 
-        #prob.driver.options['optimizer'] = optimizer
         prob.driver.options.update(driver_options)
-        prob.model.add_design_var('turbineX', lower=np.nan, upper=np.nan)
-        prob.model.add_design_var('turbineY', lower=np.nan, upper=np.nan)
+        design_var_kwargs = {}
+        if driver_options['optimizer'] == 'SLSQP':
+            # Default +/- sys.float_info.max does not work for SLSQP
+            design_var_kwargs = {'lower': np.nan, 'upper': np.nan}
+        prob.model.add_design_var('turbineX', **design_var_kwargs)
+        prob.model.add_design_var('turbineY', **design_var_kwargs)
         prob.model.add_objective('cost')
 
         prob.model.add_subsystem('spacing_comp', SpacingComp(nTurbines=n_wt), promotes=['*'])
