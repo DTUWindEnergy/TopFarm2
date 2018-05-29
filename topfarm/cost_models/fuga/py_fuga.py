@@ -19,6 +19,7 @@ c_double_p = POINTER(c_double)
 c_int_p = POINTER(ctypes.c_int32)
 
 fuga_path = os.path.abspath(os.path.dirname(__file__)) + '/Colonel/'
+fugalib_path = os.path.dirname(__file__) + "/Colonel/FugaLib/FugaLib.%s" % ('so', 'dll')[os.name == 'nt']
 
 
 class PyFuga(object):
@@ -29,11 +30,10 @@ class PyFuga(object):
         with NamedTemporaryFile() as f:
             self.stdout_filename = f.name + "pyfuga.txt"
 
-        lib_path = os.path.dirname(__file__) + "/Colonel/FugaLib/FugaLib.%s" % ('so', 'dll')[os.name == 'nt']
-        if os.path.isfile(lib_path) is False:
-            raise Exception("Fuga lib cannot be found: '%s'" % lib_path)
+        if os.path.isfile(fugalib_path) is False:
+            raise Exception("Fuga lib cannot be found: '%s'" % fugalib_path)
 
-        self.lib = PascalDLL(lib_path)
+        self.lib = PascalDLL(fugalib_path)
         self.lib.CheckInterfaceVersion(self.interface_version)
         self.lib.Initialize(self.stdout_filename)
 
@@ -45,9 +45,8 @@ class PyFuga(object):
         self.lib.Setup(float(mast_position[0]), float(mast_position[1]), float(mast_position[2]),
                        float(z0), float(zi), float(zeta0))
 
-        tb_x_ctype = np.array(tb_x, dtype=np.float).ctypes
-        tb_y_ctype = np.array(tb_y, dtype=np.float).ctypes
         assert len(tb_x) == len(tb_y)
+        tb_x_ctype, tb_y_ctype = self.tb_ctypes(tb_x, tb_y)
 
         self.lib.AddWindFarm(farm_name, turbine_model_path, turbine_model_name,
                              len(tb_x), tb_x_ctype.data_as(c_double_p), tb_y_ctype.data_as(c_double_p))
@@ -55,7 +54,7 @@ class PyFuga(object):
         assert os.path.isfile(farms_dir + wind_atlas_path), farms_dir + wind_atlas_path
         self.lib.SetupWindClimate(farms_dir, wind_atlas_path, climate_interpolation)
 
-        #assert len(tb_x) == self.get_no_tubines(), self.log + "\n%d!=%d" % (self.get_no_tubines(),len(tb_x))
+        assert len(tb_x) == self.get_no_turbines(), self.log + "\n%d!=%d" % (self.get_no_turbines(), len(tb_x))
 
     def cleanup(self):
         if hasattr(self, 'lib'):
@@ -72,16 +71,22 @@ class PyFuga(object):
                 except Exception:
                     pass
 
-    def get_no_tubines(self):
+    def get_no_turbines(self):
         no_turbines_p = c_int_p(c_int(0))
         self.lib.GetNoTurbines(no_turbines_p)
         return no_turbines_p.contents.value
 
-    def move_turbines(self, tb_x, tb_y):
-        assert len(tb_x) == len(tb_y) == self.get_no_tubines(), (len(tb_x), len(tb_y), self.get_no_tubines())
-        tb_x_ctype = np.array(tb_x, dtype=np.float).ctypes
-        tb_y_ctype = np.array(tb_y, dtype=np.float).ctypes
+    def tb_ctypes(self, tb_x, tb_y):
+        assert len(tb_x) == len(tb_y)
+        # remove mean offset to avoid loosing precision due to high offset
+        self.tb_x_offset, self.tb_y_offset = np.mean(tb_x), np.mean(tb_y)
+        tb_x = np.array(tb_x, dtype=np.float) - self.tb_x_offset
+        tb_y = np.array(tb_y, dtype=np.float) - self.tb_y_offset
+        return tb_x.ctypes, tb_y.ctypes
 
+    def move_turbines(self, tb_x, tb_y):
+        assert len(tb_x) == len(tb_y) == self.get_no_turbines(), (len(tb_x), len(tb_y), self.get_no_turbines())
+        tb_x_ctype, tb_y_ctype = self.tb_ctypes(tb_x, tb_y)
         self.lib.MoveTurbines(tb_x_ctype.data_as(c_double_p), tb_y_ctype.data_as(c_double_p))
 
     def get_aep(self, turbine_positions=None):
@@ -92,7 +97,6 @@ class PyFuga(object):
         AEPGros_p = c_double_p(c_double(0))
         capacity_p = c_double_p(c_double(0))
         self.lib.GetAEP(AEPNet_p, AEPGros_p, capacity_p)
-        #print(tb_x, tb_y, AEPNet_p.contents.value, (15.850434458235156 - AEPNet_p.contents.value) / .000001)
         net, gros, cap = [p.contents.value for p in [AEPNet_p, AEPGros_p, capacity_p]]
         return (net, gros, cap, net / gros)
 
@@ -100,15 +104,14 @@ class PyFuga(object):
         if turbine_positions is not None:
             self.move_turbines(turbine_positions[:, 0], turbine_positions[:, 1])
 
-        n_wt = self.get_no_tubines()
+        n_wt = self.get_no_turbines()
         dAEPdxyz = np.zeros(n_wt), np.zeros(n_wt), np.zeros(n_wt)
         dAEPdxyz_ctype = [dAEP.ctypes for dAEP in dAEPdxyz]
         self.lib.GetAEPGradients(*[dAEP_ctype.data_as(c_double_p) for dAEP_ctype in dAEPdxyz_ctype])
-        #print(tb_x, tb_y, dAEPdxyz)
         return np.array(dAEPdxyz)
 
     def get_TopFarm_cost_component(self):
-        n_wt = self.get_no_tubines()
+        n_wt = self.get_no_turbines()
         return AEPCostModelComponent(n_wt,
                                      lambda *args: self.get_aep(*args)[0],  # only aep
                                      lambda *args: self.get_aep_gradients(*args)[:2])  # only dAEPdx and dAEPdy
@@ -117,27 +120,6 @@ class PyFuga(object):
     def log(self):
         with open(self.stdout_filename) as fid:
             return fid.read()
-
-#         self.execute("""seed=0
-# initialize
-# set output file "out.txt"
-# load farm "Horns Rev 1"
-# 7 point integration off
-# meandering off
-# insert met mast 0.0 0.0 70.0
-# z0=0.0001
-# zi=400.0
-# zeta0=0.0
-# load wakes
-# gaussian fit on
-# proximity penalty off
-# gradients on
-# Wind climates interpolation on
-# load wind atlas "Horns Rev 1\hornsrev2.lib"
-# relative move all turbines -426733.0 -6149501.5
-# gradients off
-# calculate AEP
-# get Farm AEP""")
 
     def execute(self, script):
         res = self.lib.ExecuteScript(script.encode())
@@ -153,7 +135,7 @@ def try_me():
                      mast_position=(0, 0, 70), z0=0.0001, zi=400, zeta0=0,
                      farms_dir=fuga_path + 'LUT/Farms/', wind_atlas_path='Horns Rev 1\hornsrev.lib')
 
-        print(pyFuga.get_no_tubines())
+        print(pyFuga.get_no_turbines())
         print(pyFuga.get_aep(np.array([[0, 0], [0, 1000]])))
         print(pyFuga.get_aep(np.array([[0, 1000], [0, 0]])))
         print(pyFuga.get_aep_gradients(np.array([[0, 0], [0, 100]])))
