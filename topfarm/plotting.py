@@ -56,19 +56,20 @@ class PlotComp(ExplicitComponent):
     def compute(self, inputs, outputs):
         x = inputs['turbineX']
         y = inputs['turbineY']
+        cost = inputs['cost'][0]
         if not hasattr(self, "initial"):
-            self.initial = np.array([x, y]).T
-        cost = inputs['cost']
+            self.initial = np.array([x, y]).T, cost
+            
         self.history = [(x.copy(), y.copy())] + self.history[:self.memory]
 
         boundary = inputs['boundary']
         self.init_plot(boundary)
-        plt.title(cost)
+        plt.title("%f (%.2f%%)"%(cost, (self.initial[1]-cost)/self.initial[1]*100))
 
         history_arr = np.array(self.history)
         for i, c, x_, y_ in zip(range(len(x)), self.colors, x, y):
             if self.plot_initial:
-                plt.plot([self.initial[i, 0], x_], [self.initial[i, 1], y_], '-', color=c, lw=1)
+                plt.plot([self.initial[0][i, 0], x_], [self.initial[0][i, 1], y_], '-', color=c, lw=1)
             plt.plot(history_arr[:, 0, i], history_arr[:, 1, i], '.--', color=c, lw=1)
             plt.plot(x_, y_, 'o', color=c, ms=5)
             plt.plot(x_, y_, 'x' + 'k', ms=4)
