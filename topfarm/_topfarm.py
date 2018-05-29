@@ -25,14 +25,14 @@ class TopFarm(object):
 
         n_wt = turbines.shape[0]
         if boundary_type == 'polygon':
-            self.boundardy_comp = PolygonBoundaryComp(boundary, n_wt)
+            self.boundary_comp = PolygonBoundaryComp(boundary, n_wt)
         else:
-            self.boundardy_comp = BoundaryComp(boundary, n_wt, boundary_type)
+            self.boundary_comp = BoundaryComp(boundary, n_wt, boundary_type)
         self.problem = prob = Problem()
         indeps = prob.model.add_subsystem('indeps', IndepVarComp(), promotes=['*'])
         indeps.add_output('turbineX', turbines[:, 0], units='m')
         indeps.add_output('turbineY', turbines[:, 1], units='m')
-        indeps.add_output('boundary', self.boundardy_comp.vertices, units='m')
+        indeps.add_output('boundary', self.boundary_comp.vertices, units='m')
         prob.model.add_subsystem('cost_comp', cost_comp, promotes=['*'])
         prob.driver = ScipyOptimizeDriver()
 
@@ -43,17 +43,17 @@ class TopFarm(object):
         prob.model.add_objective('cost')
 
         prob.model.add_subsystem('spacing_comp', SpacingComp(nTurbines=n_wt), promotes=['*'])
-        prob.model.add_subsystem('bound_comp', self.boundardy_comp, promotes=['*'])
+        prob.model.add_subsystem('bound_comp', self.boundary_comp, promotes=['*'])
         if plot_comp == "default":
             plot_comp = PlotComp()
         if plot_comp:
             plot_comp.n_wt = n_wt
-            plot_comp.n_vertices = self.boundardy_comp.vertices.shape[0]
+            plot_comp.n_vertices = self.boundary_comp.vertices.shape[0]
             prob.model.add_subsystem('plot_comp', plot_comp, promotes=['*'])
 
         self.plot_comp = plot_comp
         prob.model.add_constraint('wtSeparationSquared', lower=np.zeros(int(((n_wt - 1.) * n_wt / 2.))) + (min_spacing)**2)
-        prob.model.add_constraint('boundaryDistances', lower=np.zeros(self.boundardy_comp.nVertices * n_wt))
+        prob.model.add_constraint('boundaryDistances', lower=np.zeros(self.boundary_comp.nVertices * n_wt))
 
         prob.setup(check=True, mode='fwd')
 
@@ -95,7 +95,7 @@ class TopFarm(object):
 
     @property
     def boundary(self):
-        b = self.boundardy_comp.vertices
+        b = self.boundary_comp.vertices
         return np.r_[b, b[:1]]
 
     @property
