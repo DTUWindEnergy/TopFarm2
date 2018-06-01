@@ -5,6 +5,7 @@ import warnings
 import mock
 import pytest
 import topfarm
+import matplotlib.pyplot as plt
 
 
 def get_try_me_modules():
@@ -21,9 +22,14 @@ def get_try_me_modules():
 
 @pytest.mark.parametrize("module", get_try_me_modules())
 def test_try_me(module):
-    # check that all try_me module examples run without errors 
+    # check that all try_me module examples run without errors
     if os.name == 'posix' and "DISPLAY" not in os.environ:
         pytest.xfail("No display")
     print("Checking %s.try_me" % module.__name__)
+
+    def no_show(*args, **kwargs):
+        pass
+    plt.show = no_show  # disable plt show that requires the use to close the plot
+
     with mock.patch.object(module, "__name__", "__main__"):
         getattr(module, 'try_me')()
