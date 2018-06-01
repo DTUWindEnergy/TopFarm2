@@ -29,7 +29,7 @@ def test_try_me(module):
 
     def no_show(*args, **kwargs):
         pass
-    plt.show = no_show  # disable plt show that requires the use to close the plot
+    plt.show = no_show  # disable plt show that requires the user to close the plot
 
     with mock.patch.object(module, "__name__", "__main__"):
         getattr(module, 'try_me')()
