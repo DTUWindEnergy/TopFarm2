@@ -23,13 +23,12 @@ class FusedWakeModel(object):
         self.windFarm = WindFarm(yml=yml)
         if version:
             self.version = version
-        try:
-            self.wake_model = self.wake_model_cls(WF=self.windFarm, version=self.version, **kwargs)
-        except ValueError as e:
-            pytest.xfail(str(e))
-
+        self.wake_model = self.wake_model_cls(WF=self.windFarm, version=self.version, **kwargs)
+        
     def __call__(self, turbine_positions, no_wake_wdir, no_wake_wsp, no_wake_ti):
-        self.wake_model.update_position(turbine_positions.T)
+        if not hasattr(self.wake_model, 'update_position'):
+            pytest.xfail("Method update_position missing in wakemodel")
+        self.wake_model.update_position(turbine_positions)
         WD, WS, TI = (np.atleast_2d(v) for v in [no_wake_wdir, no_wake_wsp, no_wake_ti])
         assert WD.shape == WS.shape == TI.shape, "Shape of no_wake_wdir, no_wake_wsp and no_wake_ti must equal: %s != %s != %s" % (WD.shape, WS.shape, TI.shape)
         if len(WD.shape) == 3:
