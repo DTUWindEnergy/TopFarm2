@@ -1,5 +1,4 @@
 from openmdao.drivers.scipy_optimizer import ScipyOptimizeDriver
-#from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
 from openmdao.drivers.genetic_algorithm_driver import SimpleGADriver
 
 
@@ -25,10 +24,22 @@ class EasyScipyOptimizeDriver(ScipyOptimizeDriver):
         self.options.update({'optimizer': optimizer, 'maxiter': maxiter, 'tol': tol, 'disp': disp})
 
 
-# class EasyPyOptSparseSLSQP(pyOptSparseDriver):
-#     def __init__(self, maxit=200, acc=1e-6):
-#         pyOptSparseDriver.__init__(self)
-#         raise NotImplementedError
+try:
+    from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
+    class EasyPyOptSparseSLSQP(pyOptSparseDriver):
+        def __init__(self, maxit=200, acc=1e-6):
+            pyOptSparseDriver.__init__(self)
+            self.options.update({'optimizer': 'SLSQP'})
+            self.opt_settings.update({'maxit': maxit, 'acc': acc})
+    
+    class EasyPyOptSparseIPOPT(pyOptSparseDriver):
+        def __init__(self):
+            pyOptSparseDriver.__init__(self)
+            self.options.update({'optimizer': 'IPOPT'})
+            
+    
+except:
+    EasyPyOptSparseSLSQP = "Importing PyOptSparse failed"
 
 
 class EasySimpleGADriver(SimpleGADriver):
@@ -41,7 +52,7 @@ class EasySimpleGADriver(SimpleGADriver):
             Number of bits of resolution. Default is an empty dict, where every unspecified variable is assumed to be integer, and the number of bits is calculated automatically. If you have a continuous var, you should set a bits value as a key in this dictionary.
             NotImplemented
         debug_print : list
-            List of what type of Driver variables to print at each iteration. Valid items in list are ‘desvars’, ‘ln_cons’, ‘nl_cons’, ‘objs’, ‘totals’
+            List of what type of Driver variables to print at each iteration. Valid items in list are 'desvars', 'ln_cons', 'nl_cons', 'objs', 'totals'
             NotImplemented
         elitism : bool
             If True, replace worst performing point with best from previous generation each iteration.
