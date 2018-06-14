@@ -67,9 +67,9 @@ RUN python setup.py install
 
 # Add Tini. Tini operates as a process subreaper for jupyter. This prevents
 # kernel crashes.
-#ENV TINI_VERSION v0.6.0
-#ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /usr/bin/tini
-#RUN chmod +x /usr/bin/tini
+ENV TINI_VERSION v0.6.0
+ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /usr/bin/tini
+RUN chmod +x /usr/bin/tini
 
 
 # Install the Colonel
@@ -83,15 +83,15 @@ RUN apt-get clean \
  && apt-get autoremove -y
 
 #RUN mkdir /install
-RUN mkdir /install/source
-RUN mkdir /install/FugaLib
-WORKDIR   /install
-COPY topfarm/cost_models/fuga/Colonel/source/*.pas /install/source/
-COPY topfarm/cost_models/fuga/Colonel/FugaLib/FugaLib.lpr /install/FugaLib/
-COPY topfarm/cost_models/fuga/Colonel/FugaLib/FugaLib.lpi /install/FugaLib
+#RUN mkdir /install/source
+#RUN mkdir /install/FugaLib
+#WORKDIR   /install
+#COPY topfarm/cost_models/fuga/Colonel/source/*.pas /install/source/
+#COPY topfarm/cost_models/fuga/Colonel/FugaLib/FugaLib.lpr /install/FugaLib/
+#COPY topfarm/cost_models/fuga/Colonel/FugaLib/FugaLib.lpi /install/FugaLib
 
 ## Build
-RUN lazbuild /install/FugaLib/FugaLib.lpr
+#RUN lazbuild /install/FugaLib/FugaLib.lpr
 
 #RUN curl -sL https://deb.nodesource.com/setup_8.x | bash -
 #RUN apt-get update -y && apt-get install -y nodejs

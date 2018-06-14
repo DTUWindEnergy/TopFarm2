@@ -9,7 +9,8 @@ import numpy as np
 import pytest
 from topfarm.cost_models.dummy import DummyCost, DummyCostPlotComp
 from topfarm.plotting import NoPlot
-from topfarm.easy_drivers import EasyScipyOptimizeDriver, EasySimpleGADriver
+from topfarm.easy_drivers import EasyScipyOptimizeDriver, EasySimpleGADriver,\
+    EasyPyOptSparseSLSQP, EasyPyOptSparseIPOPT
 
 
 initial = [[6, 0], [6, -8], [1, 1]]  # initial turbine layouts
@@ -59,9 +60,13 @@ def topfarm_generator():
                                        (EasyScipyOptimizeDriver(tol=1e-3), 1e-2),
                                        (EasyScipyOptimizeDriver(maxiter=13), 1e-1),
                                        (EasyScipyOptimizeDriver(optimizer='COBYLA', tol=1e-3), 1e-2),
-                                       #(EasyPyOptSparseSLSQP(),??),
-                                       (EasySimpleGADriver(), 1e-4)][-1:])
+                                       (EasyPyOptSparseSLSQP(),1e-4),
+                                       (EasyPyOptSparseIPOPT(),1e-4),
+                                       #(EasySimpleGADriver(), 1e-4)
+                                       ][-1:])
 def test_optimizers(driver, tol, topfarm_generator):
+    if isinstance(driver, str):
+        pytest.xfail("reason")
     tf = topfarm_generator(driver)
     tf.optimize()
     tb_pos = tf.turbine_positions
