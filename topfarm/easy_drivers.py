@@ -1,18 +1,14 @@
 from openmdao.drivers.scipy_optimizer import ScipyOptimizeDriver
-from openmdao.drivers.genetic_algorithm_driver import SimpleGADriver
 
 
 class EasyScipyOptimizeDriver(ScipyOptimizeDriver):
 
     def __init__(self, optimizer='SLSQP', maxiter=200, tol=1e-6, disp=True):
-        """        
+        """
         Parameters
         ----------
-        optimizer : {'Nelder-Mead', 'Powell', 'CG', 'BFGS', 'Newton-CG', 'L-BFGS-B',
-               'TNC', 'COBYLA', 'SLSQP'}            
-            Inequality constraints are supported by COBYLA and SLSQP,
-            but equality constraints are only supported by SLSQP. None of the other
-            optimizers support constraints.
+        optimizer : {'COBYLA', 'SLSQP'}
+            Gradients are only supported by SLSQP
         maxiter : int
             Maximum number of iterations.
         tol : float
@@ -26,51 +22,60 @@ class EasyScipyOptimizeDriver(ScipyOptimizeDriver):
 
 try:
     from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
-    class EasyPyOptSparseSLSQP(pyOptSparseDriver):
-        def __init__(self, maxit=200, acc=1e-6):
-            pyOptSparseDriver.__init__(self)
-            self.options.update({'optimizer': 'SLSQP'})
-            #self.opt_settings.update({'maxit': maxit, 'acc': acc})
-    
+
+#     Not working:
+#     capi_return is NULL
+#     Call-back cb_slfunc_in_slsqp__user__routines failed.
+#
+#     class EasyPyOptSparseSLSQP(pyOptSparseDriver):
+#         def __init__(self, maxit=200, acc=1e-6):
+#             pyOptSparseDriver.__init__(self)
+#             self.options.update({'optimizer': 'SLSQP'})
+#             self.opt_settings.update({'MAXIT': maxit, 'ACC': acc})
+
     class EasyPyOptSparseIPOPT(pyOptSparseDriver):
         def __init__(self, max_iter=200):
             pyOptSparseDriver.__init__(self)
             self.options.update({'optimizer': 'IPOPT'})
             self.opt_settings.update({'linear_solver': 'ma27', 'max_iter': max_iter})
-            
-    
-except:
-    EasyPyOptSparseSLSQP = "Importing PyOptSparse failed"
 
 
-class EasySimpleGADriver(SimpleGADriver):
-    def __init__(self, elitism=True, max_gen=100):
-        """Simple Genetic Algorithm Driver with argument
+except ModuleNotFoundError:
+    class PyOptSparseMissingDriver(object):
+        options = {}
 
-        Parameters
-        ----------
-        bits : dict
-            Number of bits of resolution. Default is an empty dict, where every unspecified variable is assumed to be integer, and the number of bits is calculated automatically. If you have a continuous var, you should set a bits value as a key in this dictionary.
-            NotImplemented
-        debug_print : list
-            List of what type of Driver variables to print at each iteration. Valid items in list are 'desvars', 'ln_cons', 'nl_cons', 'objs', 'totals'
-            NotImplemented
-        elitism : bool
-            If True, replace worst performing point with best from previous generation each iteration.
-        max_gen : int
-            Number of generations before termination.
-        pop_size : 
-            Number of points in the GA. Set to 0 and it will be computed as four times the number of bits.
-            NotImplemented
-        procs_per_model : int
-            Number of processors to give each model under MPI.
-            NotImplemented
-        run_parallel : bool
-            Set to True to execute the points in a generation in parallel.
-            NotImplemented    
-        """
-        SimpleGADriver.__init__(self)
-        self.options.update({'elitism': elitism, 'max_gen': max_gen})
+    EasyPyOptSparseSLSQP = PyOptSparseMissingDriver
+    EasyPyOptSparseIPOPT = PyOptSparseMissingDriver
+
+
+# class EasySimpleGADriver(SimpleGADriver):
+#     def __init__(self, elitism=True, max_gen=100):
+#         """Simple Genetic Algorithm Driver with argument
+#
+#         Parameters
+#         ----------
+#         bits : dict
+#             Number of bits of resolution. Default is an empty dict, where every unspecified variable is assumed to be integer, and the number of bits is calculated automatically. If you have a continuous var, you should set a bits value as a key in this dictionary.
+#             NotImplemented
+#         debug_print : list
+#             List of what type of Driver variables to print at each iteration. Valid items in list are 'desvars', 'ln_cons', 'nl_cons', 'objs', 'totals'
+#             NotImplemented
+#         elitism : bool
+#             If True, replace worst performing point with best from previous generation each iteration.
+#         max_gen : int
+#             Number of generations before termination.
+#         pop_size :
+#             Number of points in the GA. Set to 0 and it will be computed as four times the number of bits.
+#             NotImplemented
+#         procs_per_model : int
+#             Number of processors to give each model under MPI.
+#             NotImplemented
+#         run_parallel : bool
+#             Set to True to execute the points in a generation in parallel.
+#             NotImplemented
+#         """
+#         SimpleGADriver.__init__(self)
+#         self.options.update({'elitism': elitism, 'max_gen': max_gen})
 
 #
 # class COBYLADriverWrapper(CONMINdriver):
