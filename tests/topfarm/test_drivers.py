@@ -31,7 +31,7 @@ def topfarm_generator():
 @pytest.mark.parametrize('driver,tol', [(EasyScipyOptimizeDriver(), 1e-4),
                                         (EasyScipyOptimizeDriver(tol=1e-3), 1e-2),
                                         (EasyScipyOptimizeDriver(maxiter=13), 1e-1),
-                                        (EasyScipyOptimizeDriver(optimizer='COBYLA', tol=1e-3), 1e-2),
+                                        (EasyScipyOptimizeDriver(optimizer='COBYLA', tol=1e-3, disp=False), 1e-2),
                                         (EasyPyOptSparseSLSQP(), 1e-4),
                                         (EasyPyOptSparseIPOPT(), 1e-4),
                                         #(EasySimpleGADriver(), 1e-4)
