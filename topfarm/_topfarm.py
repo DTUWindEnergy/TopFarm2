@@ -43,7 +43,7 @@ class TopFarm(object):
         indeps.add_output('boundary', self.boundary_comp.vertices, units='m')
         prob.model.add_subsystem('cost_comp', cost_comp, promotes=['*'])
         prob.driver = driver
-        
+
         prob.model.add_design_var('turbineX', **design_var_kwargs)
         prob.model.add_design_var('turbineY', **design_var_kwargs)
         prob.model.add_objective('cost')
