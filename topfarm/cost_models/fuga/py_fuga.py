@@ -130,10 +130,10 @@ def try_me():
     if __name__ == '__main__':
         pyFuga = PyFuga()
         pyFuga.setup(farm_name='Horns Rev 1',
-                     turbine_model_path=fuga_path + 'LUT/', turbine_model_name='Vestas_V80_(2_MW_offshore)[h=67.00]',
+                     turbine_model_path=fuga_path + 'LUTs-T/', turbine_model_name='Vestas_V80_(2_MW_offshore)[h=70.00]',
                      tb_x=[423974, 424033], tb_y=[6151447, 6150889],
-                     mast_position=(0, 0, 70), z0=0.0001, zi=400, zeta0=0,
-                     farms_dir=fuga_path + 'LUT/Farms/', wind_atlas_path='Horns Rev 1\hornsrev.lib')
+                     mast_position=(0, 0, 70), z0=0.03, zi=400, zeta0=0,
+                     farms_dir=fuga_path + 'LUTs-T/Farms/', wind_atlas_path='MyFarm\DEN05JBgr_7.813E_55.489N_7.4_5.lib')
 
         print(pyFuga.get_no_turbines())
         print(pyFuga.get_aep(np.array([[0, 0], [0, 1000]])))

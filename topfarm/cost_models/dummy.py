@@ -19,9 +19,6 @@ class DummyCost(ExplicitComponent):
         self.optimal = np.array(optimal_positions)
         self.N = self.optimal.shape[0]
 
-    def cost(self, x, y):
-        """Evaluate cost function"""
-
     def setup(self):
         self.add_input('turbineX', val=np.zeros(self.N), units='m')
         self.add_input('turbineY', val=np.zeros(self.N), units='m')

@@ -56,6 +56,14 @@ ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:$IPOPT_DIR/lib
 ## Install PyOptSparse
 #COPY docker/install_pyoptsparse.sh /install
 WORKDIR $POSDIR
+
+
+# Replace python 3 incomplatible files from pyoptsparse with files from pyipopt
+RUN git clone https://github.com/xuy/pyipopt.git && \
+    mv ./pyipopt/src/pyipoptcoremodule.c ./pyoptsparse/pyIPOPT/src/pyipoptcoremodule.c && \
+    mv ./pyipopt/src/hook.h ./pyoptsparse/pyIPOPT/src/hook.h && \
+    mv ./pyipopt/src/callback.c ./pyoptsparse/pyIPOPT/src/callback.c
+
 RUN python setup.py install
 
 #RUN mkdir /notebooks
@@ -67,34 +75,36 @@ RUN python setup.py install
 
 # Add Tini. Tini operates as a process subreaper for jupyter. This prevents
 # kernel crashes.
-#ENV TINI_VERSION v0.6.0
-#ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /usr/bin/tini
-#RUN chmod +x /usr/bin/tini
+ENV TINI_VERSION v0.6.0
+ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /usr/bin/tini
+RUN chmod +x /usr/bin/tini
 
 
 # Install the Colonel
 
-RUN mkdir /deb
-WORKDIR /deb
-COPY docker/*.deb /deb/
-RUN dpkg -i *.deb
+#RUN mkdir /deb
+#WORKDIR /deb
+#COPY docker/*.deb /deb/
+#RUN dpkg -i *.deb
 
 RUN apt-get clean \
  && apt-get autoremove -y
 
+RUN apt-get install lazarus -y 
+ 
 #RUN mkdir /install
-RUN mkdir /install/source
-RUN mkdir /install/FugaLib
-WORKDIR   /install
-COPY topfarm/cost_models/fuga/Colonel/source/*.pas /install/source/
-COPY topfarm/cost_models/fuga/Colonel/FugaLib/FugaLib.lpr /install/FugaLib/
-COPY topfarm/cost_models/fuga/Colonel/FugaLib/FugaLib.lpi /install/FugaLib
+#RUN mkdir /install/source
+#RUN mkdir /install/FugaLib
+#WORKDIR   /install
+#COPY topfarm/cost_models/fuga/Colonel/source/*.pas /install/source/
+#COPY topfarm/cost_models/fuga/Colonel/FugaLib/FugaLib.lpr /install/FugaLib/
+#COPY topfarm/cost_models/fuga/Colonel/FugaLib/FugaLib.lpi /install/FugaLib
 
 ## Build
-RUN lazbuild /install/FugaLib/FugaLib.lpr
+RUN lazbuild /install/FugaLib/FugaLib.lpi
 
-#RUN curl -sL https://deb.nodesource.com/setup_8.x | bash -
-#RUN apt-get update -y && apt-get install -y nodejs
+RUN curl -sL https://deb.nodesource.com/setup_8.x | bash -
+RUN apt-get update -y && apt-get install -y nodejs
 
 
 #RUN jupyter labextension install @jupyter-widgets/jupyterlab-manager \

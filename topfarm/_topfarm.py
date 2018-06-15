@@ -19,7 +19,7 @@ class TopFarm(object):
     """
 
     def __init__(self, turbines, cost_comp, min_spacing, boundary, boundary_type='convex_hull', plot_comp=None,
-                 driver_options={'optimizer': 'SLSQP'}):
+                 driver=ScipyOptimizeDriver()):
 
         self.initial_positions = turbines = np.array(turbines)
 
@@ -32,19 +32,18 @@ class TopFarm(object):
         indeps = prob.model.add_subsystem('indeps', IndepVarComp(), promotes=['*'])
         min_x, min_y = self.boundary_comp.vertices.min(0)
         mean_x, mean_y = self.boundary_comp.vertices.mean(0)
-        if driver_options['optimizer'] == 'SLSQP':
+        design_var_kwargs = {}
+
+        if 'optimizer' in driver.options and driver.options['optimizer'] == 'SLSQP':
             min_x, min_y, mean_x, mean_y = 0, 0, 1, 1  # scaling disturbs SLSQP
+            # Default +/- sys.float_info.max does not work for SLSQP
+            design_var_kwargs = {'lower': np.nan, 'upper': np.nan}
         indeps.add_output('turbineX', turbines[:, 0], units='m', ref0=min_x, ref=mean_x)
         indeps.add_output('turbineY', turbines[:, 1], units='m', ref0=min_y, ref=mean_y)
         indeps.add_output('boundary', self.boundary_comp.vertices, units='m')
         prob.model.add_subsystem('cost_comp', cost_comp, promotes=['*'])
-        prob.driver = ScipyOptimizeDriver()
+        prob.driver = driver
 
-        prob.driver.options.update(driver_options)
-        design_var_kwargs = {}
-        if driver_options['optimizer'] == 'SLSQP':
-            # Default +/- sys.float_info.max does not work for SLSQP
-            design_var_kwargs = {'lower': np.nan, 'upper': np.nan}
         prob.model.add_design_var('turbineX', **design_var_kwargs)
         prob.model.add_design_var('turbineY', **design_var_kwargs)
         prob.model.add_objective('cost')

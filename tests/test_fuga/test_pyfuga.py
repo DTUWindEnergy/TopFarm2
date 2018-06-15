@@ -23,10 +23,10 @@ def get_fuga():
         check_lib_exists()
         pyFuga = PyFuga()
         pyFuga.setup(farm_name='Horns Rev 1',
-                     turbine_model_path=fuga_path + 'LUT/', turbine_model_name='Vestas_V80_(2_MW_offshore)[h=67.00]',
+                     turbine_model_path=fuga_path + 'LUTs-T/', turbine_model_name='Vestas_V80_(2_MW_offshore)[h=70.00]',
                      tb_x=tb_x, tb_y=tb_y,
-                     mast_position=(0, 0, 70), z0=0.0001, zi=400, zeta0=0,
-                     farms_dir=fuga_path + 'LUT/Farms/', wind_atlas_path='Horns Rev 1/hornsrev_north_only.lib', climate_interpolation=False)
+                     mast_position=(0, 0, 70), z0=0.03, zi=400, zeta0=0,
+                     farms_dir=fuga_path + 'LUTs-T/Farms/', wind_atlas_path='MyFarm/north_pm30_only.lib', climate_interpolation=False)
         return pyFuga
     return _fuga
 
@@ -67,37 +67,39 @@ def testSetup(get_fuga):
 
 def testAEP_one_tb(get_fuga):
     pyFuga = get_fuga([0], [0])
-    np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0], [0]]).T), [7.450272, 7.450272, 0.424962, 1.])
+    np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0], [0]]).T), [8.2896689155874324, 8.2896689155874324, 0.472841, 1.])
     pyFuga.cleanup()
 
 
 def testAEP(pyFuga):
-    np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0, 200], [0, 0]]).T), [14.866138, 14.900544, 0.423981, 0.997691])
-    np.testing.assert_array_almost_equal(pyFuga.get_aep_gradients(np.array([[0, 200], [0, 0]]).T), 0)
-    np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0, 0], [0, 200]]).T), [12.124883, 14.900544, 0.3458, 0.813721])
-    np.testing.assert_array_almost_equal(pyFuga.get_aep_gradients(np.array([[0, 0], [0, 200]]).T), [[-0.001794, 0.001794],
-                                                                                                    [-0.008126, 0.008126],
-                                                                                                    [0., 0.]])
-    np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0, 200], [0, 200]]).T), [14.864909, 14.900544, 0.423946, 0.997608])
-    np.testing.assert_array_almost_equal(pyFuga.get_aep_gradients(np.array([[0, 200], [0, 200]]).T), [[-5.165553e-06, 5.165553e-06],
-                                                                                                      [1.599768e-06, -1.599768e-06],
-                                                                                                      [0.000000e+00, 0.000000e+00]])
+    np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0, 1000], [0, 0]]).T), [
+                                         2 * 8.2896689155874324, 2 * 8.2896689155874324, 0.472841, 1.])
+    np.testing.assert_array_almost_equal(pyFuga.get_aep_gradients(np.array([[0, 1000], [0, 0]]).T), 0)
+    np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0, 0], [0, 200]]).T), [14.688347, 16.579338,  0.41891,  0.885943])
+    np.testing.assert_array_almost_equal(pyFuga.get_aep_gradients(np.array([[0, 0], [0, 200]]).T), [[-0.003789,  0.003789],
+                                                                                                    [-0.007204,  0.007204],
+                                                                                                    [0.,  0.]])
+    np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0, 200], [0, 200]]).T), [20.352901, 16.579338,  0.580462,  1.227606])
+    np.testing.assert_array_almost_equal(pyFuga.get_aep_gradients(np.array([[0, 200], [0, 200]]).T), [[-2.033273e-05,  2.033273e-05],
+                                                                                                      [7.255895e-06, -7.255895e-06],
+                                                                                                      [0.000000e+00,  0.000000e+00]])
     pyFuga.cleanup()
 
 
 def testLargeOffset(pyFuga):
     o = 1.e16
-    np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0 + o, 0 + o], [0 + o, 200 + o]]).T), [12.124883, 14.900544, 0.3458, 0.813721])
-    np.testing.assert_array_almost_equal(pyFuga.get_aep_gradients(), [[-0.001794, 0.001794],
-                                                                      [-0.008126, 0.008126],
-                                                                      [0., 0.]])
+    np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0 + o, 0 + o], [0 + o, 200 + o]]).T), [14.688347, 16.579338,  0.41891,  0.885943])
+    np.testing.assert_array_almost_equal(pyFuga.get_aep_gradients(), [[-0.003789,  0.003789],
+                                                                      [-0.007204,  0.007204],
+                                                                      [0.,  0.]])
+
 
 def testAEP_topfarm(get_fuga):
     pyFuga = get_fuga()
-    init_pos = [[0, 0], [200, 0]]
+    init_pos = [[0, 0], [1000, 0]]
     tf = TopFarm(init_pos, pyFuga.get_TopFarm_cost_component(), 160, init_pos, boundary_type='square')
     tf.evaluate()
-    np.testing.assert_array_almost_equal(tf.get_cost(), -14.866138)
+    np.testing.assert_array_almost_equal(tf.get_cost(), -16.579337831174865)
 
 
 def test_pyfuga_cmd():
