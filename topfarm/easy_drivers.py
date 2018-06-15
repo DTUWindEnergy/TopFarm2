@@ -30,12 +30,13 @@ try:
         def __init__(self, maxit=200, acc=1e-6):
             pyOptSparseDriver.__init__(self)
             self.options.update({'optimizer': 'SLSQP'})
-            self.opt_settings.update({'maxit': maxit, 'acc': acc})
+            #self.opt_settings.update({'maxit': maxit, 'acc': acc})
     
     class EasyPyOptSparseIPOPT(pyOptSparseDriver):
-        def __init__(self):
+        def __init__(self, max_iter=200):
             pyOptSparseDriver.__init__(self)
             self.options.update({'optimizer': 'IPOPT'})
+            self.opt_settings.update({'linear_solver': 'ma27', 'max_iter': max_iter})
             
     
 except:

@@ -22,8 +22,8 @@ desired = [[3, -3], [7, -7], [4, -3]]  # desired turbine layouts
 @pytest.fixture
 def topfarm_generator():
     def _topfarm_obj(driver):
-        plot_comp = DummyCostPlotComp(desired)
-        #plot_comp = NoPlot()
+        #plot_comp = DummyCostPlotComp(desired)
+        plot_comp = NoPlot()
         return TopFarm(initial, DummyCost(desired), 2, plot_comp=plot_comp, boundary=boundary, driver=driver)
     return _topfarm_obj
 
@@ -57,17 +57,19 @@ def topfarm_generator():
 
 
 @pytest.mark.parametrize('driver,tol',[(EasyScipyOptimizeDriver(), 1e-4),
-                                       (EasyScipyOptimizeDriver(tol=1e-3), 1e-2),
-                                       (EasyScipyOptimizeDriver(maxiter=13), 1e-1),
+                                       #(EasyScipyOptimizeDriver(tol=1e-3), 1e-2),
+                                       #(EasyScipyOptimizeDriver(maxiter=13), 1e-1),
                                        (EasyScipyOptimizeDriver(optimizer='COBYLA', tol=1e-3), 1e-2),
-                                       (EasyPyOptSparseSLSQP(),1e-4),
+                                       #(EasyPyOptSparseSLSQP(),1e-4),
                                        (EasyPyOptSparseIPOPT(),1e-4),
                                        #(EasySimpleGADriver(), 1e-4)
-                                       ][-1:])
+                                       ][:])
 def test_optimizers(driver, tol, topfarm_generator):
     if isinstance(driver, str):
         pytest.xfail("reason")
     tf = topfarm_generator(driver)
+    tf.evaluate()
+    print (driver.__class__.__name__)
     tf.optimize()
     tb_pos = tf.turbine_positions
     #tf.plot_comp.show()
