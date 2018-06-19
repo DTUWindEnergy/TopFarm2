@@ -14,6 +14,8 @@ def get_try_me_modules():
     for _, modname, _ in pkgutil.walk_packages(package.__path__, package.__name__ + '.'):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
+            if 'olonel' in modname:
+                continue
             m = importlib.import_module(modname)
         if 'try_me' in dir(m):
             modules.append(m)

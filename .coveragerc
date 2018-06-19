@@ -1,2 +1,4 @@
 [run]
-omit = */Colonel/*
+omit = 
+	*/Colonel/*
+	*/colonel/*
