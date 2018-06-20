@@ -1,7 +1,7 @@
 import pytest
 
 import numpy as np
-from tests.test_files import tfp
+from topfarm.tests.test_files import tfp
 from topfarm._topfarm import TopFarm
 from topfarm.cost_models.fused_wake_wrappers import FusedWakeNOJWakeModel
 from topfarm.cost_models.utils.aep_calculator import AEPCalculator

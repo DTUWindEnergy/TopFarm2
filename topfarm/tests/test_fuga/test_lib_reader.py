@@ -5,7 +5,7 @@ Created on 25. apr. 2018
 '''
 import unittest
 import numpy as np
-from tests.test_files import testfilepath
+from topfarm.tests.test_files import testfilepath
 from topfarm.cost_models.fuga import py_fuga, lib_reader
 from topfarm.cost_models.fuga.lib_reader import read_lib
 
