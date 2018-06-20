@@ -22,7 +22,7 @@ test_topfarm_windows:  # name the job what we like
     test
   script:  # runs on windows machine due to tag below
   - cd tests
-  - c:/Anaconda3/envs/pyTopfarm/python.exe -m pytest --cov-report term-missing:skip-covered --cov=topfarm
+  - c:/Anaconda3/envs/pyTopfarm/python.exe -m pytest --cov-report term-missing:skip-covered --cov=../topfarm --cov-config ../.coveragerc
   tags:  # tag for shared runner on windows machine
   - CPAV_old_PC
 
