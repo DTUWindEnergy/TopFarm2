@@ -1,13 +1,16 @@
+import os
 import time
 import numpy as np
 import warnings
 with warnings.catch_warnings():
     warnings.simplefilter('ignore', FutureWarning)
-    from openmdao.api import Problem, ScipyOptimizeDriver, IndepVarComp
+    from openmdao.api import Problem, ScipyOptimizeDriver, IndepVarComp, \
+    SqliteRecorder
 from topfarm.constraint_components.boundary_component import BoundaryComp,\
     PolygonBoundaryComp
 from topfarm.constraint_components.spacing_component import SpacingComp
 from topfarm.plotting import PlotComp
+from topfarm.recording import pos_from_case, latest_id
 
 
 class TopFarm(object):
@@ -19,10 +22,18 @@ class TopFarm(object):
     """
 
     def __init__(self, turbines, cost_comp, min_spacing, boundary, boundary_type='convex_hull', plot_comp=None,
-                 driver=ScipyOptimizeDriver()):
-
-        self.initial_positions = turbines = np.array(turbines)
-
+                 driver=ScipyOptimizeDriver(), record = False, case_recorder_dir = os.getcwd(),
+                 rerun_case_id = None):
+        if rerun_case_id is None:
+            self.initial_positions = turbines = np.array(turbines)
+        elif rerun_case_id is 'latest':
+            rerun_case_id = latest_id(case_recorder_dir)
+            self.initial_positions = turbines = pos_from_case(rerun_case_id) 
+            print('*Initial positions loaded from file: {}\n'.format(
+                    rerun_case_id))
+        else:
+            self.initial_positions = turbines = pos_from_case(rerun_case_id) 
+        print(turbines)
         n_wt = turbines.shape[0]
         if boundary_type == 'polygon':
             self.boundary_comp = PolygonBoundaryComp(boundary, n_wt)
@@ -44,6 +55,17 @@ class TopFarm(object):
         prob.model.add_subsystem('cost_comp', cost_comp, promotes=['*'])
         prob.driver = driver
 
+        if record:
+            timestr = time.strftime("%Y%m%d_%H%M%S")
+            filename = 'cases_{}.sql'.format(timestr)
+            case_recorder_filename = os.path.join(case_recorder_dir, filename)
+            recorder = SqliteRecorder(case_recorder_filename)
+            prob.driver.add_recorder(recorder)
+            prob.driver.recording_options['record_desvars'] = True
+            prob.driver.recording_options['record_responses'] = True
+            prob.driver.recording_options['record_objectives'] = True
+            prob.driver.recording_options['record_constraints'] = True
+
         prob.model.add_design_var('turbineX', **design_var_kwargs)
         prob.model.add_design_var('turbineY', **design_var_kwargs)
         prob.model.add_objective('cost')
@@ -63,6 +85,9 @@ class TopFarm(object):
 
         prob.setup(check=True, mode='fwd')
 
+
+        
+        
     def check(self, all=False, tol=1e-3):
         """Check gradient computations"""
         comp_name_lst = [comp.pathname for comp in self.problem.model.system_iter()
