@@ -33,7 +33,6 @@ class TopFarm(object):
                     rerun_case_id))
         else:
             self.initial_positions = turbines = pos_from_case(rerun_case_id) 
-        print(turbines)
         n_wt = turbines.shape[0]
         if boundary_type == 'polygon':
             self.boundary_comp = PolygonBoundaryComp(boundary, n_wt)
