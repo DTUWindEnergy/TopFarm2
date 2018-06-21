@@ -6,8 +6,8 @@ Created on 14. maj 2018
 import unittest
 
 import numpy as np
-from tests.test_files import tfp
-from tests.test_fuga.test_pyfuga import fuga_path
+from topfarm.tests.test_files import tfp
+from topfarm.tests.test_fuga.test_pyfuga import fuga_path
 from topfarm.cost_models.fuga.turbine_site_list_reader import read_turbine_site_list,\
     read_MR_turbine_site_list
 

@@ -2,7 +2,7 @@ import numpy as np
 from topfarm.cost_models.fused_wake_wrappers import FusedWakeGCLWakeModel
 from topfarm.cost_models.utils.aep_calculator import AEPCalculator
 from topfarm.cost_models.utils.wind_resource import WindResource
-from tests.test_files import tfp
+from topfarm.tests.test_files import tfp
 from topfarm._topfarm import TopFarm
 import pytest
 import warnings

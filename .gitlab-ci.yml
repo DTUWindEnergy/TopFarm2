@@ -9,7 +9,7 @@ test_topfarm:  # name the job what we like
     test
   script:
   - pip install --upgrade git+git://github.com/FUSED-Wind/FUSED-Wake@master
-  - cd tests; py.test
+  - py.test
   tags:  # only runners with this tag can do the job [3]
   - python
 
@@ -21,8 +21,7 @@ test_topfarm_windows:  # name the job what we like
   stage:  # build, test, deploy defined by default [2]
     test
   script:  # runs on windows machine due to tag below
-  - cd tests
-  - c:/Anaconda3/envs/pyTopfarm/python.exe -m pytest --cov-report term-missing:skip-covered --cov=../topfarm --cov-config ../.coveragerc
+  - c:/Anaconda3/envs/pyTopfarm/python.exe -m pytest --cov-report term-missing:skip-covered --cov=topfarm --cov-config .coveragerc --ignore=topfarm/cost_models/fuga/Colonel
   tags:  # tag for shared runner on windows machine
   - CPAV_old_PC
 

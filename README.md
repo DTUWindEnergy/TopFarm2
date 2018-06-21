@@ -8,8 +8,16 @@ Install windows
 
 ```conda create -n pyTopfarm python=3.6
 activate pyTopfarm
+git clone https://github.com/FUSED-Wind/FUSED-Wake.git
+cd FUSED-Wake
+pip install -e .
+cd..
+git clone https://github.com/FUSED-Wind/windIO.git
+cd windIO
+pip install -e .
+cd..
 git clone https://gitlab.windenergy.dtu.dk/TOPFARM/TopFarm2.git
 cd Topfarm2
 pip install -e .
-cd tests
+cd topfarm/tests
 python -m pytest```

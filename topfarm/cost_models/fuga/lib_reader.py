@@ -5,7 +5,7 @@ Created on 25. apr. 2018
 '''
 import os
 import numpy as np
-from tests.test_files import tfp
+from topfarm.tests.test_files import tfp
 
 
 def read_lib(filename):

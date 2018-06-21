@@ -10,7 +10,7 @@ import numpy as np
 from topfarm.cost_models.fused_wake_wrappers import FusedWakeGCLWakeModel
 from topfarm.cost_models.utils.wind_resource import WindResource
 from topfarm.cost_models.cost_model_wrappers import AEPCostModelComponent
-from tests.test_files import testfilepath
+from topfarm.tests.test_files import testfilepath
 
 
 class AEPCalculator(object):
