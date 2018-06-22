@@ -90,15 +90,14 @@ RUN chmod +x /usr/bin/tini
 RUN apt-get clean \
  && apt-get autoremove -y
 
-RUN apt-get install lazarus -y 
- 
-#RUN mkdir /install
-#RUN mkdir /install/source
-#RUN mkdir /install/FugaLib
-#WORKDIR   /install
-#COPY topfarm/cost_models/fuga/Colonel/source/*.pas /install/source/
-#COPY topfarm/cost_models/fuga/Colonel/FugaLib/FugaLib.lpr /install/FugaLib/
-#COPY topfarm/cost_models/fuga/Colonel/FugaLib/FugaLib.lpi /install/FugaLib
+RUN apt-get install lazarus -y
+
+RUN mkdir /install/source
+RUN mkdir /install/FugaLib
+WORKDIR   /install
+COPY topfarm/cost_models/fuga/Colonel/source/*.pas /install/source/
+COPY topfarm/cost_models/fuga/Colonel/FugaLib/FugaLib.lpr /install/FugaLib/
+COPY topfarm/cost_models/fuga/Colonel/FugaLib/FugaLib.lpi /install/FugaLib
 
 ## Build
 RUN lazbuild /install/FugaLib/FugaLib.lpi
@@ -106,6 +105,19 @@ RUN lazbuild /install/FugaLib/FugaLib.lpi
 RUN curl -sL https://deb.nodesource.com/setup_8.x | bash -
 RUN apt-get update -y && apt-get install -y nodejs
 
+
+## Install TOPFARM
+RUN mkdir /topfarm
+COPY topfarm /topfarm/topfarm
+COPY setup.py /topfarm/
+WORKDIR /topfarm
+RUN cp /install/FugaLib/libfugalib.so /topfarm/topfarm/cost_models/fuga/Colonel/FugaLib/FugaLib.so
+RUN pip install -e .
+
+# Install python library requirements to run the notebooks
+WORKDIR /install
+COPY docker/requirements2.txt /install
+RUN pip install -r /install/requirements2.txt
 
 #RUN jupyter labextension install @jupyter-widgets/jupyterlab-manager \
 # && jupyter labextension install jupyterlab_bokeh
@@ -121,3 +133,5 @@ CMD bash
      #      --notebook-dir=/notebooks \
      #      --config=/install/jupyter_notebook_config.py \
      #      --allow-root
+
+     #jupyter notebook  --notebook-dir=/topfarm  --allow-root --port=8898 --ip='*'

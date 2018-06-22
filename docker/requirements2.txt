@@ -1,4 +1,9 @@
 -e git+https://github.com/FUSED-Wind/windIO.git#egg=windio
 -e git+https://github.com/OpenMDAO/OpenMDAO.git#egg=openmdao
+-e git+https://github.com/FUSED-Wind/FUSED-Wake.git#egg=fusedwake
 bokeh==0.12.14
 ipywidgets
+msgpack
+pytest
+pytest-cov
+matplotlib
