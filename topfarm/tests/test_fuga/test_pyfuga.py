@@ -1,18 +1,18 @@
+import os
 import threading
 import time
-import numpy as np
+
 import pytest
-from topfarm.cost_models.fuga.pascal_dll import PascalDLL
-from topfarm.cost_models.fuga.py_fuga import PyFuga, fugalib_path
-import os
-from topfarm.cost_models.fuga import py_fuga
+
+import numpy as np
 from topfarm import TopFarm
-
-
-fuga_path = os.path.abspath(os.path.dirname(py_fuga.__file__)) + '/Colonel/'
+from topfarm.cost_models import fuga
 
 
 def check_lib_exists():
+    if not os.path.isdir(os.path.dirname(fuga.__file__) + "/Colonel/py_colonel/"):
+        pytest.xfail("Colonel submodule not found\n")
+    from topfarm.cost_models.fuga.Colonel.py_colonel.py_colonel_lib import fugalib_path
     if os.path.isfile(fugalib_path) is False:
         pytest.xfail("Fugalib '%s' not found\n" % fugalib_path)
 
@@ -21,6 +21,7 @@ def check_lib_exists():
 def get_fuga():
     def _fuga(tb_x=[423974, 424033], tb_y=[6151447, 6150889]):
         check_lib_exists()
+        from topfarm.cost_models.fuga.py_fuga import PyFuga, fuga_path
         pyFuga = PyFuga()
         pyFuga.setup(farm_name='Horns Rev 1',
                      turbine_model_path=fuga_path + 'LUTs-T/', turbine_model_name='Vestas_V80_(2_MW_offshore)[h=70.00]',
@@ -47,6 +48,8 @@ def _test_parallel(i):
 
 def testCheckVersion(get_fuga):
     check_lib_exists()
+    from topfarm.cost_models.fuga.Colonel.py_colonel.py_colonel_lib import fugalib_path, PascalDLL
+    from topfarm.cost_models.fuga.py_fuga import fuga_path
     lib = PascalDLL(fuga_path + "FugaLib/FugaLib.%s" % ('so', 'dll')[os.name == 'nt'])
     with pytest.raises(Exception, match="This version of FugaLib supports interface version "):
         lib.CheckInterfaceVersion(1)
@@ -104,6 +107,7 @@ def testAEP_topfarm(get_fuga):
 
 def test_pyfuga_cmd():
     check_lib_exists()
+    from topfarm.cost_models.fuga.py_fuga import PyFuga
     pyFuga = PyFuga()
     pyFuga.execute(r'echo "ColonelInit"')
     assert pyFuga.log.strip().split("\n")[-1] == 'ColonelInit'
