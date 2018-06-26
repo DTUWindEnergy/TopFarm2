@@ -10,7 +10,7 @@ from topfarm.constraint_components.boundary_component import BoundaryComp,\
     PolygonBoundaryComp
 from topfarm.constraint_components.spacing_component import SpacingComp
 from topfarm.plotting import PlotComp
-from topfarm.recording import pos_from_case, latest_id
+from topfarm.utils import pos_from_case, latest_id
 
 
 class TopFarm(object):

@@ -60,7 +60,7 @@ class SpacingComp(ExplicitComponent):
         nTurbines = self.nTurbines
 
         # initialize gradient calculation array
-        dS = np.zeros((int((nTurbines - 1.) * nTurbines / 2.), 2 * nTurbines))
+#        dS = np.zeros((int((nTurbines - 1.) * nTurbines / 2.), 2 * nTurbines))
         dSdx = np.zeros((int((nTurbines - 1.) * nTurbines / 2.),  nTurbines)) #col: dx_1-dx_n, row: d12, d13,..,d1n, d23..d2n,..
         dSdy = np.zeros((int((nTurbines - 1.) * nTurbines / 2.),  nTurbines))
 
@@ -71,20 +71,20 @@ class SpacingComp(ExplicitComponent):
         for i in range(0, nTurbines):
             for j in range(i + 1, nTurbines):
                 # separation wrt Xj
-                dS[k, j] = 2 * (turbineX[j] - turbineX[i])
+#                dS[k, j] = 2 * (turbineX[j] - turbineX[i])
                 dSdx[k,j]= 2 * (turbineX[j] - turbineX[i])
                 # separation wrt Xi
-                dS[k, i] = -2 * (turbineX[j] - turbineX[i])
+#                dS[k, i] = -2 * (turbineX[j] - turbineX[i])
                 dSdx[k, i] = -2 * (turbineX[j] - turbineX[i])
                 # separation wrt Yj
-                dS[k, j + nTurbines] = 2 * (turbineY[j] - turbineY[i])
+#                dS[k, j + nTurbines] = 2 * (turbineY[j] - turbineY[i])
                 dSdy[k, j] = 2 * (turbineY[j] - turbineY[i])
                 # separation wrt Yi
-                dS[k, i + nTurbines] = -2 * (turbineY[j] - turbineY[i])
+#                dS[k, i + nTurbines] = -2 * (turbineY[j] - turbineY[i])
                 dSdy[k, i] = -2 * (turbineY[j] - turbineY[i])
                 # increment turbine pair counter
                 k += 1
 
         # populate Jacobian dict
-        J['wtSeparationSquared', 'turbineX'] = dS[:, :nTurbines]
-        J['wtSeparationSquared', 'turbineY'] = dS[:, nTurbines:]
+        J['wtSeparationSquared', 'turbineX'] = dSdx
+        J['wtSeparationSquared', 'turbineY'] = dSdy
