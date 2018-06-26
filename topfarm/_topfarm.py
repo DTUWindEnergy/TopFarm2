@@ -1,3 +1,8 @@
+from topfarm.constraint_components.boundary_component import BoundaryComp,\
+    PolygonBoundaryComp
+from topfarm.constraint_components.spacing_component import SpacingComp
+from topfarm.plotting import PlotComp
+from topfarm.utils import pos_from_case, latest_id
 import os
 import time
 import numpy as np
@@ -5,41 +10,37 @@ import warnings
 with warnings.catch_warnings():
     warnings.simplefilter('ignore', FutureWarning)
     from openmdao.api import Problem, ScipyOptimizeDriver, IndepVarComp, \
-    SqliteRecorder
-from topfarm.constraint_components.boundary_component import BoundaryComp,\
-    PolygonBoundaryComp
-from topfarm.constraint_components.spacing_component import SpacingComp
-from topfarm.plotting import PlotComp
-from topfarm.utils import pos_from_case, latest_id
-
+        SqliteRecorder
 
 class TopFarm(object):
-    """Optimize wind farm layout in terms of 
+    """Optimize wind farm layout in terms of
     - Position of turbines
     [- Type of turbines: Not implemented yet]
     [- Height of turbines: Not implemented yet]
     [- Number of turbines: Not implemented yet]
     """
 
-    def __init__(self, turbines, cost_comp, min_spacing, boundary, boundary_type='convex_hull', plot_comp=None,
-                 driver=ScipyOptimizeDriver(), record = False, case_recorder_dir = os.getcwd(),
-                 rerun_case_id = None):
+    def __init__(self, turbines, cost_comp, min_spacing, boundary,
+                 boundary_type='convex_hull', plot_comp=None,
+                 driver=ScipyOptimizeDriver(), record=False,
+                 case_recorder_dir=os.getcwd(), rerun_case_id=None):
         if rerun_case_id is None:
             self.initial_positions = turbines = np.array(turbines)
         elif rerun_case_id is 'latest':
             rerun_case_id = latest_id(case_recorder_dir)
-            self.initial_positions = turbines = pos_from_case(rerun_case_id) 
+            self.initial_positions = turbines = pos_from_case(rerun_case_id)
             print('*Initial positions loaded from file: {}\n'.format(
                     rerun_case_id))
         else:
-            self.initial_positions = turbines = pos_from_case(rerun_case_id) 
+            self.initial_positions = turbines = pos_from_case(rerun_case_id)
         n_wt = turbines.shape[0]
         if boundary_type == 'polygon':
             self.boundary_comp = PolygonBoundaryComp(boundary, n_wt)
         else:
             self.boundary_comp = BoundaryComp(boundary, n_wt, boundary_type)
         self.problem = prob = Problem()
-        indeps = prob.model.add_subsystem('indeps', IndepVarComp(), promotes=['*'])
+        indeps = prob.model.add_subsystem('indeps', IndepVarComp(),
+                                          promotes=['*'])
         min_x, min_y = self.boundary_comp.vertices.min(0)
         mean_x, mean_y = self.boundary_comp.vertices.mean(0)
         design_var_kwargs = {}
@@ -69,8 +70,10 @@ class TopFarm(object):
         prob.model.add_design_var('turbineY', **design_var_kwargs)
         prob.model.add_objective('cost')
 
-        prob.model.add_subsystem('spacing_comp', SpacingComp(nTurbines=n_wt), promotes=['*'])
-        prob.model.add_subsystem('bound_comp', self.boundary_comp, promotes=['*'])
+        prob.model.add_subsystem('spacing_comp', SpacingComp(nTurbines=n_wt),
+                                 promotes=['*'])
+        prob.model.add_subsystem('bound_comp', self.boundary_comp,
+                                 promotes=['*'])
         if plot_comp == "default":
             plot_comp = PlotComp()
         if plot_comp:
@@ -85,8 +88,6 @@ class TopFarm(object):
         prob.setup(check=True, mode='fwd')
 
 
-        
-        
     def check(self, all=False, tol=1e-3):
         """Check gradient computations"""
         comp_name_lst = [comp.pathname for comp in self.problem.model.system_iter()
@@ -133,6 +134,14 @@ class TopFarm(object):
         return np.array([self.problem['turbineX'], self.problem['turbineY']]).T
 
 
+    def post_process(self, anim_time=10, verbose=True):
+        if self.plot_comp.animate:
+           self.plot_comp.run_animate(anim_time, verbose)
+        for file in os.listdir(self.plot_comp.temp):
+            if file.startswith('plot_') and file.endswith('.png'):
+                os.remove(os.path.join(self.plot_comp.temp,file))
+
+
 def try_me():
     if __name__ == '__main__':
         from topfarm.cost_models.dummy import DummyCostPlotComp, DummyCost
@@ -145,12 +154,10 @@ def try_me():
 
         turbines = np.array(optimal) + np.random.randint(-random_offset, random_offset, (n_wt, 2))
         plot_comp = DummyCostPlotComp(optimal)
+        plot_comp.animate = True
 
         boundary = [(0, 0), (6, 0), (6, -10), (0, -10)]
         tf = TopFarm(turbines, DummyCost(optimal), minSpacing * rotorDiameter, boundary=boundary, plot_comp=plot_comp)
         # tf.check()
         tf.optimize()
-        # plot_comp.show()
-
-
 try_me()

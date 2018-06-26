@@ -1,8 +1,6 @@
-import time
-
 import matplotlib
 from openmdao.core.explicitcomponent import ExplicitComponent
-
+import os
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -23,13 +21,15 @@ def mypause(interval):
 class PlotComp(ExplicitComponent):
     colors = ['b', 'r', 'm', 'c', 'g', 'y', 'orange', 'indigo', 'grey'] * 100
 
-    def __init__(self, memory=10, delay=0.001, plot_initial=True):
+    def __init__(self, memory=10, delay=0.001, plot_initial=True,
+                 animate=False):
         ExplicitComponent.__init__(self)
         self.memory = memory
         self.delay = delay
         self.plot_initial = plot_initial
         self.history = []
         self.counter = 0
+        self.animate = animate
 
     def show(self):
         plt.show()
@@ -59,26 +59,45 @@ class PlotComp(ExplicitComponent):
         cost = inputs['cost'][0]
         if not hasattr(self, "initial"):
             self.initial = np.array([x, y]).T, cost
-            
         self.history = [(x.copy(), y.copy())] + self.history[:self.memory]
 
         boundary = inputs['boundary']
         self.init_plot(boundary)
-        plt.title("%f (%.2f%%)"%(cost, (self.initial[1]-cost)/self.initial[1]*100))
+        plt.title("%f (%.2f%%)" % (cost,
+                  (self.initial[1]-cost)/self.initial[1]*100))
 
         history_arr = np.array(self.history)
         for i, c, x_, y_ in zip(range(len(x)), self.colors, x, y):
             if self.plot_initial:
-                plt.plot([self.initial[0][i, 0], x_], [self.initial[0][i, 1], y_], '-', color=c, lw=1)
-            plt.plot(history_arr[:, 0, i], history_arr[:, 1, i], '.--', color=c, lw=1)
+                plt.plot([self.initial[0][i, 0], x_],
+                         [self.initial[0][i, 1], y_], '-', color=c, lw=1)
+            plt.plot(history_arr[:, 0, i], history_arr[:, 1, i], '.--',
+                     color=c, lw=1)
             plt.plot(x_, y_, 'o', color=c, ms=5)
             plt.plot(x_, y_, 'x' + 'k', ms=4)
+            self.temp = '../__animations__'
+            if not os.path.exists(self.temp):
+                os.makedirs(self.temp)
+            if self.animate:
+                path = os.path.join(self.temp,
+                                    'plot_{:05d}.png'.format(self.counter))
+                plt.savefig(path)
 
         if self.counter == 0:
             plt.pause(.01)
         mypause(self.delay)
 
         self.counter += 1
+
+    def run_animate(self, anim_time=10, verbose=False):
+        N = anim_time/self.counter
+        string = 'ffmpeg -f image2 -r 1/'
+        string += '{} -i {}//plot_%05d.png'.format(N, self.temp)
+        string += ' -vcodec mpeg4 -y {}//animation.mp4'.format(self.temp)
+        if verbose:
+            print('\nCreating animation:')
+            print(string)
+        os.system(string)
 
 
 class NoPlot(PlotComp):
