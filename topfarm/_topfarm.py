@@ -160,4 +160,6 @@ def try_me():
         tf = TopFarm(turbines, DummyCost(optimal), minSpacing * rotorDiameter, boundary=boundary, plot_comp=plot_comp)
         # tf.check()
         tf.optimize()
+        tf.post_process()
+
 try_me()
