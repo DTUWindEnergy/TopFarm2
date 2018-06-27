@@ -46,16 +46,16 @@ def latest_id(case_recorder_dir):
     return latest
 
 
-def random_positions(boundary, n_wt, n_iter, step_size, min_space, 
-                     pad = 1.1, plot=False, verbose=True):
+def random_positions(boundary, n_wt, n_iter, step_size, min_space,
+                     pad=1.1, plot=False, verbose=True):
     '''
     Input:
         boundary:   list of tuples, e.g.: [(0, 0), (6, 1), (7, -11), (-1, -10)]
         n_wt:       number of wind turbines
         n_iter:     number of iterations allowed to try and satisfy the minimum
                     spacing constraint
-        step_size:  the multiplier on the spacing gradient that the turbines 
-                    are moved in each step 
+        step_size:  the multiplier on the spacing gradient that the turbines
+                    are moved in each step
         min_space:  the minimum spacing between turbines
         pad:        the multiplier on the boundary gradient
         plot:       plot the generated random layout
@@ -113,8 +113,7 @@ def _random(b):
 
 def _contain(n_wt, turbineX, turbineY, boundary_comp, pad):
     for i in range(0, n_wt):
-        dng = boundary_comp.calc_distance_and_gradients(turbineX,
-                                                        turbineY)
+        dng = boundary_comp.calc_distance_and_gradients(turbineX, turbineY)
         dist = dng[0][i]
         if dist < 0:
             dx = dng[1][i]
@@ -125,23 +124,25 @@ def _contain(n_wt, turbineX, turbineY, boundary_comp, pad):
 
 
 if __name__ == '__main__':
-#    this_dir = os.path.dirname(os.path.abspath(__file__))
-#    crf = r"C:\Sandbox\Git\TopFarm2\topfarm\cases_20180621_111710.sql"
-#    case_recorder_filename = crf
-#    turbines = pos_from_case(case_recorder_filename)
-#    print(turbines)
-#
-#    case_recorder_dir = r'C:\Sandbox\Git\TopFarm2\topfarm'
-#    latest_id = latest_id(case_recorder_dir)
-#    print(latest_id)
+    this_dir = os.getcwd()
+    crf = r"tests\test_files\recordings\cases_20180621_111710.sql"
+    case_recorder_filename = crf
+    path = os.path.join(this_dir, crf)
+    turbines = pos_from_case(path)
+    print(turbines)
+
+    case_recorder_dir = r'tests\test_files\recordings'
+    latest_id = latest_id(case_recorder_dir)
+    print(latest_id)
 
     boundary = [(0, 0), (6, 1), (7, -11), (-1, -10)]
     n_wt = 20
     n_iter = 1000
     step_size = 0.1
     min_space = 2.1
+    pad = 1.01
     plot = True
     verbose = True
     turbines = random_positions(boundary, n_wt, n_iter, step_size, min_space,
-                                plot, verbose)
+                                pad, plot, verbose)
     print(turbines)
