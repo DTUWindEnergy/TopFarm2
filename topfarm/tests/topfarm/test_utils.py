@@ -14,13 +14,13 @@ turbines = np.array([[ 2.4999377 , -2.99987763],
                    [ 3.00004123, -6.9999519 ]])
 
 def test_pos_from_case():
-    crf = "..\\test_files\\recordings\cases_20180621_111710.sql"
+    crf = "../test_files/recordings/cases_20180621_111710.sql"
     path = os.path.join(thisdir, crf)
     np.testing.assert_allclose(turbines, pos_from_case(path))
 
 
 def test_latest_id():
-    crd = "..\\test_files\\recordings"
+    crd = "../test_files/recordings"
     path = os.path.join(thisdir, crd)
     ref_path = os.path.join(path,'cases_20180621_111710.sql')
     assert latest_id(path) == ref_path

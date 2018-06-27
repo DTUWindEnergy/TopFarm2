@@ -7,9 +7,11 @@ import os
 import time
 import numpy as np
 import warnings
+from openmdao.api import Problem, ScipyOptimizeDriver, IndepVarComp, \
+    SqliteRecorder
 with warnings.catch_warnings():
     warnings.simplefilter('ignore', FutureWarning)
-    from openmdao.api import Problem, ScipyOptimizeDriver, IndepVarComp, \
+
 class TopFarm(object):
     """Optimize wind farm layout in terms of
     - Position of turbines
@@ -26,12 +28,10 @@ class TopFarm(object):
             self.initial_positions = turbines = np.array(turbines)
         elif rerun_case_id is 'latest':
             rerun_case_id = latest_id(case_recorder_dir)
-
             self.initial_positions = turbines = pos_from_case(rerun_case_id)
             print('*Initial positions loaded from file: {}\n'.format(
                     rerun_case_id))
         else:
-
             self.initial_positions = turbines = pos_from_case(rerun_case_id)
         n_wt = turbines.shape[0]
         if boundary_type == 'polygon':
@@ -39,7 +39,6 @@ class TopFarm(object):
         else:
             self.boundary_comp = BoundaryComp(boundary, n_wt, boundary_type)
         self.problem = prob = Problem()
-
         indeps = prob.model.add_subsystem('indeps', IndepVarComp(),
                                           promotes=['*'])
         min_x, min_y = self.boundary_comp.vertices.min(0)

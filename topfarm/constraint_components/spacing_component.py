@@ -85,3 +85,4 @@ class SpacingComp(ExplicitComponent):
                 dSdy[k, i] = -2 * (turbineY[j] - turbineY[i])
                 # increment turbine pair counter
                 k += 1
+        return dSdx, dSdy
