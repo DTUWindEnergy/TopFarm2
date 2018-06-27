@@ -46,29 +46,30 @@ def latest_id(case_recorder_dir):
     return latest
 
 
-def random_positions(boundary, n_wt, n_iter, step_size, min_space,
-                     plot=False, verbose=True):
+def random_positions(boundary, n_wt, n_iter, step_size, min_space, 
+                     pad = 1.1, plot=False, verbose=True):
     '''
     Input:
         boundary:   list of tuples, e.g.: [(0, 0), (6, 1), (7, -11), (-1, -10)]
         n_wt:       number of wind turbines
         n_iter:     number of iterations allowed to try and satisfy the minimum
                     spacing constraint
-        step_size:  the multiplier on the gradient that the turbines are moved
-                    in each step
+        step_size:  the multiplier on the spacing gradient that the turbines 
+                    are moved in each step 
         min_space:  the minimum spacing between turbines
+        pad:        the multiplier on the boundary gradient
         plot:       plot the generated random layout
         verbose:    print helpful text to the console
     Returns an array of xy coordinates of the wind turbines
     '''
     x, y = map(_random, np.array(boundary).T)
     turbines = _random_positions(x, y, boundary, n_wt, n_iter, step_size,
-                                 min_space, plot, verbose)
+                                 min_space, pad, plot, verbose)
     return turbines
 
 
 def _random_positions(x, y, boundary, n_wt, n_iter, step_size, min_space,
-                      plot, verbose):
+                      pad, plot, verbose):
     boundary_comp = PolygonBoundaryComp(boundary, n_wt)
     spacing_comp = SpacingComp(nTurbines=n_wt)
     turbineX = copy(x)
@@ -89,7 +90,7 @@ def _random_positions(x, y, boundary, n_wt, n_iter, step_size, min_space,
             turbineX += dx[index]*step_size
             turbineY += dy[index]*step_size
             turbineX, turbineY = _contain(n_wt, turbineX, turbineY,
-                                          boundary_comp)
+                                          boundary_comp, pad)
         else:
             if verbose:
                 print('Obtained required spacing after {} iterations'.format(
@@ -110,7 +111,7 @@ def _random(b):
     return np.random.rand(n_wt) * (max(b) - min(b)) + min(b)
 
 
-def _contain(n_wt, turbineX, turbineY, boundary_comp):
+def _contain(n_wt, turbineX, turbineY, boundary_comp, pad):
     for i in range(0, n_wt):
         dng = boundary_comp.calc_distance_and_gradients(turbineX,
                                                         turbineY)
@@ -118,8 +119,8 @@ def _contain(n_wt, turbineX, turbineY, boundary_comp):
         if dist < 0:
             dx = dng[1][i]
             dy = dng[2][i]
-            turbineX[i] -= dx*dist*1.1
-            turbineY[i] -= dy*dist*1.1
+            turbineX[i] -= dx*dist*pad
+            turbineY[i] -= dy*dist*pad
     return turbineX, turbineY
 
 
