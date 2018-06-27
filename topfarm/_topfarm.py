@@ -7,10 +7,10 @@ import os
 import time
 import numpy as np
 import warnings
-from openmdao.api import Problem, ScipyOptimizeDriver, IndepVarComp, \
-    SqliteRecorder
 with warnings.catch_warnings():
     warnings.simplefilter('ignore', FutureWarning)
+    from openmdao.api import Problem, ScipyOptimizeDriver, IndepVarComp, \
+        SqliteRecorder
 
 class TopFarm(object):
     """Optimize wind farm layout in terms of
