@@ -2,7 +2,6 @@ from topfarm.constraint_components.boundary_component import \
     PolygonBoundaryComp
 from topfarm.constraint_components.spacing_component import SpacingComp
 import os
-from copy import copy
 import numpy as np
 from openmdao.api import CaseReader
 import matplotlib.pyplot as plt
@@ -46,51 +45,76 @@ def latest_id(case_recorder_dir):
     return latest
 
 
-def random_positions(boundary, n_wt, n_iter, step_size, min_space,
-                     pad=1.1, plot=False, verbose=True):
+def shuffle_positions(boundary, n_wt, min_space, init_pos, shuffle_type='abs',
+                      n_iter=1000, step_size=0.1, pad=1.1, offset=0.5,
+                      plot=True, verbose=True):
     '''
     Input:
         boundary:   list of tuples, e.g.: [(0, 0), (6, 1), (7, -11), (-1, -10)]
         n_wt:       number of wind turbines
+        min_space:  the minimum spacing between turbines
+        init_pos:   inital positions that suffeling is based off of if the
+                    shuffle_type requires it
+        shuffle_type:
+                    'abs': absolute random positions that respect the boundary,
+                    and aims to respect the minimum spacing
+                    'rel': moves each turbine with an offset compared to the
+                    initial positions - not implemented yet.
         n_iter:     number of iterations allowed to try and satisfy the minimum
                     spacing constraint
         step_size:  the multiplier on the spacing gradient that the turbines
                     are moved in each step
-        min_space:  the minimum spacing between turbines
         pad:        the multiplier on the boundary gradient
         plot:       plot the generated random layout
         verbose:    print helpful text to the console
     Returns an array of xy coordinates of the wind turbines
     '''
-    x, y = map(_random, np.array(boundary).T)
-    turbines = _random_positions(x, y, boundary, n_wt, n_iter, step_size,
-                                 min_space, pad, plot, verbose)
+    if shuffle_type == 'abs':
+        def _random(b):
+            return np.random.rand(n_wt) * (max(b) - min(b)) + min(b)
+        x, y = map(_random, np.array(boundary).T)
+        turbines = _shuffle_positions_abs(x, y, boundary, n_wt, n_iter,
+                                          step_size, min_space, pad, plot,
+                                          verbose)
+    elif shuffle_type == 'rel':
+        turbines = _shuffle_postions_rel(init_pos, offset, boundary, n_wt,
+                                         plot)
     return turbines
 
 
-def _random_positions(x, y, boundary, n_wt, n_iter, step_size, min_space,
-                      pad, plot, verbose):
-    boundary_comp = PolygonBoundaryComp(boundary, n_wt)
-    spacing_comp = SpacingComp(nTurbines=n_wt)
-    turbineX = copy(x)
-    turbineY = copy(y)
-    min_space2 = min_space**2
+def _shuffle_postions_rel(init_pos, offset, boundary, n_wt, plot):
+    turbineX = init_pos[:, 0]
+    turbineY = init_pos[:, 1]
     ba = np.array(boundary).T
-    bx = np.append(ba[0], ba[0][0])
-    by = np.append(ba[1], ba[1][0])
+    turbines = np.array(init_pos) + np.random.rand(n_wt, 2)*2*offset-offset
     if plot:
         plt.cla()
-        plt.plot(bx, by)
-        plt.plot(x, y, '.')
+        plt.plot(ba[0], ba[1])
+        plt.plot(turbineX, turbineY, '.')
+        plt.plot(turbines.T[0], turbines.T[1], 'o')
+    return turbines
+
+
+def _shuffle_positions_abs(turbineX, turbineY, boundary, n_wt, n_iter,
+                           step_size, min_space, pad, plot, verbose):
+    boundary_comp = PolygonBoundaryComp(boundary, n_wt)
+    spacing_comp = SpacingComp(nTurbines=n_wt)
+    min_space2 = min_space**2
+    ba = np.array(boundary).T
+    if plot:
+        plt.cla()
+        plt.plot(ba[0], ba[1])
+        plt.plot(turbineX, turbineY, '.')
     for j in range(n_iter):
         dist = spacing_comp._compute(turbineX, turbineY)
         dx, dy = spacing_comp._compute_partials(turbineX, turbineY)
         index = np.argmin(dist)
-        if dist[index] < min_space2:
+        if dist[index] < min_space2 or j == 0:
             turbineX += dx[index]*step_size
             turbineY += dy[index]*step_size
-            turbineX, turbineY = _contain(n_wt, turbineX, turbineY,
-                                          boundary_comp, pad)
+            turbineX, turbineY = _move_inside_boundary(n_wt, turbineX,
+                                                       turbineY, boundary_comp,
+                                                       pad)
         else:
             if verbose:
                 print('Obtained required spacing after {} iterations'.format(
@@ -107,11 +131,7 @@ def _random_positions(x, y, boundary, n_wt, n_iter, step_size, min_space,
     return turbines
 
 
-def _random(b):
-    return np.random.rand(n_wt) * (max(b) - min(b)) + min(b)
-
-
-def _contain(n_wt, turbineX, turbineY, boundary_comp, pad):
+def _move_inside_boundary(n_wt, turbineX, turbineY, boundary_comp, pad):
     for i in range(0, n_wt):
         dng = boundary_comp.calc_distance_and_gradients(turbineX, turbineY)
         dist = dng[0][i]
@@ -135,14 +155,11 @@ if __name__ == '__main__':
     latest_id = latest_id(case_recorder_dir)
     print(latest_id)
 
-    boundary = [(0, 0), (6, 1), (7, -11), (-1, -10)]
+    boundary = [(0, 0), (6, 1), (7, -11), (-1, -10), (0, 0)]
     n_wt = 20
-    n_iter = 1000
-    step_size = 0.1
+    init_pos = np.column_stack((np.random.randint(0, 6, (n_wt)),
+                                np.random.randint(-10, 0, (n_wt))))
     min_space = 2.1
-    pad = 1.01
-    plot = True
-    verbose = True
-    turbines = random_positions(boundary, n_wt, n_iter, step_size, min_space,
-                                pad, plot, verbose)
+    turbines = shuffle_positions(boundary, n_wt, min_space, init_pos,
+                                 shuffle_type='rel')
     print(turbines)

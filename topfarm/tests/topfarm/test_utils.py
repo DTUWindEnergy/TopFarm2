@@ -5,7 +5,7 @@ from topfarm.cost_models.cost_model_wrappers import CostModelComponent
 import pytest
 import os
 
-from topfarm.utils import pos_from_case, latest_id, _random_positions
+from topfarm.utils import pos_from_case, latest_id, _shuffle_positions_abs
 
 thisdir = os.path.dirname(os.path.abspath(__file__))
 turbines = np.array([[ 2.4999377 , -2.99987763],
@@ -58,13 +58,13 @@ def testlatest_id():
     ref_path = os.path.join(path,'cases_20180621_111710.sql')
     assert latest_id(path) == ref_path
 
-def test_random_positions():
-    turbines2 = _random_positions(x, y, boundary, n_wt, n_iter, step_size,
+def test_shuffle_positions_abs():
+    turbines2 = _shuffle_positions_abs(x, y, boundary, n_wt, n_iter, step_size,
                                  min_space, pad, plot, verbose)
     np.testing.assert_allclose(turbines2, turbines2_ref)
 
 if __name__ == '__main__':
 #    testpos_from_case()
 #    testlatest_id()
-#    test_random_positions()
+#    test_shuffle_positions_abs()
     pass

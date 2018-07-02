@@ -3,6 +3,7 @@ from topfarm.constraint_components.boundary_component import BoundaryComp,\
 from topfarm.constraint_components.spacing_component import SpacingComp
 from topfarm.plotting import PlotComp
 from topfarm.utils import pos_from_case, latest_id
+from topfarm.utils import shuffle_positions as spos
 import os
 import time
 import numpy as np
@@ -11,6 +12,7 @@ with warnings.catch_warnings():
     warnings.simplefilter('ignore', FutureWarning)
     from openmdao.api import Problem, ScipyOptimizeDriver, IndepVarComp, \
         SqliteRecorder
+
 
 class TopFarm(object):
     """Optimize wind farm layout in terms of
@@ -24,6 +26,7 @@ class TopFarm(object):
                  boundary_type='convex_hull', plot_comp=None,
                  driver=ScipyOptimizeDriver(), record=False,
                  case_recorder_dir=os.getcwd(), rerun_case_id=None):
+        self.min_spacing = min_spacing
         if rerun_case_id is None:
             self.initial_positions = turbines = np.array(turbines)
         elif rerun_case_id is 'latest':
@@ -34,6 +37,7 @@ class TopFarm(object):
         else:
             self.initial_positions = turbines = pos_from_case(rerun_case_id)
         n_wt = turbines.shape[0]
+        self.n_wt = n_wt
         if boundary_type == 'polygon':
             self.boundary_comp = PolygonBoundaryComp(boundary, n_wt)
         else:
@@ -44,13 +48,15 @@ class TopFarm(object):
         min_x, min_y = self.boundary_comp.vertices.min(0)
         mean_x, mean_y = self.boundary_comp.vertices.mean(0)
         design_var_kwargs = {}
-
-        if 'optimizer' in driver.options and driver.options['optimizer'] == 'SLSQP':
+        do = driver.options
+        if 'optimizer' in do and do['optimizer'] == 'SLSQP':
             min_x, min_y, mean_x, mean_y = 0, 0, 1, 1  # scaling disturbs SLSQP
             # Default +/- sys.float_info.max does not work for SLSQP
             design_var_kwargs = {'lower': np.nan, 'upper': np.nan}
-        indeps.add_output('turbineX', turbines[:, 0], units='m', ref0=min_x, ref=mean_x)
-        indeps.add_output('turbineY', turbines[:, 1], units='m', ref0=min_y, ref=mean_y)
+        indeps.add_output('turbineX', turbines[:, 0], units='m', ref0=min_x,
+                          ref=mean_x)
+        indeps.add_output('turbineY', turbines[:, 1], units='m', ref0=min_y,
+                          ref=mean_y)
         indeps.add_output('boundary', self.boundary_comp.vertices, units='m')
         prob.model.add_subsystem('cost_comp', cost_comp, promotes=['*'])
         prob.driver = driver
@@ -111,7 +117,8 @@ class TopFarm(object):
 
     def evaluate_gradients(self):
         t = time.time()
-        res = self.problem.compute_totals(['cost'], wrt=['turbineX', 'turbineY'], return_format='dict')
+        res = self.problem.compute_totals(['cost'], wrt=['turbineX',
+                                          'turbineY'], return_format='dict')
         print("Gradients evaluated in\t%.3fs" % (time.time() - t))
         return res
 
@@ -133,33 +140,52 @@ class TopFarm(object):
     def turbine_positions(self):
         return np.array([self.problem['turbineX'], self.problem['turbineY']]).T
 
-
-    def post_process(self, anim_time=10, verbose=True):
-        if self.plot_comp.animate:
-           self.plot_comp.run_animate(anim_time, verbose)
+    def clean(self):
         for file in os.listdir(self.plot_comp.temp):
             if file.startswith('plot_') and file.endswith('.png'):
-                os.remove(os.path.join(self.plot_comp.temp,file))
+                os.remove(os.path.join(self.plot_comp.temp, file))
+
+    def shuffle_positions(self, shuffle_type='rel', n_iter=1000,
+                          step_size=0.1, pad=1.1, offset=5, plot=False,
+                          verbose=False):
+        if shuffle_type is not None:
+            turbines = spos(self.boundary, self.n_wt, self.min_spacing,
+                            self.turbine_positions, shuffle_type, n_iter,
+                            step_size, pad, offset, plot, verbose)
+            self.problem['turbineX'] = turbines.T[0]
+            self.problem['turbineY'] = turbines.T[1]
+
+    def animate(self, anim_time=10, verbose=False):
+        if self.plot_comp.animate:
+            self.plot_comp.run_animate(anim_time, verbose)
+        else:
+            if verbose:
+                print('Animation requested but was not enabled for this '
+                      'optimization. Set plot_comp.animate = True to enable')
 
 
 def try_me():
     if __name__ == '__main__':
         from topfarm.cost_models.dummy import DummyCostPlotComp, DummyCost
 
-        n_wt = 4
+        n_wt = 20
         random_offset = 5
-        optimal = [(3, -3), (7, -7), (4, -3), (3, -7), (-3, -3), (-7, -7), (-4, -3), (-3, -7)][:n_wt]
+        optimal = [(3, -3), (7, -7), (4, -3), (3, -7), (-3, -3), (-7, -7),
+                   (-4, -3), (-3, -7)][:n_wt]
         rotorDiameter = 1.0
         minSpacing = 2.0
 
-        turbines = np.array(optimal) + np.random.randint(-random_offset, random_offset, (n_wt, 2))
         plot_comp = DummyCostPlotComp(optimal)
-        plot_comp.animate = True
+#        plot_comp.animate = True
 
         boundary = [(0, 0), (6, 0), (6, -10), (0, -10)]
-        tf = TopFarm(turbines, DummyCost(optimal), minSpacing * rotorDiameter, boundary=boundary, plot_comp=plot_comp)
+        tf = TopFarm(optimal, DummyCost(optimal), minSpacing * rotorDiameter,
+                     boundary=boundary, plot_comp=plot_comp)
         # tf.check()
+        tf.shuffle_positions(shuffle_type='abs', offset=random_offset)
         tf.optimize()
-        tf.post_process()
+        tf.animate()
+        tf.clean()
+
 
 try_me()
