@@ -1,6 +1,6 @@
 # ===== DEFINE DEFAULT DOCKER IMAGE =====
 # dockerhub image generated using docker/Dockerfile_simple
-image: rinkdtu/topfarm-ci:latest
+image: dtuwindenergy/topfarm2:latest
 
 
 # ===== TEST TOPFARM =====
