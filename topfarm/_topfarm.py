@@ -100,7 +100,7 @@ class TopFarm(object):
                          if comp._has_compute_partials and
                          (comp.pathname not in ['spacing_comp', 'bound_comp', 'plot_comp'] or (all and comp.pathname != 'plot_comp'))]
         print("checking %s" % ", ".join(comp_name_lst))
-        res = self.problem.check_partials(comps=comp_name_lst, compact_print=True)
+        res = self.problem.check_partials(includes=comp_name_lst, compact_print=True)
         for comp in comp_name_lst:
             var_pair = list(res[comp].keys())
             worst = var_pair[np.argmax([res[comp][k]['rel error'].forward for k in var_pair])]
@@ -180,7 +180,7 @@ def try_me():
 
         boundary = [(0, 0), (6, 0), (6, -10), (0, -10)]
         tf = TopFarm(optimal, DummyCost(optimal), minSpacing * rotorDiameter,
-                     boundary=boundary, plot_comp=plot_comp)
+                     boundary=boundary, plot_comp=plot_comp, record=True)
         # tf.check()
         tf.shuffle_positions(shuffle_type='abs', offset=random_offset)
         tf.optimize()

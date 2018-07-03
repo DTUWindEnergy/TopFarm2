@@ -17,12 +17,10 @@ def pos_from_case(case_recorder_filename):
         string += case_recorder_filename
         raise Warning(string)
     cr = CaseReader(case_recorder_filename)
-    case_list = cr.driver_cases.list_cases()
-    case_len = len(case_list)
-    case_arg = 'rank0:SLSQP|{:d}'.format(case_len-1)
-    case = cr.driver_cases.get_case(case_arg)
-    x = np.array(case.desvars['turbineX'])
-    y = np.array(case.desvars['turbineY'])
+    driver_case = cr.driver_cases.get_case(-1)
+    desvars = driver_case.get_desvars()
+    x = np.array(desvars['turbineX'])
+    y = np.array(desvars['turbineY'])
     turbines = np.column_stack((x, y))
     return turbines
 
@@ -145,7 +143,7 @@ def _move_inside_boundary(n_wt, turbineX, turbineY, boundary_comp, pad):
 
 if __name__ == '__main__':
     this_dir = os.getcwd()
-    crf = r"tests\test_files\recordings\cases_20180621_111710.sql"
+    crf = r"tests\test_files\recordings\cases_20180703_152607.sql"
     case_recorder_filename = crf
     path = os.path.join(this_dir, crf)
     turbines = pos_from_case(path)
