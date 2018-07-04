@@ -126,7 +126,7 @@ class TopFarm(object):
         t = time.time()
         self.problem.run_driver()
         print("Optimized in\t%.3fs" % (time.time() - t))
-        return np.array([self.problem['turbineX'], self.problem['turbineY']]).T
+        return self.get_cost(), np.array([self.problem['turbineX'], self.problem['turbineY']]).T
 
     def get_cost(self):
         return self.problem['cost'][0]
