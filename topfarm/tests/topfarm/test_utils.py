@@ -8,10 +8,10 @@ import os
 from topfarm.utils import pos_from_case, latest_id, _shuffle_positions_abs
 
 thisdir = os.path.dirname(os.path.abspath(__file__))
-turbines = np.array([[ 2.4999377 , -2.99987763],
-                   [ 6.        , -6.99997496],
-                   [ 4.49993771, -2.99985273],
-                   [ 3.00004123, -6.9999519 ]])
+turbines = np.array([[ 2.49998371, -2.99999965],
+       [ 6.        , -6.99999467],
+       [ 4.49998371, -3.00002279],
+       [ 3.00001007, -7.00001197]])
 x = np.array([-0.5463264 ,  0.4158521 ,  1.50479727,  3.04121982,  0.82494571,
             1.48072571,  0.03939927,  2.27593243, -0.18551361,  0.24885285,
             1.12706339,  2.25472924,  0.04329133,  0.292686  ,  5.18916103,
@@ -47,7 +47,7 @@ turbines2_ref = np.array([[-0.53056298, -5.34414632],
        [ 6.42858562, -9.90795045]])
 
 def testpos_from_case():
-    crf = "../test_files/recordings/cases_20180621_111710.sql"
+    crf = "../test_files/recordings/cases_20180703_152607.sql"
     path = os.path.join(thisdir, crf)
     np.testing.assert_allclose(turbines, pos_from_case(path))
 
@@ -55,7 +55,7 @@ def testpos_from_case():
 def testlatest_id():
     crd = "../test_files/recordings"
     path = os.path.join(thisdir, crd)
-    ref_path = os.path.join(path,'cases_20180621_111710.sql')
+    ref_path = os.path.join(path,'cases_20180703_152607.sql')
     assert latest_id(path) == ref_path
 
 def test_shuffle_positions_abs():

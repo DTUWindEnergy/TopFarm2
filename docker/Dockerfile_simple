@@ -25,5 +25,5 @@ RUN conda update -y conda && \
 # update pip then install openmdao, windio and fused-wake (nocache to save space)
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir openmdao && \
-    pip install --no-cache-dir git+https://github.com/rethore/windIO.git && \
-    pip install --no-cache-dir git+https://github.com/FUSED-Wind/FUSED-Wake.git
+    pip install --no-cache-dir git+https://github.com/FUSED-Wind/windIO.git && \
+    pip install --no-cache-dir git+https://gitlab.windenergy.dtu.dk/TOPFARM/FUSED-Wake.git
