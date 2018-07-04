@@ -5,7 +5,6 @@ Created on 19/04/2018
 '''
 import os
 
-from fusedwake import fusedwake
 import numpy as np
 from topfarm.cost_models.fused_wake_wrappers import FusedWakeGCLWakeModel
 from topfarm.cost_models.utils.wind_resource import WindResource

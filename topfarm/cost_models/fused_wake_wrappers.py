@@ -54,7 +54,7 @@ class FusedWakeNOJWakeModel(FusedWakeModel):
 
 def try_me():
     if __name__ == '__main__':
-        from fusedwake import fusedwake
+        import fusedwake
         import os
         import matplotlib.pyplot as plt
         hornsrev_yml = os.path.dirname(fusedwake.__file__) + "/../examples/hornsrev.yml"
