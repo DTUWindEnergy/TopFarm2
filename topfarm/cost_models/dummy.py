@@ -31,7 +31,7 @@ class DummyCost(ExplicitComponent):
         """
         x = inputs['turbineX']
         y = inputs['turbineY']
-        opt_x, opt_y = self.optimal.T
+        opt_x, opt_y = self.optimal.T[0:2]
         outputs['cost'] = np.sum((x - opt_x)**2 + (y - opt_y)**2)
 
     def compute_partials(self, inputs, J):
@@ -48,7 +48,8 @@ class DummyCostPlotComp(PlotComp):
 
     def init_plot(self, boundary):
         PlotComp.init_plot(self, boundary)
-        for c, (optx, opty) in zip(self.colors, self.optimal):
+        opt_x, opt_y = np.array(self.optimal).T[0:2]
+        for c, optx, opty in zip(self.colors, opt_x, opt_y):
             plt.plot(optx, opty, 'ko', ms=10)
             plt.plot(optx, opty, 'o', color=c, ms=8)
 

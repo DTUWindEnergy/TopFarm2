@@ -28,20 +28,21 @@ class TopFarm(object):
                  case_recorder_dir=os.getcwd(), rerun_case_id=None):
         self.min_spacing = min_spacing
         if rerun_case_id is None:
-            self.initial_positions = turbines = np.array(turbines)
+            turbines = np.array(turbines)
         elif rerun_case_id is 'latest':
             rerun_case_id = latest_id(case_recorder_dir)
-            self.initial_positions = turbines = pos_from_case(rerun_case_id)
+            turbines = pos_from_case(rerun_case_id)
             print('*Initial positions loaded from file: {}\n'.format(
                     rerun_case_id))
         else:
-            self.initial_positions = turbines = pos_from_case(rerun_case_id)
+            turbines = pos_from_case(rerun_case_id)
         n_wt = turbines.shape[0]
+        self.initial_positions = turbines.T[0:2]
         self.n_wt = n_wt
         if boundary_type == 'polygon':
-            self.boundary_comp = PolygonBoundaryComp(boundary, n_wt)
+            self.boundary_comp = PolygonBoundaryComp(boundary[0], n_wt)
         else:
-            self.boundary_comp = BoundaryComp(boundary, n_wt, boundary_type)
+            self.boundary_comp = BoundaryComp(boundary[0], n_wt, boundary_type)
         self.problem = prob = Problem()
         indeps = prob.model.add_subsystem('indeps', IndepVarComp(),
                                           promotes=['*'])
@@ -172,13 +173,16 @@ def try_me():
         random_offset = 5
         optimal = [(3, -3), (7, -7), (4, -3), (3, -7), (-3, -3), (-7, -7),
                    (-4, -3), (-3, -7)][:n_wt]
+#        optimal = [(3, -3, 5, 1), (7, -7, 5, 1), (4, -3, 5, 1), (3, -7, 5, 1),
+#                   (-3, -3, 5, 1), (-7, -7, 5, 1),
+#                   (-4, -3, 5, 1), (-3, -7, 5, 1)][:n_wt]
         rotorDiameter = 1.0
         minSpacing = 2.0
 
         plot_comp = DummyCostPlotComp(optimal)
 #        plot_comp.animate = True
 
-        boundary = [(0, 0), (6, 0), (6, -10), (0, -10)]
+        boundary = [[(0, 0), (6, 0), (6, -10), (0, -10)],]
         tf = TopFarm(optimal, DummyCost(optimal), minSpacing * rotorDiameter,
                      boundary=boundary, plot_comp=plot_comp, record=True)
         # tf.check()
