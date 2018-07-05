@@ -1,10 +1,3 @@
-'''
-Created on 19/04/2018
-
-@author: Mads
-'''
-import os
-
 import numpy as np
 from topfarm.cost_models.fused_wake_wrappers import FusedWakeGCLWakeModel
 from topfarm.cost_models.utils.wind_resource import WindResource

@@ -57,7 +57,7 @@ def single_start_example(id, maxiter=5, plot_comp=None):
 
 def try_me():
     if __name__ == '__main__':
-        print(run(4, single_start_example)[0])
+        print(run(4, single_start_example)[0], 2)
         print(single_start_example(0, 10))
 
 
