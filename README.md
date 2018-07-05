@@ -2,22 +2,13 @@
 [![coverage report](https://gitlab.windenergy.dtu.dk/TOPFARM/TopFarm2/badges/master/coverage.svg)](https://gitlab.windenergy.dtu.dk/TOPFARM/TopFarm2/commits/master)
 
 
+Welcome to TOPFARM
+------------------
 
-Install windows
----------------
+This is the plant-level optimization tool that is being developed by DTU Wind
+Energy.
 
-```conda create -n pyTopfarm python=3.6
-activate pyTopfarm
-git clone https://github.com/FUSED-Wind/FUSED-Wake.git
-cd FUSED-Wake
-pip install -e .
-cd..
-git clone https://github.com/FUSED-Wind/windIO.git
-cd windIO
-pip install -e .
-cd..
-git clone https://gitlab.windenergy.dtu.dk/TOPFARM/TopFarm2.git
-cd Topfarm2
-pip install -e .
-cd topfarm/tests
-python -m pytest```
+# Installation Guide, Examples, and Documentation
+
+Please refer to the 
+[TOPFARM documentation](https://topfarm.pages.windenergy.dtu.dk/TopFarm2).
