@@ -10,18 +10,19 @@ setup(name='topfarm',
       version='2.0',  
       description='Topfarm - Wind farm optimization using OpenMDAO',
       url='https://gitlab.windenergy.dtu.dk/TOPFARM/topfarm2',
-      author='MMPE, PIRE, MIKF, RINK',  
-      author_email='mmpe@dtu.dk, pire@dtu.dk, mikf@dtu.dk, rink@dtu.dk',
-      license='GNU GPL',
+      author='DTU Wind Energy',  
+      author_email='dave@dtu.dk',
+      license='MIT',
       packages=['topfarm'
-				],
-	  install_requires=[
-        'openmdao',
-		'pytest',
-		'pytest-cov',
-		'matplotlib'		
+                ],
+      install_requires=[
+        'matplotlib',  # for plotting
+        'numpy',  # for numerical calculations
+        'openmdao',  # for optimization
+        'pytest',  # for testing
+        'pytest-cov',  # for calculating coverage
+        'scipy',  # constraints
+        'sphinx',  # generating documentation
+        'sphinx_rtd_theme'  # docs theme
       ],
-#	  files= ['plotting.py',
-#			  'topfarm.py',
-#			  ],
       zip_safe=True)
