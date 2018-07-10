@@ -1,9 +1,7 @@
 from openmdao.core.explicitcomponent import ExplicitComponent
-
 import matplotlib.pyplot as plt
 import numpy as np
 from topfarm.plotting import PlotComp
-from topfarm import TopFarm
 
 
 class DummyCost(ExplicitComponent):
@@ -56,6 +54,7 @@ class DummyCostPlotComp(PlotComp):
 
 def try_me():
     if __name__ == '__main__':
+        from topfarm import TopFarm
         n_wt = 4
         random_offset = 5
         optimal = [(3, -3), (7, -7), (4, -3), (3, -7), (-3, -3), (-7, -7), (-4, -3), (-3, -7)][:n_wt]
@@ -66,11 +65,11 @@ def try_me():
         plot_comp = DummyCostPlotComp(optimal)
 
         boundary = [(0, 0), (6, 0), (6, -10), (0, -10)]
-        tf = TopFarm(turbines, DummyCost(optimal), minSpacing * rotorDiameter, boundary=boundary, plot_comp=plot_comp)
+
+        tf = TopFarm(turbines, DummyCost(optimal), minSpacing * rotorDiameter, boundary=boundary, plot_comp=plot_comp, record_id=None)
         # tf.check()
         tf.optimize()
         # plot_comp.show()
-        
 
 
 try_me()

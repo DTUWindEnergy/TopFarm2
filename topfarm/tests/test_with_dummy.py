@@ -3,10 +3,7 @@
 import os
 from topfarm import TopFarm
 import unittest
-import warnings
-
 import pytest
-
 import numpy as np
 from topfarm.cost_models.dummy import DummyCost, DummyCostPlotComp
 
@@ -32,7 +29,7 @@ class Test(unittest.TestCase):  # unittest version
 
         # when
         tf = TopFarm(initial, DummyCost(desired), min_spacing,
-                     boundary=boundary)
+                     boundary=boundary, record_id=None)
         tf.optimize()
         tb_pos = tf.turbine_positions
 
@@ -51,7 +48,8 @@ class Test(unittest.TestCase):  # unittest version
                      cost_comp=DummyCost(desired),
                      min_spacing=2,
                      boundary=[(0, 0), (6, 0), (6, -10), (0, -10)],
-                     plot_comp = DummyCostPlotComp(desired))
+                     plot_comp = DummyCostPlotComp(desired),
+                     record_id=None)
         tf.evaluate()
 
 

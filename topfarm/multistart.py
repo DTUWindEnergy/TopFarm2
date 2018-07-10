@@ -50,7 +50,7 @@ def single_start_example(id, maxiter=5, plot_comp=None):
     aep_calc = AEPCalculator(wr, wm)
     driver = EasyScipyOptimizeDriver(maxiter=maxiter, disp=False)
     tf = TopFarm(init_pos, aep_calc.get_TopFarm_cost_component(), minSpacing * D,
-                 boundary=boundary, plot_comp=plot_comp, driver=driver)
+                 boundary=boundary, plot_comp=plot_comp, driver=driver, record_id=None)
     tf.shuffle_positions('abs')
     return tf.optimize()
 

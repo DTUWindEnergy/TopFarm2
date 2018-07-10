@@ -18,7 +18,7 @@ def topfarm_generator():
         # from topfarm.cost_models.dummy import DummyCostPlotComp
         # plot_comp = DummyCostPlotComp(desired)
         plot_comp = NoPlot()
-        return TopFarm(initial, DummyCost(desired), 2, plot_comp=plot_comp, boundary=boundary, driver=driver)
+        return TopFarm(initial, DummyCost(desired), 2, plot_comp=plot_comp, boundary=boundary, driver=driver, record_id=None)
     return _topfarm_obj
 
 

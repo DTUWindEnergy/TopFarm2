@@ -3,6 +3,54 @@ from openmdao.api import Group, IndepVarComp, ExecComp, ExplicitComponent, Probl
 from scipy.spatial import ConvexHull
 
 
+def setup_xy_z_boundary(problem, boundary, n_wt, boundary_type):
+    if boundary is None or len(boundary) == 0 or \
+       (len(boundary) == 2 and boundary[0] is None and boundary[1] is None):
+        # None / []
+        xy_boundary, z_boundary = None, None
+    elif len(boundary) == 1:
+        # [(x1,y1),(x2,y2),...]
+        xy_boundary, z_boundary = np.array(boundary[0]), None
+    elif len(boundary) == 2 and (boundary[0] is None or hasattr(boundary[0][0], '__len__')):
+        # [((x1,y1),(x2,y2),...), (z0,z1)]
+        # [None, (z0,z1)]
+        # [((x1,y1),(x2,y2),...), None]
+        xy_boundary, z_boundary = [(np.array(v), v)[v is None] for v in boundary]
+    elif len(boundary) >= 2 and not hasattr(boundary[0][0], '__len__'):
+        # [(x1,y1),(x2,y2),...]
+        # [(x1,y1),(x2,y2)]
+        xy_boundary, z_boundary = np.array(boundary), None
+    else:
+        raise TypeError("""Boundary must be one of:
+None
+[xy_boundary,z_boundary]
+[xy_boundary]
+xy_boundary
+
+where
+xy_boundary is [(x1,y1),(x2,y2),...] or None
+z_boundary = [z_low,z_high] or None""")
+
+    if xy_boundary is not None:
+        if boundary_type == 'polygon':
+            boundary_comp = PolygonBoundaryComp(xy_boundary, n_wt)
+        else:
+            boundary_comp = BoundaryComp(xy_boundary, n_wt, boundary_type)
+        problem.model.add_subsystem('bound_comp', boundary_comp, promotes=['*'])
+        problem.model.add_constraint('boundaryDistances', lower=np.zeros(boundary_comp.nVertices * n_wt))
+    else:
+        boundary_comp = None
+
+    if z_boundary is not None:
+        assert z_boundary.shape[-1] == 2
+        if len(z_boundary.shape) == 1:
+            z_boundary = np.zeros((n_wt, 2)) + [z_boundary]
+        assert z_boundary.shape == (n_wt, 2)
+        assert np.all(z_boundary[:, 0] < z_boundary[:, 1])
+        problem.model.add_constraint('turbineZ', lower=z_boundary[:, 0], upper=z_boundary[:, 1])
+    return boundary_comp, z_boundary
+
+
 class BoundaryComp(ExplicitComponent):
 
     def __init__(self, vertices, nTurbines, boundary_type='convex_hull'):
@@ -35,7 +83,7 @@ class BoundaryComp(ExplicitComponent):
             r = range_ / 2
             vertices = np.array([(x_c - r[0], y_c - r[1]), (x_c + r[0], y_c - r[1]), (x_c + r[0], y_c + r[1]), (x_c - r[0], y_c + r[1])])
         else:
-            raise NotImplementedError("Boundary type '%s' is not implemented"%boundary_type)
+            raise NotImplementedError("Boundary type '%s' is not implemented" % boundary_type)
 
         # get the real number of vertices
         nVertices = vertices.shape[0]
@@ -136,15 +184,10 @@ class BoundaryComp(ExplicitComponent):
         turbineX = inputs['turbineX']
         turbineY = inputs['turbineY']
 
-        # put locations in correct arrangement for calculations
-        locations = np.zeros([self.nTurbines, 2])
-        for i in range(0, self.nTurbines):
-            locations[i] = np.array([turbineX[i], turbineY[i]])
-
         # print "in comp, locs are: ", locations
 
         # calculate distance from each point to each face
-        outputs['boundaryDistances'] = self.calculate_distance_to_boundary(locations)
+        outputs['boundaryDistances'] = self.calculate_distance_to_boundary(np.array([turbineX, turbineY]).T)
 
     def compute_partials(self, inputs, partials):
         # return Jacobian dict
@@ -225,7 +268,7 @@ class PolygonBoundaryComp(BoundaryComp):
         """
         if np.all(np.array([x, y]) == self._cache_input):
             return self._cache_output
-        
+
         X, Y = [np.tile(xy, (len(self.x1), 1)).T for xy in [x, y]]  # dim = (ntb, nEdges)
         X1, Y1, X2, Y2, ddist_dX, ddist_dY = [np.tile(xy, (len(x), 1))
                                               for xy in [self.x1, self.y1, self.x2, self.y2, self.dEdgeDist_dx, self.dEdgeDist_dy]]
@@ -278,7 +321,7 @@ class PolygonBoundaryComp(BoundaryComp):
 
         closest_edge_index = np.argmin(np.abs(distance), 1)
 
-        self._cache_input = np.array([x,y])
+        self._cache_input = np.array([x, y])
         self._cache_output = [np.choose(closest_edge_index, v.T) for v in [distance, ddist_dX, ddist_dY]]
         return self._cache_output
 

@@ -96,7 +96,7 @@ def _shuffle_postions_rel(init_pos, offset, boundary, n_wt, plot):
 def _shuffle_positions_abs(turbineX, turbineY, boundary, n_wt, n_iter,
                            step_size, min_space, pad, plot, verbose):
     boundary_comp = PolygonBoundaryComp(boundary, n_wt)
-    spacing_comp = SpacingComp(nTurbines=n_wt)
+    spacing_comp = SpacingComp(n_wt=n_wt)
     min_space2 = min_space**2
     ba = np.array(boundary).T
     if plot:

@@ -12,28 +12,34 @@ class CostModelComponent(ExplicitComponent):
     def setup(self):
         self.add_input('turbineX', val=np.zeros(self.n_wt), units='m')
         self.add_input('turbineY', val=np.zeros(self.n_wt), units='m')
+        self.add_input('turbineZ', val=np.zeros(self.n_wt), units='m')
+        self.add_input('turbineType', val=np.zeros(self.n_wt, dtype=np.int))
 
         self.add_output('cost', val=0.0)
 
-        # Finite difference all partials.
         if self.cost_gradient_function:
-            self.declare_partials('cost', '*')
+            self.declare_partials('cost', self.problem.model._static_design_vars.keys())
         else:
-            self.declare_partials('cost', '*', method='fd')
+            # Finite difference all partials.
+            self.declare_partials('cost', self.problem.model._static_design_vars.keys(), method='fd')
 
     def compute(self, inputs, outputs):
         x = inputs['turbineX']
         y = inputs['turbineY']
-        outputs['cost'] = self.cost_function(np.array([x, y]).T)
+        z = inputs['turbineZ']
+        itype = inputs['turbineType']
+        outputs['cost'] = self.cost_function(np.array([x, y, z, itype]).T)
 
     def compute_partials(self, inputs, J):
         if self.cost_gradient_function:
             x = inputs['turbineX']
             y = inputs['turbineY']
-            dCostdx, dCostdy = self.cost_gradient_function(np.array([x, y]).T)
-            J['cost', 'turbineX'] = dCostdx
-            J['cost', 'turbineY'] = dCostdy
-
+            z = inputs['turbineZ']
+            itype = inputs['turbineType']
+            for XYZ, dCostdxyz in zip('XYZ', self.cost_gradient_function(np.array([x, y, z, itype]).T)):
+                if dCostdxyz is not None:
+                    J['cost', 'turbine%s'%XYZ] = dCostdxyz
+            
 
 class AEPCostModelComponent(CostModelComponent):
     def compute(self, inputs, outputs):
