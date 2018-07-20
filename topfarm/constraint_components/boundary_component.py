@@ -3,129 +3,135 @@ from openmdao.api import Group, IndepVarComp, ExecComp, ExplicitComponent, Probl
 from scipy.spatial import ConvexHull
 
 
-def setup_xy_z_boundary(problem, boundary, n_wt, boundary_type):
-    if boundary is None or len(boundary) == 0 or \
-       (len(boundary) == 2 and boundary[0] is None and boundary[1] is None):
-        # None / []
-        xy_boundary, z_boundary = None, None
-    elif len(boundary) == 1:
-        # [(x1,y1),(x2,y2),...]
-        xy_boundary, z_boundary = np.array(boundary[0]), None
-    elif len(boundary) == 2 and (boundary[0] is None or hasattr(boundary[0][0], '__len__')):
-        # [((x1,y1),(x2,y2),...), (z0,z1)]
-        # [None, (z0,z1)]
-        # [((x1,y1),(x2,y2),...), None]
-        xy_boundary, z_boundary = [(np.array(v), v)[v is None] for v in boundary]
-    elif len(boundary) >= 2 and not hasattr(boundary[0][0], '__len__'):
-        # [(x1,y1),(x2,y2),...]
-        # [(x1,y1),(x2,y2)]
-        xy_boundary, z_boundary = np.array(boundary), None
+def BoundaryComp(n_wt, xy_boundary, z_boundary, xy_boundary_type='convex_hull'):
+    if xy_boundary_type == 'polygon':
+        return PolygonBoundaryComp(n_wt, xy_boundary, z_boundary)
     else:
-        raise TypeError("""Boundary must be one of:
-None
-[xy_boundary,z_boundary]
-[xy_boundary]
-xy_boundary
+        return ConvexBoundaryComp(n_wt, xy_boundary, z_boundary, xy_boundary_type)
 
-where
-xy_boundary is [(x1,y1),(x2,y2),...] or None
-z_boundary = [z_low,z_high] or None""")
 
-    if xy_boundary is not None:
-        if boundary_type == 'polygon':
-            boundary_comp = PolygonBoundaryComp(xy_boundary, n_wt)
+# def setup_xy_z_boundary(problem, n_wt, xy_boundary, z_boundary, xy_boundary_type):
+#     if xy_boundary is not None:
+#         if xy_boundary_type == 'polygon':
+#             xy_boundary_comp = PolygonBoundaryComp(xy_boundary, n_wt)
+#         else:
+#             xy_boundary_comp = BoundaryComp(xy_boundary, n_wt, xy_boundary_type)
+#         problem.model.add_subsystem('xy_bound_comp', xy_boundary_comp, promotes=['*'])
+#         problem.model.add_constraint('boundaryDistances', lower=np.zeros(xy_boundary_comp.nVertices * n_wt))
+#     else:
+#         xy_boundary_comp = None
+#
+#     if z_boundary is not None:
+#         z_boundary = np.array(z_boundary)
+#         assert z_boundary.shape[-1] == 2
+#         if len(z_boundary.shape) == 1:
+#             z_boundary = np.zeros((n_wt, 2)) + [z_boundary]
+#         assert z_boundary.shape == (n_wt, 2)
+#         assert np.all(z_boundary[:, 0] < z_boundary[:, 1])
+#         problem.model.add_constraint('turbineZ', lower=z_boundary[:, 0], upper=z_boundary[:, 1])
+#     return xy_boundary_comp, z_boundary
+
+
+class BoundaryBaseComp(ExplicitComponent):
+    def __init__(self, n_wt, xy_boundary=None, z_boundary=None, **kwargs):
+        ExplicitComponent.__init__(self, **kwargs)
+        self.n_wt = n_wt
+        if xy_boundary is None:
+            self.xy_boundary = np.zeros((0, 2))
         else:
-            boundary_comp = BoundaryComp(xy_boundary, n_wt, boundary_type)
-        problem.model.add_subsystem('bound_comp', boundary_comp, promotes=['*'])
-        problem.model.add_constraint('boundaryDistances', lower=np.zeros(boundary_comp.nVertices * n_wt))
-    else:
-        boundary_comp = None
+            self.xy_boundary = np.array(xy_boundary)
+        if z_boundary is None:
+            z_boundary = []
+        if len(z_boundary) > 0:
+            z_boundary = np.asarray(z_boundary)
+            assert z_boundary.shape[-1] == 2
+            if len(z_boundary.shape) == 1:
+                z_boundary = np.zeros((self.n_wt, 2)) + [z_boundary]
+            assert z_boundary.shape == (self.n_wt, 2)
+            assert np.all(z_boundary[:, 0] < z_boundary[:, 1])
+        self.z_boundary = z_boundary
 
-    if z_boundary is not None:
-        assert z_boundary.shape[-1] == 2
-        if len(z_boundary.shape) == 1:
-            z_boundary = np.zeros((n_wt, 2)) + [z_boundary]
-        assert z_boundary.shape == (n_wt, 2)
-        assert np.all(z_boundary[:, 0] < z_boundary[:, 1])
-        problem.model.add_constraint('turbineZ', lower=z_boundary[:, 0], upper=z_boundary[:, 1])
-    return boundary_comp, z_boundary
+    def setup_as_constraints(self, problem):
+        if len(self.xy_boundary) > 0:
+            problem.model.add_subsystem('xy_bound_comp', self, promotes=['*'])
+            problem.model.add_constraint('boundaryDistances', lower=np.zeros(self.nVertices * self.n_wt))
+        if len(self.z_boundary):
+            problem.model.add_constraint('turbineZ', lower=self.z_boundary[:, 0], upper=self.z_boundary[:, 1])
 
 
-class BoundaryComp(ExplicitComponent):
+class ConvexBoundaryComp(BoundaryBaseComp):
+    def __init__(self, n_wt, xy_boundary=None, z_boundary=None, xy_boundary_type='convex_hull'):
+        super().__init__(n_wt, xy_boundary, z_boundary)
+        if len(self.xy_boundary):
+            self.boundary_type = xy_boundary_type
+            self.calculate_boundary_and_normals()
+            self.calculate_gradients()
 
-    def __init__(self, vertices, nTurbines, boundary_type='convex_hull'):
-        super(BoundaryComp, self).__init__()
-        self.nTurbines = nTurbines
-        self.vertices = np.array(vertices)
-        self.calculate_boundary_and_normals(vertices, boundary_type)
-        self.nVertices = self.vertices.shape[0]
-        self.calculate_gradients()
-
-    def calculate_boundary_and_normals(self, vertices, boundary_type):
-        if boundary_type == 'convex_hull':
+    def calculate_boundary_and_normals(self):
+        if self.boundary_type == 'convex_hull':
             # find the points that actually comprise a convex hull
-            hull = ConvexHull(list(vertices))
+            hull = ConvexHull(list(self.xy_boundary))
 
-            # keep only vertices that actually comprise a convex hull and arrange in CCW order
-            vertices = np.array(vertices)[hull.vertices]
-        elif boundary_type == 'square':
-            min_ = np.array(vertices).min(0)
-            max_ = np.array(vertices).max(0)
+            # keep only xy_vertices that actually comprise a convex hull and arrange in CCW order
+            self.xy_boundary = self.xy_boundary[hull.vertices]
+        elif self.boundary_type == 'square':
+            min_ = self.xy_boundary.min(0)
+            max_ = self.xy_boundary.max(0)
             range_ = (max_ - min_)
             x_c, y_c = min_ + range_ / 2
             r = range_.max() / 2
-            vertices = np.array([(x_c - r, y_c - r), (x_c + r, y_c - r), (x_c + r, y_c + r), (x_c - r, y_c + r)])
-        elif boundary_type == 'rectangle':
-            min_ = np.array(vertices).min(0)
-            max_ = np.array(vertices).max(0)
+            self.xy_boundary = np.array([(x_c - r, y_c - r), (x_c + r, y_c - r), (x_c + r, y_c + r), (x_c - r, y_c + r)])
+        elif self.boundary_type == 'rectangle':
+            min_ = self.xy_boundary.min(0)
+            max_ = self.xy_boundary.max(0)
             range_ = (max_ - min_)
             x_c, y_c = min_ + range_ / 2
             r = range_ / 2
-            vertices = np.array([(x_c - r[0], y_c - r[1]), (x_c + r[0], y_c - r[1]), (x_c + r[0], y_c + r[1]), (x_c - r[0], y_c + r[1])])
+            self.xy_boundary = np.array([(x_c - r[0], y_c - r[1]), (x_c + r[0], y_c - r[1]), (x_c + r[0], y_c + r[1]), (x_c - r[0], y_c + r[1])])
         else:
-            raise NotImplementedError("Boundary type '%s' is not implemented" % boundary_type)
+            raise NotImplementedError("Boundary type '%s' is not implemented" % self.boundary_type)
 
-        # get the real number of vertices
-        nVertices = vertices.shape[0]
+        # get the real number of xy_vertices
+        self.nVertices = self.xy_boundary.shape[0]
 
         # initialize normals array
-        unit_normals = np.zeros([nVertices, 2])
+        unit_normals = np.zeros([self.nVertices, 2])
 
-        # determine if point is inside or outside of each face, and distance from each face
-        for j in range(0, nVertices):
+        # determine if point is inside or outside of each face, and distances from each face
+        for j in range(0, self.nVertices):
 
             # calculate the unit normal vector of the current face (taking points CCW)
-            if j < nVertices - 1:  # all but the set of point that close the shape
-                normal = np.array([vertices[j + 1, 1] - vertices[j, 1],
-                                   -(vertices[j + 1, 0] - vertices[j, 0])])
+            if j < self.nVertices - 1:  # all but the set of point that close the shape
+                normal = np.array([self.xy_boundary[j + 1, 1] - self.xy_boundary[j, 1],
+                                   -(self.xy_boundary[j + 1, 0] - self.xy_boundary[j, 0])])
                 unit_normals[j] = normal / np.linalg.norm(normal)
             else:   # the set of points that close the shape
-                normal = np.array([vertices[0, 1] - vertices[j, 1],
-                                   -(vertices[0, 0] - vertices[j, 0])])
+                normal = np.array([self.xy_boundary[0, 1] - self.xy_boundary[j, 1],
+                                   -(self.xy_boundary[0, 0] - self.xy_boundary[j, 0])])
                 unit_normals[j] = normal / np.linalg.norm(normal)
 
-        self.vertices, self.unit_normals = vertices, unit_normals
+        self.unit_normals = unit_normals
 
     def calculate_gradients(self):
         unit_normals = self.unit_normals
 
         # initialize array to hold distances from each point to each face
-        dfaceDistance_dx = np.zeros([self.nTurbines * self.nVertices, self.nTurbines])
-        dfaceDistance_dy = np.zeros([self.nTurbines * self.nVertices, self.nTurbines])
+        dfaceDistance_dx = np.zeros([self.n_wt * self.nVertices, self.n_wt])
+        dfaceDistance_dy = np.zeros([self.n_wt * self.nVertices, self.n_wt])
 
-        for i in range(0, self.nTurbines):
-            # determine if point is inside or outside of each face, and distance from each face
+        for i in range(0, self.n_wt):
+            # determine if point is inside or outside of each face, and distances from each face
             for j in range(0, self.nVertices):
 
                 # define the derivative vectors from the point of interest to the first point of the face
                 dpa_dx = np.array([-1.0, 0.0])
                 dpa_dy = np.array([0.0, -1.0])
 
-                # find perpendicular distance derivatives from point to current surface (vector projection)
+                # find perpendicular distances derivatives from point to current surface (vector projection)
                 ddistanceVec_dx = np.vdot(dpa_dx, unit_normals[j]) * unit_normals[j]
                 ddistanceVec_dy = np.vdot(dpa_dy, unit_normals[j]) * unit_normals[j]
 
-                # calculate derivatives for the sign of perpendicular distance from point to current face
+                # calculate derivatives for the sign of perpendicular distances from point to current face
                 dfaceDistance_dx[i * self.nVertices + j, i] = np.vdot(ddistanceVec_dx, unit_normals[j])
                 dfaceDistance_dy[i * self.nVertices + j, i] = np.vdot(ddistanceVec_dy, unit_normals[j])
 
@@ -135,30 +141,30 @@ class BoundaryComp(ExplicitComponent):
 
     def calculate_distance_to_boundary(self, points):
         """
-        :param points: points that you want to calculate the distance from to the faces of the convex hull
-        :return face_distace: signed perpendicular distance from each point to each face; + is inside
+        :param points: points that you want to calculate the distances from to the faces of the convex hull
+        :return face_distace: signed perpendicular distances from each point to each face; + is inside
         """
 
         nPoints = np.array(points).shape[0]
-        nVertices = self.vertices.shape[0]
-        vertices = self.vertices
+        nVertices = self.xy_boundary.shape[0]
+        vertices = self.xy_boundary
         unit_normals = self.unit_normals
         # initialize array to hold distances from each point to each face
         face_distance = np.zeros([nPoints, nVertices])
 
-        # loop through points and find distance to each face
+        # loop through points and find distances to each face
         for i in range(0, nPoints):
 
-            # determine if point is inside or outside of each face, and distance from each face
+            # determine if point is inside or outside of each face, and distances from each face
             for j in range(0, nVertices):
 
                 # define the vector from the point of interest to the first point of the face
                 pa = np.array([vertices[j, 0] - points[i, 0], vertices[j, 1] - points[i, 1]])
 
-                # find perpendicular distance from point to current surface (vector projection)
+                # find perpendicular distances from point to current surface (vector projection)
                 d_vec = np.vdot(pa, unit_normals[j]) * unit_normals[j]
 
-                # calculate the sign of perpendicular distance from point to current face (+ is inside, - is outside)
+                # calculate the sign of perpendicular distances from point to current face (+ is inside, - is outside)
                 face_distance[i, j] = np.vdot(d_vec, unit_normals[j])
         #print (face_distance)
         return face_distance
@@ -166,43 +172,62 @@ class BoundaryComp(ExplicitComponent):
     def setup(self):
 
         # Explicitly size input arrays
-        self.add_input('turbineX', np.zeros(self.nTurbines), units='m',
+        self.add_input('turbineX', np.zeros(self.n_wt), units='m',
                        desc='x coordinates of turbines in global ref. frame')
-        self.add_input('turbineY', np.zeros(self.nTurbines), units='m',
+        self.add_input('turbineY', np.zeros(self.n_wt), units='m',
                        desc='y coordinates of turbines in global ref. frame')
 
         # Explicitly size output array
         # (vector with positive elements if turbines outside of hull)
-        self.add_output('boundaryDistances', np.zeros([self.nTurbines, self.nVertices]),
-                        desc="signed perpendicular distance from each turbine to each face CCW; + is inside")
+        self.add_output('boundaryDistances', np.zeros([self.n_wt, self.nVertices]),
+                        desc="signed perpendicular distances from each turbine to each face CCW; + is inside")
 
         self.declare_partials('boundaryDistances', ['turbineX', 'turbineY'])
         #self.declare_partials('boundaryDistances', ['boundaryVertices', 'boundaryNormals'], method='fd')
 
+    def distances(self, turbineX, turbineY):
+        return self.calculate_distance_to_boundary(np.array([turbineX, turbineY]).T)
+
+    def gradients(self, turbineX, turbineY):
+        return self.dfaceDistance_dx, self.dfaceDistance_dy
+
     def compute(self, inputs, outputs):
-
-        turbineX = inputs['turbineX']
-        turbineY = inputs['turbineY']
-
-        # print "in comp, locs are: ", locations
-
-        # calculate distance from each point to each face
-        outputs['boundaryDistances'] = self.calculate_distance_to_boundary(np.array([turbineX, turbineY]).T)
+        # calculate distances from each point to each face
+        outputs['boundaryDistances'] = self.distances(**inputs)
 
     def compute_partials(self, inputs, partials):
         # return Jacobian dict
-        partials['boundaryDistances', 'turbineX'] = self.dfaceDistance_dx
-        partials['boundaryDistances', 'turbineY'] = self.dfaceDistance_dy
+        dx, dy = self.gradients(**inputs)
+
+        partials['boundaryDistances', 'turbineX'] = dx
+        partials['boundaryDistances', 'turbineY'] = dy
+
+    def move_inside(self, turbineX, turbineY, turbineZ, pad=1.1):
+        x, y, z = [np.asarray(xyz, dtype=np.float) for xyz in [turbineX, turbineY, turbineZ]]
+        dist = self.distances(turbineX, turbineY)
+        dx, dy = self.gradients(x, y)  # independent of position
+        dx = dx[:self.n_wt + 1, 0]
+        dy = dy[:self.n_wt + 1, 0]
+        for i in np.where(dist.min(1) < 0)[0]:  # loop over violated edges
+            # find smallest movement that where the constraints are satisfied
+            d = dist[i]
+            v = np.linspace(-np.abs(d.min()), np.abs(d.min()), 100)
+            X, Y = np.meshgrid(v, v)
+            m = np.ones_like(X)
+            for j in range(3):
+                m = np.logical_and(m, X * dx[j] + Y * dy[j] >= -dist[i][j])
+            index = np.argmin(X[m]**2 + Y[m]**2)
+            x[i] += X[m][index]
+            y[i] += Y[m][index]
+        return x, y, z
 
 
-class PolygonBoundaryComp(BoundaryComp):
+class PolygonBoundaryComp(BoundaryBaseComp):
+    def __init__(self, n_wt, xy_boundary=None, z_boundary=None, **kwargs):
+        BoundaryBaseComp.__init__(self, n_wt, xy_boundary=xy_boundary, z_boundary=z_boundary, **kwargs)
 
-    def __init__(self, vertices, nTurbines):
-
-        super(BoundaryComp, self).__init__()
-
-        self.nTurbines = nTurbines
-        vertices = np.array(vertices)
+        self.nTurbines = n_wt
+        vertices = self.xy_boundary
         self.nVertices = vertices.shape[0]
 
         def edges_counter_clockwise(vertices):
@@ -218,7 +243,7 @@ class PolygonBoundaryComp(BoundaryComp):
             else:
                 return vertices[:-1], x1, y1, x2, y2
 
-        self.vertices, self.x1, self.y1, self.x2, self.y2 = edges_counter_clockwise(vertices)
+        self.xy_boundary, self.x1, self.y1, self.x2, self.y2 = edges_counter_clockwise(vertices)
         self.min_x, self.min_y = np.min([self.x1, self.x2], 0), np.min([self.y1, self.y2], )
         self.max_x, self.max_y = np.max([self.x1, self.x2], 1), np.max([self.y1, self.y2], 0)
         self.dx = self.x2 - self.x1
@@ -247,24 +272,24 @@ class PolygonBoundaryComp(BoundaryComp):
         # Explicitly size output array
         # (vector with positive elements if turbines outside of hull)
         self.add_output('boundaryDistances', np.zeros(self.nTurbines),
-                        desc="signed perpendicular distance from each turbine to each face CCW; + is inside")
+                        desc="signed perpendicular distances from each turbine to each face CCW; + is inside")
 
         self.declare_partials('boundaryDistances', ['turbineX', 'turbineY'])
         #self.declare_partials('boundaryDistances', ['boundaryVertices', 'boundaryNormals'], method='fd')
 
     def calc_distance_and_gradients(self, x, y):
         """
-        distance point(x,y) to edge((x1,y1)->(x2,y2))
+        distances point(x,y) to edge((x1,y1)->(x2,y2))
         +/-: inside/outside 
         case (x,y) closest to edge: 
-            distance = edge_unit_vec dot (x1-x,y1-y)
+            distances = edge_unit_vec dot (x1-x,y1-y)
             ddist_dx = -(y2-y2)/|edge|
             ddist_dy = (x2-x2)/|edge|
         case (x,y) closest to (x1,y1) (and (x2,y2)):
-            sign = sign of distance to nearest edge
-            distance = sign * (x1-x^2 + y1-y)^2)^.5
-            ddist_dx = sign * 2*x-2*x1 / (2 * distance^.5)
-            ddist_dy = sign * 2*y-2*y1 / (2 * distance^.5)
+            sign = sign of distances to nearest edge
+            distances = sign * (x1-x^2 + y1-y)^2)^.5
+            ddist_dx = sign * 2*x-2*x1 / (2 * distances^.5)
+            ddist_dy = sign * 2*y-2*y1 / (2 * distances^.5)
         """
         if np.all(np.array([x, y]) == self._cache_input):
             return self._cache_output
@@ -273,14 +298,14 @@ class PolygonBoundaryComp(BoundaryComp):
         X1, Y1, X2, Y2, ddist_dX, ddist_dY = [np.tile(xy, (len(x), 1))
                                               for xy in [self.x1, self.y1, self.x2, self.y2, self.dEdgeDist_dx, self.dEdgeDist_dy]]
 
-        # perpendicular distance to edge (dot product)
+        # perpendicular distances to edge (dot product)
         d12 = (self.x1 - X) * self.edge_unit_vec[0] + (self.y1 - Y) * self.edge_unit_vec[1]
 
         # nearest point on edge
         px = X + d12 * self.edge_unit_vec[0]
         py = Y + d12 * self.edge_unit_vec[1]
 
-        # distance to start and end points
+        # distances to start and end points
         d1 = np.sqrt((self.x1 - X)**2 + (self.y1 - Y)**2)
         d2 = np.sqrt((self.x2 - X)**2 + (self.y2 - Y)**2)
 
@@ -325,16 +350,18 @@ class PolygonBoundaryComp(BoundaryComp):
         self._cache_output = [np.choose(closest_edge_index, v.T) for v in [distance, ddist_dX, ddist_dY]]
         return self._cache_output
 
-    def compute(self, inputs, outputs):
-        turbineX = inputs['turbineX']
-        turbineY = inputs['turbineY']
+    def distances(self, turbineX, turbineY):
+        return self.calc_distance_and_gradients(turbineX, turbineY)[0]
 
-        outputs['boundaryDistances'] = self.calc_distance_and_gradients(turbineX, turbineY)[0]
-
-    def compute_partials(self, inputs, partials):
-        turbineX = inputs['turbineX']
-        turbineY = inputs['turbineY']
-
+    def gradients(self, turbineX, turbineY):
         _, dx, dy = self.calc_distance_and_gradients(turbineX, turbineY)
-        partials['boundaryDistances', 'turbineX'] = np.diagflat(dx)
-        partials['boundaryDistances', 'turbineY'] = np.diagflat(dy)
+        return np.diagflat(dx), np.diagflat(dy)
+
+    def move_inside(self, turbineX, turbineY, turbineZ, pad=1.1):
+        x, y, z = [np.asarray(xyz, dtype=np.float) for xyz in [turbineX, turbineY, turbineZ]]
+        dist = self.distances(turbineX, turbineY)
+        dx, dy = map(np.diag, self.gradients(x, y))
+        m = dist < 0
+        x[m] -= dx[m] * dist[m] * pad
+        y[m] -= dy[m] * dist[m] * pad
+        return x, y, z

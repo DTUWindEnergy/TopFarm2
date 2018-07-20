@@ -3,43 +3,36 @@ import numpy as np
 
 
 class CostModelComponent(ExplicitComponent):
-    def __init__(self, n_wt, cost_function, cost_gradient_function=None):
+    def __init__(self, input_keys, n_wt, cost_function, cost_gradient_function=None, input_units={'turbine' + xyz: 'm' for xyz in 'XYZ'}):
         super().__init__()
+        assert isinstance(n_wt, int), n_wt
+        self.input_keys = input_keys
         self.cost_function = cost_function
         self.cost_gradient_function = cost_gradient_function
+        self.input_units = input_units
         self.n_wt = n_wt
 
     def setup(self):
-        self.add_input('turbineX', val=np.zeros(self.n_wt), units='m')
-        self.add_input('turbineY', val=np.zeros(self.n_wt), units='m')
-        self.add_input('turbineZ', val=np.zeros(self.n_wt), units='m')
-        self.add_input('turbineType', val=np.zeros(self.n_wt, dtype=np.int))
-
+        for i in self.input_keys:
+            self.add_input(i, val=np.zeros(self.n_wt), units=self.input_units.get(i, None))
         self.add_output('cost', val=0.0)
 
         if self.cost_gradient_function:
-            self.declare_partials('cost', self.problem.model._static_design_vars.keys())
+            self.declare_partials('cost', self.input_keys)
         else:
             # Finite difference all partials.
-            self.declare_partials('cost', self.problem.model._static_design_vars.keys(), method='fd')
+            self.declare_partials('cost', self.input_keys, method='fd')
 
     def compute(self, inputs, outputs):
-        x = inputs['turbineX']
-        y = inputs['turbineY']
-        z = inputs['turbineZ']
-        itype = inputs['turbineType']
-        outputs['cost'] = self.cost_function(np.array([x, y, z, itype]).T)
+        outputs['cost'] = self.cost_function(**inputs)
 
     def compute_partials(self, inputs, J):
         if self.cost_gradient_function:
-            x = inputs['turbineX']
-            y = inputs['turbineY']
-            z = inputs['turbineZ']
-            itype = inputs['turbineType']
-            for XYZ, dCostdxyz in zip('XYZ', self.cost_gradient_function(np.array([x, y, z, itype]).T)):
-                if dCostdxyz is not None:
-                    J['cost', 'turbine%s'%XYZ] = dCostdxyz
-            
+            for k, dCostdk in zip(self.input_keys,
+                                  self.cost_gradient_function(**inputs)):
+                if dCostdk is not None:
+                    J['cost', k] = dCostdk
+
 
 class AEPCostModelComponent(CostModelComponent):
     def compute(self, inputs, outputs):

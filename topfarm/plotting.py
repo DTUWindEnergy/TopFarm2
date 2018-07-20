@@ -63,7 +63,7 @@ class PlotComp(ExplicitComponent):
 
         boundary = inputs['boundary']
         self.init_plot(boundary)
-        plt.title("%f (%.2f%%)" % (cost,
+        plt.title("%d: %f (%.2f%%)" % (self.counter, cost,
                   (self.initial[1]-cost)/self.initial[1]*100))
 
         history_arr = np.array(self.history)

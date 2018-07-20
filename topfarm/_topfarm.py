@@ -1,120 +1,105 @@
-from topfarm.constraint_components.boundary_component import setup_xy_z_boundary
-from topfarm.constraint_components.spacing_component import setup_min_spacing
+from topfarm.constraint_components.boundary_component import BoundaryComp
+from topfarm.constraint_components.spacing_component import SpacingComp
 from topfarm.plotting import PlotComp
-from topfarm.utils import pos_from_case, latest_id
-from topfarm.utils import shuffle_positions as spos
 import os
 import time
 import numpy as np
 import warnings
-from openmdao.drivers.doe_generators import FullFactorialGenerator
+from openmdao.drivers.doe_generators import DOEGenerator, ListGenerator
 from openmdao.drivers.doe_driver import DOEDriver
 from openmdao.core.explicitcomponent import ExplicitComponent
-from openmdao.recorders.case_reader import CaseReader
-with warnings.catch_warnings():
-    warnings.simplefilter('ignore', FutureWarning)
-    from openmdao.api import Problem, ScipyOptimizeDriver, IndepVarComp, \
-        SqliteRecorder
+
+from topfarm.recorders import ListRecorder, NestedTopFarmListRecorder,\
+    TopFarmListRecorder
+from openmdao.api import Problem, ScipyOptimizeDriver, IndepVarComp
 
 
-class TopFarm(object):
-    """Optimize wind farm layout in terms of
-    - Position of turbines
-    [- Type of turbines: Not implemented yet]
-    [- Height of turbines: Not implemented yet]
-    [- Number of turbines: Not implemented yet]
-    """
-
-    def __init__(self, turbines, cost_comp, min_spacing, boundary,
-                 boundary_type='convex_hull', plot_comp=None,
-                 driver=ScipyOptimizeDriver(),
-                 turbine_type_options=None,
-                 record_id="Opt_%s" % time.strftime("%Y%m%d_%H%M%S")):
-        self.min_spacing = min_spacing
+class TopFarmProblem(Problem):
+    def __init__(self, cost_comp, record_id, expected_cost):
+        Problem.__init__(self)
+        if isinstance(cost_comp, TopFarmProblem):
+            cost_comp = cost_comp.as_component()
+        cost_comp.parent = self
         self.record_id = record_id
+        self.cost_comp = cost_comp
+        self.indeps = self.model.add_subsystem('indeps', IndepVarComp(), promotes=['*'])
+        self.model.add_subsystem('cost_comp', cost_comp, promotes=['*'])
+        self.model.add_objective('cost', scaler=1 / abs(expected_cost))
 
-        turbines = np.array(turbines)
-        n_wt = turbines.shape[0]
-        turbines = np.hstack((turbines, np.zeros((n_wt, 4 - turbines.shape[1]))))
+    @property
+    def cost(self):
+        return self['cost'][0]
 
-        self.initial_positions = turbines.T[:2]
-
-        self.n_wt = n_wt
-
-        self.problem = prob = Problem()
-        indeps = prob.model.add_subsystem('indeps', IndepVarComp(),
-                                          promotes=['*'])
-
-        setup_min_spacing(prob, min_spacing, n_wt)
-
-        self.boundary_comp, z_boundary = setup_xy_z_boundary(prob, boundary, n_wt, boundary_type)
-
-        do = driver.options
-        if 'optimizer' in do and do['optimizer'] == 'SLSQP':
-            # Default +/- sys.float_info.max does not work for SLSQP
-            design_var_kwargs = {'lower': np.nan, 'upper': np.nan}
+    @property
+    def state(self):
+        if hasattr(self.cost_comp, 'state'):
+            return self.cost_comp.state
         else:
-            design_var_kwargs = {}
+            return {}
 
-        if self.boundary_comp is not None:
-            min_x, min_y = self.boundary_comp.vertices.min(0)
-            mean_x, mean_y = self.boundary_comp.vertices.mean(0)
+    def state_array(self, keys):
+        return np.array([self[k] for k in keys]).T
 
-            indeps.add_output('boundary', self.boundary_comp.vertices, units='m')
-            prob.model.add_design_var('turbineX', **design_var_kwargs)
-            prob.model.add_design_var('turbineY', **design_var_kwargs)
+    def update_state(self, state):
+        for k, v in state.items():
+            try:
+                c = self[k]  # fail if k not exists
+                v = np.array(v)
+                if hasattr(c, 'shape') and c.shape != v.shape:
+                    v = v.reshape(c.shape)
+                self[k] = v
+            except KeyError:
+                pass
+
+    def evaluate(self, state={}):
+        t = time.time()
+        self.update_state(state)
+        rec = ListRecorder()
+        self.driver.add_recorder(rec)
+        self.run_model()
+        self.driver._rec_mgr._recorders.remove(rec)
+        print("Evaluated in\t%.3fs" % (time.time() - t))
+        return self.cost, self.state
+
+    def evaluate_gradients(self):
+        t = time.time()
+        rec = ListRecorder()
+        self.driver.add_recorder(rec)
+        res = self.compute_totals(['cost'], wrt=['turbineX', 'turbineY'], return_format='dict')
+        self.driver._rec_mgr._recorders.remove(rec)
+        print("Gradients evaluated in\t%.3fs" % (time.time() - t))
+        return res
+
+    def optimize(self, state={}):
+        if hasattr(self.cost_comp, 'problem'):
+            self.recorder = NestedTopFarmListRecorder(self.cost_comp, self.record_id)
         else:
-            min_x, mean_x, min_y, mean_y = 0, 1, 0, 1
+            self.recorder = TopFarmListRecorder(self.record_id)
+        if state == {} and len(self.recorder.driver_iteration_lst) > 0:
+            state = {k: self.recorder.get(k)[-1] for k in self.state.keys()}
+        self.update_state(state)
+        self.driver.add_recorder(self.recorder)
+        self.run_driver()
+        self.cleanup()
+        self.driver._rec_mgr._recorders.remove(self.recorder)
+        if isinstance(self.driver, DOEDriver):
+            costs = self.recorder.get('cost')
+            cases = self.recorder.driver_cases
+            costs = [cases.get_case(i).outputs['cost'] for i in range(cases.num_cases)]
+            best_case_index = int(np.argmin(costs))
+            best_case = cases.get_case(best_case_index)
+            self.update_state({k: best_case.outputs[k] for k in best_case.outputs})
+        return self.cost, self.state, self.recorder
 
-        if z_boundary is not None:
-            min_z, mean_z = np.min(z_boundary), np.mean(z_boundary)
-            prob.model.add_design_var('turbineZ', lower=z_boundary[:, 0], upper=z_boundary[:, 1])
-        else:
-            min_z, mean_z = 0, 1
-
-        if 'optimizer' in do and do['optimizer'] == 'SLSQP':
-            min_x, min_y, min_z, mean_x, mean_y, mean_z = 0, 0, 0, 1, 1, 1  # scaling disturbs SLSQP
-
-        indeps.add_output('turbineX', turbines[:, 0], units='m', ref0=min_x, ref=mean_x)
-        indeps.add_output('turbineY', turbines[:, 1], units='m', ref0=min_y, ref=mean_y)
-        indeps.add_output('turbineZ', turbines[:, 2], units='m', ref0=min_z, ref=mean_z)
-
-        indeps.add_output('turbineType', turbines[:, 3].astype(np.int))
-
-        prob.model.add_subsystem('cost_comp', cost_comp, promotes=['*'])
-
-        prob.model.add_objective('cost')
-        cost_comp.problem = prob
-        prob.driver = driver
-
-        if record_id:
-            recorder = SqliteRecorder(record_id + ".sql")
-            prob.driver.add_recorder(recorder)
-            for n in ['record_desvars', 'record_responses', 'record_objectives', 'record_constraints']:
-                prob.driver.recording_options[n] = True
-
-        if plot_comp:
-            if plot_comp == "default":
-                plot_comp = PlotComp()
-
-            plot_comp.n_wt = n_wt
-            plot_comp.n_vertices = self.boundary_comp.vertices.shape[0]
-            prob.model.add_subsystem('plot_comp', plot_comp, promotes=['*'])
-
-        self.plot_comp = plot_comp
-        prob.setup(check=True, mode='fwd')
-        if turbine_type_options is not None:
-            self.turbineTypeProblem = TurbineTypeProblem(self, * turbine_type_options)
-        else:
-            self.turbineTypeProblem = None
-
-    def check(self, all=False, tol=1e-3):
+    def check_gradients(self, all=False, tol=1e-3):
         """Check gradient computations"""
-        comp_name_lst = [comp.pathname for comp in self.problem.model.system_iter()
-                         if comp._has_compute_partials and
-                         (comp.pathname not in ['spacing_comp', 'bound_comp', 'plot_comp'] or (all and comp.pathname != 'plot_comp'))]
+        if all:
+            comp_name_lst = [comp.pathname for comp in self.model.system_iter()
+                             if comp._has_compute_partials]
+        else:
+            comp_name_lst = [self.cost_comp.pathname]
         print("checking %s" % ", ".join(comp_name_lst))
-        res = self.problem.check_partials(includes=comp_name_lst, compact_print=True)
+        res = self.check_partials(includes=comp_name_lst, compact_print=True)
         for comp in comp_name_lst:
             var_pair = list(res[comp].keys())
             worst = var_pair[np.argmax([res[comp][k]['rel error'].forward for k in var_pair])]
@@ -123,179 +108,223 @@ class TopFarm(object):
                 raise Warning("Mismatch between finite difference derivative of '%s' wrt. '%s' and derivative computed in '%s' is: %f" %
                               (worst[0], worst[1], comp, err))
 
-    def _set_turbines(self, turbines):
-        if turbines is not None:
-            for data, n in zip(turbines.T, ['X', 'Y', 'Z', 'Type']):
-                self.problem['turbine%s' % n] = data
+    def as_component(self):
+        return ProblemComponent(self)
 
-    def evaluate(self, turbines=None):
-        t = time.time()
-        self._set_turbines(turbines)
-        self.problem.run_model()
-        print("Evaluated in\t%.3fs" % (time.time() - t))
-        return self.get_cost(), self.turbines
-
-    def evaluate_gradients(self):
-        t = time.time()
-        res = self.problem.compute_totals(['cost'], wrt=['turbineX',
-                                                         'turbineY'], return_format='dict')
-        print("Gradients evaluated in\t%.3fs" % (time.time() - t))
-        return res
-
-    def optimize(self, turbines=None):
-        if self.turbineTypeProblem:
-            self.turbineTypeProblem.run_driver()
-            return self.get_cost(), self.turbines
-        else:
-            return self.optimize_xyz(turbines)
-
-    def optimize_xyz(self, turbines):
-        if len(self.problem.model._static_design_vars.keys()) == 0:
-            return self.evaluate(turbines)
-        else:
-            t = time.time()
-            self._set_turbines(turbines)
-            self.problem.run_driver()
-            print("Optimized in\t%.3fs" % (time.time() - t))
-            return self.get_cost(), self.turbines
-
-    def get_cost(self):
-        return self.problem['cost'][0]
-
-    def multistart(self, turbines_lst):
-        results = list(map(self.optimize, turbines_lst))
-        best = results[np.argmin([r[0] for r in results])]
-        return best, results
-
-    @property
-    def boundary(self):
-        if self.boundary_comp is None:
-            return []
-        else:
-            b = self.boundary_comp.vertices
-            return np.r_[b, b[:1]]
-
-    @property
-    def turbines(self):
-        return np.array([self.problem['turbineX'], self.problem['turbineY'], self.problem['turbineZ'], self.problem['turbineType']]).T
-
-    @property
-    def turbine_positions(self):
-        return np.array([self.problem['turbineX'], self.problem['turbineY']]).T
-
-    def clean(self):
-        for file in os.listdir(self.plot_comp.temp):
-            if file.startswith('plot_') and file.endswith('.png'):
-                os.remove(os.path.join(self.plot_comp.temp, file))
-
-    def shuffle_positions(self, shuffle_type='rel', n_iter=1000,
-                          step_size=0.1, pad=1.1, offset=5, plot=False,
-                          verbose=False):
-        if shuffle_type is not None:
-            turbines = spos(self.boundary, self.n_wt, self.min_spacing,
-                            self.turbine_positions, shuffle_type, n_iter,
-                            step_size, pad, offset, plot, verbose)
-            self.problem['turbineX'] = turbines.T[0]
-            self.problem['turbineY'] = turbines.T[1]
-
-    def animate(self, anim_time=10, verbose=False):
-        if self.plot_comp.animate:
-            self.plot_comp.run_animate(anim_time, verbose)
-        else:
-            if verbose:
-                print('Animation requested but was not enabled for this '
-                      'optimization. Set plot_comp.animate = True to enable')
-
-    def load(self, case_id='latest'):
-        if case_id is 'latest':
-            case_id = latest_id(os.path.dirname(self.record_id))
-        turbines = pos_from_case(case_id)
-        self.problem.model['turbinesX'] = turbines[:, 0]
+    def get_DOE_list(self):
+        assert isinstance(self.driver, DOEDriver), 'get_DOE_list only applies to DOEDrivers, and the current driver is: %s' % type(self.driver)
+        case_gen = self.driver.options['generator']
+        return np.array([[var[1] for var in c] for c in case_gen(self.model.get_design_vars(recurse=True), self.model)])
 
 
-class TopFarmComponent(ExplicitComponent):
-    def __init__(self, topFarm):
-        super().__init__()
-        self.topFarm = topFarm
-        self.n_wt = topFarm.n_wt
+class TurbineTypeOptimizationProblem(TopFarmProblem):
+    def __init__(self, cost_comp, turbineTypes, lower, upper, driver, record_id=None, expected_cost=1):
+        TopFarmProblem.__init__(self, cost_comp, record_id, expected_cost)
+        self.turbineTypes = turbineTypes
+        self.lower = lower
+        self.upper = upper
 
-    def setup(self):
-        for xyz in 'XYZ':
-            self.add_input('turbine%s'%xyz, val=np.zeros(self.n_wt), units='m')
-        self.add_input('turbineType', val=np.zeros(self.n_wt, dtype=np.int))
-        self.add_output('cost', val=0.0)
-
-    def compute(self, inputs, outputs):
-        turbines = np.array([inputs['turbine%s' % xyzt] for xyzt in ['X', 'Y', 'Z', 'Type']]).T
-        outputs['cost'] = self.topFarm.optimize_xyz(turbines)[0]
-
-
-class TurbineTypeProblem(Problem):
-    def __init__(self, topFarm, lower, upper, doe_generator):
-        Problem.__init__(self)
-        indeps = self.model.add_subsystem('indeps', IndepVarComp(), promotes=['*'])
-
-        turbines = topFarm.turbines
-        n_wt = turbines.shape[0]
+        n_wt = len(turbineTypes)
 
         lim = np.zeros((n_wt, 2))
         lim[:, 0] += lower
         lim[:, 1] += upper
         assert np.all(lim[:, 0] < lim[:, 1])
-        
+
         self.model.add_constraint('turbineType', lower=lim[:, 0], upper=lim[:, 1])
-        indeps.add_output('turbineType', topFarm.turbines[:, 3].astype(np.int))
-        self.driver = DOEDriver(doe_generator, )
-        self.driver.options['run_parallel'] =  False
+        self.indeps.add_output('turbineType', np.array(turbineTypes).astype(np.int))
+        self.driver = driver
         self.model.add_design_var('turbineType', lower=lim[:, 0], upper=lim[:, 1])
-        self.model.add_subsystem('cost_comp', TopFarmComponent(topFarm), promotes=['*'])
-        self.model.add_objective('cost')
-        self.setup()
+        self.setup(check=True, mode='fwd')
 
-    def get_DOE_list(self):
-        self.driver._set_name()
-        case_gen = self.driver.options['generator']
-        arr = np.array([c[0][1] for c in case_gen(self.model.get_design_vars(recurse=True), self.model)])
-        return np.unique(np.round(arr).astype(np.int), axis=0)
+    @property
+    def state(self):
+        state = {'turbineType': np.array(self['turbineType']).astype(np.int)}
+        state.update(TopFarmProblem.state.fget(self))
+        return state
 
 
-    def optimize(self):
-        self.driver.add_recorder(SqliteRecorder("cases2.sql"))
-        self.run_driver()
-        self.cleanup()
-        values = []
-        cases = CaseReader("cases1.sql_0").driver_cases
-        for n in range(cases.num_cases):
-            outputs = cases.get_case(n).outputs
-            values.append((outputs['x'], outputs['y'], outputs['f_xy']))
+class TurbineXYZOptimizationProblem(TopFarmProblem):
+    def __init__(self, cost_comp, turbineXYZ, boundary_comp, min_spacing=None,
+                 driver=ScipyOptimizeDriver(), plot_comp=None, record_id=None, expected_cost=1):
+        self.turbineXYZ = turbineXYZ
+        TopFarmProblem.__init__(self, cost_comp, record_id, expected_cost)
+
+        turbineXYZ = np.array(turbineXYZ)
+        self.n_wt = n_wt = turbineXYZ.shape[0]
+        turbineXYZ = np.hstack((turbineXYZ, np.zeros((n_wt, 4 - turbineXYZ.shape[1]))))
+        self.min_spacing = min_spacing
+
+        spacing_comp = SpacingComp(n_wt, min_spacing)
+        spacing_comp.setup_as_constraints(self)
+
+        self.boundary_comp = boundary_comp
+        boundary_comp.setup_as_constraints(self)
+
+        do = driver.options
+        if len(boundary_comp.xy_boundary) > 0:
+
+            ref0_x, ref0_y = self.boundary_comp.xy_boundary.min(0)
+            ref_x, ref_y = self.boundary_comp.xy_boundary.max(0)
+            if (('optimizer' in do and do['optimizer'] == 'SLSQP') or  # scaling disturbs SLSQP
+                    isinstance(driver, DOEDriver)):
+                ref0_x, ref0_y, ref_x, ref_y = 0, 0, 1, 1
+            vertices = self.boundary_comp.xy_boundary
+            self.indeps.add_output('boundary', vertices, units='m')
+
+            if 'optimizer' in do and do['optimizer'] == 'SLSQP':
+                # Default +/- sys.float_info.max does not work for SLSQP
+                self.model.add_design_var('turbineX', lower=np.nan, upper=np.nan)
+                self.model.add_design_var('turbineY', lower=np.nan, upper=np.nan)
+            else:
+                l, u = [f(vertices[:, 0]) * (ref_x - ref0_x) + ref0_x for f in [np.min, np.max]]
+                self.model.add_design_var('turbineX', lower=l, upper=u, ref0=ref0_x, ref=ref_x)
+                l, u = [f(vertices[:, 1]) * (ref_y - ref0_y) + ref0_y for f in [np.min, np.max]]
+                self.model.add_design_var('turbineY', lower=l, upper=u, ref0=ref0_y, ref=ref_y)
+
+        if len(boundary_comp.z_boundary) > 0:
+            ref0_z, ref_z = np.min(self.boundary_comp.z_boundary), np.max(self.boundary_comp.z_boundary)
+            if (('optimizer' in do and do['optimizer'] == 'SLSQP') or  # scaling disturbs SLSQP
+                    isinstance(driver, DOEDriver)):
+                ref0_z, ref_z = 0, 1
+            l, u = [self.boundary_comp.z_boundary[:, i] * (ref_x - ref0_x) + ref0_x for i in range(2)]
+            self.model.add_design_var('turbineZ', lower=l, upper=u, ref0=ref0_z, ref=ref_z)
+
+        self.indeps.add_output('turbineX', turbineXYZ[:, 0], units='m')
+        self.indeps.add_output('turbineY', turbineXYZ[:, 1], units='m')
+        self.indeps.add_output('turbineZ', turbineXYZ[:, 2], units='m')
+
+        self.driver = driver
+
+        if plot_comp:
+            if plot_comp == "default":
+                plot_comp = PlotComp()
+
+            plot_comp.n_wt = n_wt
+            if self.boundary_comp:
+                plot_comp.n_vertices = len(self.boundary_comp.xy_boundary)
+            else:
+                plot_comp.n_vertices = 0
+            self.model.add_subsystem('plot_comp', plot_comp, promotes=['*'])
+
+        self.plot_comp = plot_comp
+        self.setup(check=True, mode='fwd')
+
+    @property
+    def turbine_positions(self):
+        return self.state_array(['turbineX', 'turbineY', 'turbineZ'])
+
+    @property
+    def state(self):
+        state = {'turbine%s' % xyz: self['turbine%s' % xyz] for xyz in 'XYZ'}
+        state.update(TopFarmProblem.state.fget(self))
+        return state
+
+    @property
+    def xy_boundary(self):
+        xy_b = self.boundary_comp.xy_boundary
+        if len(xy_b) > 0:
+            return np.r_[xy_b, xy_b[:1]]
+        else:
+            return xy_b
+
+    @property
+    def z_boundary(self):
+        return self.boundary_comp.z_boundary
 
 
+class InitialXYZOptimizationProblem(TurbineXYZOptimizationProblem):
+    def __init__(self, cost_comp, turbineXYZ, boundary_comp=None, min_spacing=None,
+                 driver=None, plot_comp=None):
+        #          if driver is None:
+        #              driver = DOEDriver(shuffle_generator(self, 10))
+        if isinstance(driver, list):
+            driver = DOEDriver(ListGenerator(driver))
+        elif isinstance(driver, DOEGenerator):
+            driver = DOEDriver(generator=driver)
+        TurbineXYZOptimizationProblem.__init__(self, cost_comp, turbineXYZ,
+                                               boundary_comp, min_spacing,
+                                               driver=driver, plot_comp=plot_comp)
 
-def try_me():
-    if __name__ == '__main__':
-        from topfarm.cost_models.dummy import DummyCostPlotComp, DummyCost
-
-        n_wt = 20
-        random_offset = 5
-        optimal = [(3, -3), (7, -7), (4, -3), (3, -7), (-3, -3), (-7, -7),
-                   (-4, -3), (-3, -7)][:n_wt]
-#        optimal = [(3, -3, 5, 1), (7, -7, 5, 1), (4, -3, 5, 1), (3, -7, 5, 1),
-#                   (-3, -3, 5, 1), (-7, -7, 5, 1),
-#                   (-4, -3, 5, 1), (-3, -7, 5, 1)][:n_wt]
-        rotorDiameter = 1.0
-        minSpacing = 2.0
-
-        plot_comp = DummyCostPlotComp(optimal)
-#        plot_comp.animate = True
-
-        boundary = [[(0, 0), (6, 0), (6, -10), (0, -10)], ]
-        tf = TopFarm(optimal, DummyCost(optimal), minSpacing * rotorDiameter,
-                     boundary=boundary, plot_comp=plot_comp, record_id=None)
-        # topFarm.check()
-        tf.shuffle_positions(shuffle_type='abs', offset=random_offset)
-        tf.optimize()
-        tf.animate()
-        tf.clean()
+#     def shuffle_positions(self, shuffle_type='rel', n_iter=1000,
+#                           step_size=0.1, pad=1.1, offset=5, plot=False,
+#                           verbose=False):
+#         if shuffle_type is not None:
+#             turbines = spos(self.boundary, self.n_wt, self.min_spacing,
+#                             self.turbine_positions, shuffle_type, n_iter,
+#                             step_size, pad, offset, plot, verbose)
+#             self.problem['turbineX'] = turbines.T[0]
+#             self.problem['turbineY'] = turbines.T[1]
 
 
-try_me()
+class TopFarm(TurbineXYZOptimizationProblem):
+    """Wrapper of TurbineXYZOPtimizationProblem for backward compatibility
+    """
+
+    def __init__(self, turbines, cost_comp, min_spacing, boundary,
+                 boundary_type='convex_hull', plot_comp=None,
+                 driver=ScipyOptimizeDriver(),
+                 record_id="Opt_%s" % time.strftime("%Y%m%d_%H%M%S"),
+                 expected_cost=1):
+
+        TurbineXYZOptimizationProblem.__init__(self, cost_comp, turbines,
+                                               boundary_comp=BoundaryComp(len(turbines), boundary, None, boundary_type),
+                                               min_spacing=min_spacing, driver=driver, plot_comp=plot_comp,
+                                               record_id=record_id, expected_cost=expected_cost)
+
+
+class ProblemComponent(ExplicitComponent):
+    """class used to wrap a TopFarmProblem as a cost_component"""
+
+    def __init__(self, problem):
+        ExplicitComponent.__init__(self)
+        self.problem = problem
+
+    def setup(self):
+        missing_in_problem = (set([c[0] for c in self.parent.indeps._indep_external]) -
+                              set([c[0] for c in self.problem.indeps._indep_external]))
+
+        for name, val, kwargs in self.parent.indeps._indep_external:
+            self.add_input(name, val=val, **{k: kwargs[k] for k in ['units']})
+            if name in missing_in_problem:
+                self.problem.indeps.add_output(name, val, **kwargs)
+        self.problem.setup(check=True, mode='fwd')
+
+        self.add_output('cost', val=0.0)
+
+    @property
+    def state(self):
+        return self.problem.state
+
+    def compute(self, inputs, outputs):
+        outputs['cost'] = self.problem.optimize(dict(inputs))[0]
+
+#
+# def try_me():
+#     if __name__ == '__main__':
+#         from topfarm.cost_models.dummy import DummyCostPlotComp, DummyCost
+#
+#         n_wt = 20
+#         random_offset = 5
+#         optimal = [(3, -3), (7, -7), (4, -3), (3, -7), (-3, -3), (-7, -7),
+#                    (-4, -3), (-3, -7)][:n_wt]
+# #        optimal = [(3, -3, 5, 1), (7, -7, 5, 1), (4, -3, 5, 1), (3, -7, 5, 1),
+# #                   (-3, -3, 5, 1), (-7, -7, 5, 1),
+# #                   (-4, -3, 5, 1), (-3, -7, 5, 1)][:n_wt]
+#         rotorDiameter = 1.0
+#         minSpacing = 2.0
+#
+#         plot_comp = DummyCostPlotComp(optimal)
+# #        plot_comp.animate = True
+#
+#         boundary = [[(0, 0), (6, 0), (6, -10), (0, -10)], ]
+#         tf = TopFarm(optimal, DummyCost(optimal), minSpacing * rotorDiameter,
+#                      boundary=boundary, plot_comp=plot_comp, record_id=None)
+#         # topFarm.check()
+#         tf.shuffle_positions(shuffle_type='abs', offset=random_offset)
+#         tf.optimize()
+#         tf.animate()
+#         tf.clean()
+#
+#
+# try_me()

@@ -2,41 +2,80 @@ from openmdao.core.explicitcomponent import ExplicitComponent
 import matplotlib.pyplot as plt
 import numpy as np
 from topfarm.plotting import PlotComp
+from topfarm.cost_models.cost_model_wrappers import CostModelComponent
 
 
-class DummyCost(ExplicitComponent):
-    """Sum of squared error between current positions and optimal positions
+# class DummyCost(ExplicitComponent):
+#     """Sum of squared error between current positions and optimal positions
+#
+#         Evaluates the equation
+#         f(x,y) = SUM(x_i - optx_i)^2 + SUM(y_i + opty_i)^2.
+#     """
+#
+#     def __init__(self, optimal_positions):
+#         """Pass an Nx2 array (or list of lists) of optimal positions"""
+#         ExplicitComponent.__init__(self)
+#         self.optimal = np.array(optimal_positions)
+#         self.n_wt = self.optimal.shape[0]
+#
+#     def setup(self):
+#         self.add_input('turbineX', val=np.zeros(self.n_wt), units='m')
+#         self.add_input('turbineY', val=np.zeros(self.n_wt), units='m')
+#         self.add_output('cost', val=0.0)
+#         self.declare_partials('cost', '*')
+#
+#     def compute(self, inputs, outputs):
+#         """
+#         f(x,y) = SUM(x_i - optx_i)^2 + SUM(y_i + opty_i)^2
+#         """
+#         x = inputs['turbineX']
+#         y = inputs['turbineY']
+#         opt_x, opt_y = self.optimal.T[0:2]
+#         outputs['cost'] = np.sum((x - opt_x)**2 + (y - opt_y)**2)
+#
+#     def compute_partials(self, inputs, J):
+#         x = inputs['turbineX']
+#         y = inputs['turbineY']
+#         J['cost', 'turbineX'] = (2 * x - 2 * np.array(self.optimal)[:, 0])
+#         J['cost', 'turbineY'] = (2 * y - 2 * np.array(self.optimal)[:, 1])
 
-        Evaluates the equation
-        f(x,y) = SUM(x_i - optx_i)^2 + SUM(y_i + opty_i)^2.
+
+class DummyCost(CostModelComponent):
+    """Sum of squared error between current and optimal state
+       Evaluates the equation
+       f(x,..) = SUM((x_i - optx_i)^2 + ...).
     """
 
-    def __init__(self, optimal_positions):
-        """Pass an Nx2 array (or list of lists) of optimal positions"""
-        ExplicitComponent.__init__(self)
-        self.optimal = np.array(optimal_positions)
-        self.N = self.optimal.shape[0]
-
-    def setup(self):
-        self.add_input('turbineX', val=np.zeros(self.N), units='m')
-        self.add_input('turbineY', val=np.zeros(self.N), units='m')
-        self.add_output('cost', val=0.0)
-        self.declare_partials('cost', '*')
-
-    def compute(self, inputs, outputs):
+    def __init__(self, optimal_state, inputs=['turbineX', 'turbineY', 'turbineZ'],
+                 input_units={'turbineX': 'm', 'turbineY': 'm', 'turbineZ': 'm'}):
         """
-        f(x,y) = SUM(x_i - optx_i)^2 + SUM(y_i + opty_i)^2
+        Parameters
+        ----------
+        optimal_state : array_like, dim=(#wt,#inputs)
+            optimal state array
+        inputs : array_like
+            list of input names
         """
-        x = inputs['turbineX']
-        y = inputs['turbineY']
-        opt_x, opt_y = self.optimal.T[0:2]
-        outputs['cost'] = np.sum((x - opt_x)**2 + (y - opt_y)**2)
+        self.optimal_state = np.array(optimal_state)
+        self.n_wt = self.optimal_state.shape[0]
 
-    def compute_partials(self, inputs, J):
-        x = inputs['turbineX']
-        y = inputs['turbineY']
-        J['cost', 'turbineX'] = (2 * x - 2 * np.array(self.optimal)[:, 0])
-        J['cost', 'turbineY'] = (2 * y - 2 * np.array(self.optimal)[:, 1])
+        CostModelComponent.__init__(self, inputs, self.n_wt, self.cost, self.grad,
+                                    input_units)
+
+    def cost(self, **kwargs):
+        opt = self.optimal_state
+        return np.sum([(kwargs[n] - opt[:, i])**2 for i, n in enumerate(self.input_keys)])
+
+    def grad(self, **kwargs):
+        opt = self.optimal_state
+        return [(2 * kwargs[n] - 2 * opt[:, i]) for i, n in enumerate(self.input_keys)]
+
+
+class TurbineTypeDummyCost(DummyCost):
+    def __init__(self, optimal):
+        if len(np.array(optimal).shape) == 1:
+            optimal = np.array([optimal]).T
+        DummyCost.__init__(self, optimal, inputs=['turbineType'])
 
 
 class DummyCostPlotComp(PlotComp):

@@ -16,9 +16,9 @@ class PyFuga(PyColonel):
 
     def get_TopFarm_cost_component(self):
         n_wt = self.get_no_turbines()
-        return AEPCostModelComponent(n_wt,
-                                     lambda *args: self.get_aep(*args)[0],  # only aep
-                                     lambda *args: self.get_aep_gradients(*args)[:2])  # only dAEPdx and dAEPdy
+        return AEPCostModelComponent(['turbineX', 'turbineY'], n_wt,
+                                     lambda turbineX, turbineY: self.get_aep(np.array([turbineX, turbineY]).T)[0],  # only aep
+                                     lambda turbineX, turbineY: self.get_aep_gradients(np.array([turbineX, turbineY]).T)[:2])  # only dAEPdx and dAEPdy
 
 
 def try_me():

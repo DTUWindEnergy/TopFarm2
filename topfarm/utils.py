@@ -7,6 +7,9 @@ from openmdao.api import CaseReader
 import matplotlib.pyplot as plt
 
 
+
+
+
 def pos_from_case(case_recorder_filename):
     '''
     Input: a recorded optimization case

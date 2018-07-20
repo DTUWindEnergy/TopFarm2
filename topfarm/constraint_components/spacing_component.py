@@ -2,24 +2,23 @@ from openmdao.core.explicitcomponent import ExplicitComponent
 import numpy as np
 
 
-def setup_min_spacing(problem, min_spacing, n_wt):
-    if min_spacing is not None and n_wt > 1:
-        problem.model.add_subsystem('spacing_comp', SpacingComp(n_wt), promotes=['*'])
-        zero = np.zeros(int(((n_wt - 1.) * n_wt / 2.)))
-        problem.model.add_constraint('wtSeparationSquared', lower=zero + (min_spacing)**2)
-
-
 class SpacingComp(ExplicitComponent):
     """
     Calculates inter-turbine spacing for all turbine pairs.
     Code from wake-exchange module
     """
 
-    def __init__(self, n_wt):
+    def __init__(self, n_wt, min_spacing):
         super(SpacingComp, self).__init__()
         self.n_wt = n_wt
+        self.min_spacing = min_spacing
 
-    
+    def setup_as_constraints(self, problem):
+        if self.min_spacing is not None:
+            problem.model.add_subsystem('spacing_comp', self, promotes=['*'])
+            zero = np.zeros(int(((self.n_wt - 1.) * self.n_wt / 2.)))
+            problem.model.add_constraint('wtSeparationSquared', lower=zero + (self.min_spacing)**2)
+
     def setup(self):
 
         # set finite difference options (fd used for testing only)
