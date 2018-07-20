@@ -206,9 +206,9 @@ class ConvexBoundaryComp(BoundaryBaseComp):
         x, y, z = [np.asarray(xyz, dtype=np.float) for xyz in [turbineX, turbineY, turbineZ]]
         dist = self.distances(turbineX, turbineY)
         dx, dy = self.gradients(x, y)  # independent of position
-        dx = dx[:self.n_wt + 1, 0]
-        dy = dy[:self.n_wt + 1, 0]
-        for i in np.where(dist.min(1) < 0)[0]:  # loop over violated edges
+        dx = dx[:self.nVertices, 0]
+        dy = dy[:self.nVertices, 0]
+        for i in np.where(dist.min(1) < 0)[0]:  # loop over turbines that violate edges
             # find smallest movement that where the constraints are satisfied
             d = dist[i]
             v = np.linspace(-np.abs(d.min()), np.abs(d.min()), 100)

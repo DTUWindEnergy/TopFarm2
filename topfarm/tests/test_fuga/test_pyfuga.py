@@ -7,9 +7,6 @@ import pytest
 import numpy as np
 from topfarm import TopFarm
 from topfarm.cost_models import fuga
-from topfarm.cost_models.fuga.Colonel.py_colonel import lib_reader
-from topfarm.cost_models.utils.wind_resource import WindResource
-from topfarm.cost_models.fuga.py_fuga import fuga_path
 from topfarm.tests import uta
 from topfarm.plotting import NoPlot, PlotComp
 from topfarm.cost_models.cost_model_wrappers import AEPCostModelComponent

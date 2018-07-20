@@ -20,39 +20,41 @@ class TestCostModelWrappers(unittest.TestCase):
         self.min_spacing = 2  # min distance between turbines
         self.optimal = np.array([[3, -3], [7, -7], [4, -3], [3, -7]])  # desired turbine layouts
 
-    def cost(self, tb):
-        x, y = tb[:, :2].T
+    def cost(self, turbineX, turbineY):
+        x, y = turbineX, turbineY
         opt_x, opt_y = self.optimal.T
         return np.sum((x - opt_x)**2 + (y - opt_y)**2)
 
-    def aep_cost(self, tb):
-        x, y = tb[:, :2].T
+    def aep_cost(self, turbineX, turbineY):
+        x, y = turbineX, turbineY
         opt_x, opt_y = self.optimal.T
         return -np.sum((x - opt_x)**2 + (y - opt_y)**2)
 
-    def gradients(self, tb):
-        x, y = tb[:, :2].T
+    def gradients(self, turbineX, turbineY):
+        x, y = turbineX, turbineY
         return (2 * x - 2 * self.optimal[:, 0]), (2 * y - 2 * self.optimal[:, 1])
 
-    def aep_gradients(self, tb):
-        x, y = tb[:, :2].T
+    def aep_gradients(self, turbineX, turbineY):
+        x, y = turbineX, turbineY
         return -(2 * x - 2 * self.optimal[:, 0]), -(2 * y - 2 * self.optimal[:, 1])
 
     def testCostModelComponent(self):
-        tf = TopFarm(self.initial, CostModelComponent(4, self.cost, self.gradients), self.min_spacing, boundary=self.boundary, record_id=None)
+        tf = TopFarm(self.initial, CostModelComponent(['turbineX', 'turbineY'], 4, self.cost,
+                                                      self.gradients), self.min_spacing, boundary=self.boundary, record_id=None)
         tf.optimize()
-        np.testing.assert_array_almost_equal(tf.turbine_positions, self.optimal_with_constraints, 5)
+        np.testing.assert_array_almost_equal(tf.turbine_positions[:, :2], self.optimal_with_constraints, 5)
 
     def testCostModelComponent_no_gradients(self):
-        tf = TopFarm(self.initial, CostModelComponent(4, self.cost), self.min_spacing, boundary=self.boundary, record_id=None)
-        tf.optimize()
-        np.testing.assert_array_almost_equal(tf.turbine_positions, self.optimal_with_constraints, 5)
-
-    def testAEPCostModelComponent(self):
-        tf = TopFarm(self.initial, AEPCostModelComponent(4, self.aep_cost, self.aep_gradients),
+        tf = TopFarm(self.initial, CostModelComponent(['turbineX', 'turbineY'], 4, self.cost),
                      self.min_spacing, boundary=self.boundary, record_id=None)
         tf.optimize()
-        np.testing.assert_array_almost_equal(tf.turbine_positions, self.optimal_with_constraints, 5)
+        np.testing.assert_array_almost_equal(tf.turbine_positions[:, :2], self.optimal_with_constraints, 5)
+
+    def testAEPCostModelComponent(self):
+        tf = TopFarm(self.initial, AEPCostModelComponent(['turbineX', 'turbineY'], 4, self.aep_cost, self.aep_gradients),
+                     self.min_spacing, boundary=self.boundary, record_id=None)
+        tf.optimize()
+        np.testing.assert_array_almost_equal(tf.turbine_positions[:, :2], self.optimal_with_constraints, 5)
 
 
 if __name__ == "__main__":

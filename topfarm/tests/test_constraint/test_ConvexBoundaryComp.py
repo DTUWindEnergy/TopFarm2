@@ -76,11 +76,12 @@ def test_move_inside():
 #     import matplotlib.pyplot as plt
 #     b = np.r_[pbc.xy_boundary, pbc.xy_boundary[:1]]
 #     plt.plot(b[:, 0], b[:, 1], 'k')
-#     for x0, x, y0, y in zip(x0, x, y0, y):
-#         plt.plot([x0, x], [y0, y], '.-')
+#     for x0_, x_, y0_, y_ in zip(x0, x, y0, y):
+#         plt.plot([x0_, x_], [y0_, y_], '.-')
 #     plt.show()
-    npt.assert_array_less(y, x)
-    npt.assert_array_less(x, 10)
-    npt.assert_array_less(y, 10)
-    npt.assert_array_less(-x, 0)
-    npt.assert_array_less(-y, 0)
+    eps = 1e-10
+    npt.assert_array_less(y, x + eps)
+    npt.assert_array_less(x, 10 + eps)
+    npt.assert_array_less(y, 10 + eps)
+    npt.assert_array_less(-x, 0 + eps)
+    npt.assert_array_less(-y, 0 + eps)

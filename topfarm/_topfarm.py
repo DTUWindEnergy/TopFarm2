@@ -187,7 +187,7 @@ class TurbineXYZOptimizationProblem(TopFarmProblem):
             if (('optimizer' in do and do['optimizer'] == 'SLSQP') or  # scaling disturbs SLSQP
                     isinstance(driver, DOEDriver)):
                 ref0_z, ref_z = 0, 1
-            l, u = [self.boundary_comp.z_boundary[:, i] * (ref_x - ref0_x) + ref0_x for i in range(2)]
+            l, u = [self.boundary_comp.z_boundary[:, i] * (ref_z - ref0_z) + ref0_z for i in range(2)]
             self.model.add_design_var('turbineZ', lower=l, upper=u, ref0=ref0_z, ref=ref_z)
 
         self.indeps.add_output('turbineX', turbineXYZ[:, 0], units='m')

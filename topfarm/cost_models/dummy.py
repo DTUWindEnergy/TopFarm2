@@ -105,7 +105,7 @@ def try_me():
 
         boundary = [(0, 0), (6, 0), (6, -10), (0, -10)]
 
-        tf = TopFarm(turbines, DummyCost(optimal), minSpacing * rotorDiameter, boundary=boundary, plot_comp=plot_comp, record_id=None)
+        tf = TopFarm(turbines, DummyCost(optimal,['turbineX','turbineY']), minSpacing * rotorDiameter, boundary=boundary, plot_comp=plot_comp, record_id=None)
         # tf.check()
         tf.optimize()
         # plot_comp.show()

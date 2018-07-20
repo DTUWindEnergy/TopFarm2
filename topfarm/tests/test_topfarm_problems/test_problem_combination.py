@@ -7,7 +7,12 @@ from topfarm.cost_models.dummy import DummyCost, DummyCostPlotComp
 from topfarm.plotting import NoPlot
 import numpy as np
 from topfarm.easy_drivers import EasyScipyOptimizeDriver
+from topfarm.constraint_components.boundary_component import BoundaryComp
 optimal = [(0, 2, 4, 1), (4, 2, 1, 0)]
+
+boundary_comp = BoundaryComp(2, xy_boundary=[(0, 0), (4, 4)],
+                             z_boundary=(0, 4),
+                             xy_boundary_type='square')
 
 
 def test_turbineType_and_XYZ_optimization():
@@ -20,9 +25,7 @@ def test_turbineType_and_XYZ_optimization():
         cost_comp,
         turbineXYZ=[(0, 0, 0), (1, 1, 1)],
         min_spacing=2,
-        xy_boundary=[(0, 0), (4, 4)],
-        z_boundary=(0, 4),
-        xy_boundary_type='square',
+        boundary_comp=boundary_comp,
         plot_comp=plot_comp,
         driver=EasyScipyOptimizeDriver(disp=False))
     tf = TurbineTypeOptimizationProblem(
@@ -36,22 +39,21 @@ def test_turbine_Type_multistart_XYZ_optimization():
     plot_comp = DummyCostPlotComp(optimal, delay=.5)
     plot_comp = NoPlot()
     xyz = [(0, 0, 0), (1, 1, 1)]
-    xy_boundary = [(0, 0), (4, 4)]
-    z_boundary = (0, 4)
+
     p1 = DummyCost(optimal_state=optimal,
                    inputs=['turbineX', 'turbineY', 'turbineZ', 'turbineType'])
+
     p2 = TurbineXYZOptimizationProblem(
         cost_comp=p1,
         turbineXYZ=xyz,
         min_spacing=2,
-        xy_boundary=xy_boundary,
-        z_boundary=z_boundary,
-        xy_boundary_type='square',
+        boundary_comp=boundary_comp,
         plot_comp=plot_comp,
         driver=EasyScipyOptimizeDriver(disp=True, optimizer='COBYLA', maxiter=10))
     p3 = InitialXYZOptimizationProblem(
         cost_comp=p2,
-        turbineXYZ=xyz, min_spacing=2, xy_boundary=xy_boundary, z_boundary=z_boundary, xy_boundary_type='square',
+        turbineXYZ=xyz, min_spacing=2,
+        boundary_comp=boundary_comp,
         driver=DOEDriver(ListGenerator([[('turbineX', [0, 4]), ('turbineY', [2, 2]), ('turbineZ', [4, 1])]])))
     tf = TurbineTypeOptimizationProblem(
         cost_comp=p3,

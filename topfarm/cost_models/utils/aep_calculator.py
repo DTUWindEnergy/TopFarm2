@@ -17,14 +17,15 @@ class AEPCalculator(object):
         self.wdir = wdir
         self.wsp = wsp
 
-    def __call__(self, turbine_positions):
+    def __call__(self, turbineX, turbineY):
+        turbine_positions = np.array([turbineX, turbineY]).T
         no_wake_WD, no_wake_WS, no_wake_TI, weight = self.wind_resource(turbine_positions, self.wdir, self.wsp)
         power_GW = self.wake_model(turbine_positions, no_wake_WD, no_wake_WS, no_wake_TI) / 1e9
         return np.sum(power_GW * weight) * 24 * 365
 
     def get_TopFarm_cost_component(self):
         n_wt = self.wake_model.windFarm.nWT
-        return AEPCostModelComponent(n_wt, lambda *args: self(*args))
+        return AEPCostModelComponent(['turbineX', 'turbineY'], n_wt, lambda *args, **kwargs: self(*args, **kwargs))
 
 
 def try_me():
@@ -37,7 +38,7 @@ def try_me():
         wm = FusedWakeGCLWakeModel(wf_3tb)
         aep_calc = AEPCalculator(wr, wm)
 
-        print(aep_calc(wm.windFarm.pos.T))
+        print(aep_calc(wm.windFarm.pos[:,0], wm.windFarm.pos[:,1]))
 
 
 try_me()

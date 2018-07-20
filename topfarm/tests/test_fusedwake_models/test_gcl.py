@@ -30,11 +30,11 @@ def test_input_shape_must_be_equal():
 
 
 def test_GCL(aep_calc):
-    init_pos = aep_calc.wake_model.windFarm.pos.T
+    init_pos = aep_calc.wake_model.windFarm.pos
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        assert aep_calc(init_pos) == 19.85973533524627  # tb aligned north-south -> wake
-        assert aep_calc(np.array([[-500, 0, 500], [0, 0, 0]]).T) == 22.31788007605505  # tb aligned West-East -> no wake
+        assert aep_calc(init_pos[:, 0], init_pos[:, 1]) == 19.85973533524627  # tb aligned north-south -> wake
+        assert aep_calc([-500, 0, 500], [0, 0, 0]) == 22.31788007605505  # tb aligned West-East -> no wake
 
 
 def test_GCL_Topfarm(aep_calc):
@@ -43,4 +43,4 @@ def test_GCL_Topfarm(aep_calc):
         warnings.simplefilter("ignore")
         tf = TopFarm(init_pos, aep_calc.get_TopFarm_cost_component(), 160, init_pos, boundary_type='square', record_id=None)
         tf.evaluate()
-    assert tf.get_cost() == -19.85973533524627
+    assert tf.cost == -19.85973533524627
