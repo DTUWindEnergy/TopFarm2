@@ -299,32 +299,43 @@ class ProblemComponent(ExplicitComponent):
     def compute(self, inputs, outputs):
         outputs['cost'] = self.problem.optimize(dict(inputs))[0]
 
-#
-# def try_me():
-#     if __name__ == '__main__':
-#         from topfarm.cost_models.dummy import DummyCostPlotComp, DummyCost
-#
-#         n_wt = 20
-#         random_offset = 5
-#         optimal = [(3, -3), (7, -7), (4, -3), (3, -7), (-3, -3), (-7, -7),
-#                    (-4, -3), (-3, -7)][:n_wt]
-# #        optimal = [(3, -3, 5, 1), (7, -7, 5, 1), (4, -3, 5, 1), (3, -7, 5, 1),
-# #                   (-3, -3, 5, 1), (-7, -7, 5, 1),
-# #                   (-4, -3, 5, 1), (-3, -7, 5, 1)][:n_wt]
-#         rotorDiameter = 1.0
-#         minSpacing = 2.0
-#
-#         plot_comp = DummyCostPlotComp(optimal)
-# #        plot_comp.animate = True
-#
-#         boundary = [[(0, 0), (6, 0), (6, -10), (0, -10)], ]
-#         tf = TopFarm(optimal, DummyCost(optimal), minSpacing * rotorDiameter,
-#                      boundary=boundary, plot_comp=plot_comp, record_id=None)
-#         # topFarm.check()
-#         tf.shuffle_positions(shuffle_type='abs', offset=random_offset)
-#         tf.optimize()
-#         tf.animate()
-#         tf.clean()
-#
-#
-# try_me()
+
+def try_me():
+    if __name__ == '__main__':
+        from openmdao.drivers.doe_generators import FullFactorialGenerator
+        from topfarm.cost_models.dummy import DummyCost, DummyCostPlotComp
+        from topfarm.plotting import NoPlot
+        import numpy as np
+        from topfarm.easy_drivers import EasyScipyOptimizeDriver
+        optimal = [(0, 2, 4, 1), (4, 2, 1, 0)]
+
+        plot_comp = DummyCostPlotComp(optimal)
+
+        cost_comp = DummyCost(
+            optimal_state=optimal,
+            inputs=['turbineX', 'turbineY', 'turbineZ', 'turbineType'])
+        xyz_opt_problem = TurbineXYZOptimizationProblem(
+            cost_comp,
+            turbineXYZ=[(0, 0, 0), (1, 1, 1)],
+            min_spacing=2,
+            boundary_comp=BoundaryComp(n_wt=2,
+                                       xy_boundary=[(0, 0), (4, 4)],
+                                       z_boundary=(0, 4),
+                                       xy_boundary_type='square'),
+            plot_comp=plot_comp,
+            driver=EasyScipyOptimizeDriver(disp=False),
+            record_id='test:latest')
+        
+        cost, state, recorder = xyz_opt_problem.optimize()
+        recorder.save()
+        
+        tf = TurbineTypeOptimizationProblem(
+            cost_comp=xyz_opt_problem,
+            turbineTypes=[0, 0], lower=0, upper=1,
+            driver=DOEDriver(FullFactorialGenerator(2)))
+        cost, state, recorder = tf.optimize()
+        print (state)
+        plot_comp.show()
+
+
+try_me()
