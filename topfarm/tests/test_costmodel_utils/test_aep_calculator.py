@@ -25,7 +25,7 @@ class TestAEPCalculator(unittest.TestCase):
             warnings.simplefilter("ignore")
             wm = FusedWakeGCLWakeModel(wf_3tb)
             aep_calc = AEPCalculator(wr, wm)
-            self.assertAlmostEqual(aep_calc(np.array([[-1600, 0, 1600], [0, 0, 0]]).T), 22.3178800761)
+            self.assertAlmostEqual(aep_calc([-1600, 0, 1600], [0, 0, 0]), 22.3178800761)
 
 
 if __name__ == "__main__":

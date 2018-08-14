@@ -9,6 +9,7 @@ test_topfarm:  # name the job what we like
     test
   script:
   - pip install --upgrade git+git://github.com/FUSED-Wind/FUSED-Wake@master
+  - pip install scipy==1.0.1
   - py.test
   tags:  # only runners with this tag can do the job [3]
   - python

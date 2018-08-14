@@ -3,36 +3,35 @@ import numpy as np
 
 
 class CostModelComponent(ExplicitComponent):
-    def __init__(self, n_wt, cost_function, cost_gradient_function=None):
+    def __init__(self, input_keys, n_wt, cost_function, cost_gradient_function=None, input_units={'turbine' + xyz: 'm' for xyz in 'XYZ'}):
         super().__init__()
+        assert isinstance(n_wt, int), n_wt
+        self.input_keys = input_keys
         self.cost_function = cost_function
         self.cost_gradient_function = cost_gradient_function
+        self.input_units = input_units
         self.n_wt = n_wt
 
     def setup(self):
-        self.add_input('turbineX', val=np.zeros(self.n_wt), units='m')
-        self.add_input('turbineY', val=np.zeros(self.n_wt), units='m')
-
+        for i in self.input_keys:
+            self.add_input(i, val=np.zeros(self.n_wt), units=self.input_units.get(i, None))
         self.add_output('cost', val=0.0)
 
-        # Finite difference all partials.
         if self.cost_gradient_function:
-            self.declare_partials('cost', '*')
+            self.declare_partials('cost', self.input_keys)
         else:
-            self.declare_partials('cost', '*', method='fd')
+            # Finite difference all partials.
+            self.declare_partials('cost', self.input_keys, method='fd')
 
     def compute(self, inputs, outputs):
-        x = inputs['turbineX']
-        y = inputs['turbineY']
-        outputs['cost'] = self.cost_function(np.array([x, y]).T)
+        outputs['cost'] = self.cost_function(**inputs)
 
     def compute_partials(self, inputs, J):
         if self.cost_gradient_function:
-            x = inputs['turbineX']
-            y = inputs['turbineY']
-            dCostdx, dCostdy = self.cost_gradient_function(np.array([x, y]).T)
-            J['cost', 'turbineX'] = dCostdx
-            J['cost', 'turbineY'] = dCostdy
+            for k, dCostdk in zip(self.input_keys,
+                                  self.cost_gradient_function(**inputs)):
+                if dCostdk is not None:
+                    J['cost', k] = dCostdk
 
 
 class AEPCostModelComponent(CostModelComponent):

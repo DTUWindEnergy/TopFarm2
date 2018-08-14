@@ -7,6 +7,10 @@ import pytest
 import numpy as np
 from topfarm import TopFarm
 from topfarm.cost_models import fuga
+from topfarm.tests import uta
+from topfarm.plotting import NoPlot, PlotComp
+from topfarm.cost_models.cost_model_wrappers import AEPCostModelComponent
+from topfarm.easy_drivers import EasyScipyOptimizeDriver
 
 
 def check_lib_exists():
@@ -19,7 +23,7 @@ def check_lib_exists():
 
 @pytest.fixture
 def get_fuga():
-    def _fuga(tb_x=[423974, 424033], tb_y=[6151447, 6150889]):
+    def _fuga(tb_x=[423974, 424033], tb_y=[6151447, 6150889], wind_atlas='MyFarm/north_pm15_only.lib'):
         check_lib_exists()
         from topfarm.cost_models.fuga.py_fuga import PyFuga, fuga_path
         pyFuga = PyFuga()
@@ -27,7 +31,7 @@ def get_fuga():
                      turbine_model_path=fuga_path + 'LUTs-T/', turbine_model_name='Vestas_V80_(2_MW_offshore)[h=70.00]',
                      tb_x=tb_x, tb_y=tb_y,
                      mast_position=(0, 0, 70), z0=0.03, zi=400, zeta0=0,
-                     farms_dir=fuga_path + 'LUTs-T/Farms/', wind_atlas_path='MyFarm/north_pm30_only.lib', climate_interpolation=False)
+                     farms_dir=fuga_path + 'LUTs-T/Farms/', wind_atlas_path=wind_atlas, climate_interpolation=False)
         return pyFuga
     return _fuga
 
@@ -77,32 +81,35 @@ def testAEP_one_tb(get_fuga):
 def testAEP(pyFuga):
     np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0, 1000], [0, 0]]).T), [
                                          2 * 8.2896689155874324, 2 * 8.2896689155874324, 0.472841, 1.])
-    np.testing.assert_array_almost_equal(pyFuga.get_aep_gradients(np.array([[0, 1000], [0, 0]]).T), 0)
-    np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0, 0], [0, 200]]).T), [14.688347, 16.579338,  0.41891,  0.885943])
-    np.testing.assert_array_almost_equal(pyFuga.get_aep_gradients(np.array([[0, 0], [0, 200]]).T), [[-0.003789,  0.003789],
-                                                                                                    [-0.007204,  0.007204],
-                                                                                                    [0.,  0.]])
-    np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0, 200], [0, 200]]).T), [20.352901, 16.579338,  0.580462,  1.227606])
-    np.testing.assert_array_almost_equal(pyFuga.get_aep_gradients(np.array([[0, 200], [0, 200]]).T), [[-2.033273e-05,  2.033273e-05],
+    np.testing.assert_array_almost_equal(pyFuga.get_aep_gradients(np.array([[0, 1000], [0, 0]]).T), [[0, 0],
+                                                                                                     [0, 0],
+                                                                                                     [1.047718e-002, 9.801237e-003]])
+    np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0, 0], [0, 200]]).T), [14.472994, 16.579338, 0.412768, 0.872954])
+    np.testing.assert_array_almost_equal(pyFuga.get_aep_gradients(np.array([[0, 0], [0, 200]]).T), [[0, 0],
+                                                                                                    [-7.02042144e-03, 7.02042144e-03],
+                                                                                                    [3.099291e-02, -1.459773e-02]])
+    np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0, 200], [0, 200]]).T), [16.543667, 16.579338, 0.471824, 0.997848])
+    np.testing.assert_array_almost_equal(pyFuga.get_aep_gradients(np.array([[0, 200], [0, 200]]).T), [[-1.679974e-05, 1.679974e-05],
                                                                                                       [7.255895e-06, -7.255895e-06],
-                                                                                                      [0.000000e+00,  0.000000e+00]])
+                                                                                                      [2.002942e-02, 3.759327e-06]])
     pyFuga.cleanup()
 
 
 def testLargeOffset(pyFuga):
     o = 1.e16
-    np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0 + o, 0 + o], [0 + o, 200 + o]]).T), [14.688347, 16.579338,  0.41891,  0.885943])
-    np.testing.assert_array_almost_equal(pyFuga.get_aep_gradients(), [[-0.003789,  0.003789],
-                                                                      [-0.007204,  0.007204],
-                                                                      [0.,  0.]])
+    np.testing.assert_array_almost_equal(pyFuga.get_aep(
+        np.array([[0 + o, 0 + o], [0 + o, 200 + o]]).T), [14.472994, 16.579338, 0.412768, 0.872954])
+    np.testing.assert_array_almost_equal(pyFuga.get_aep_gradients(), [[0, 0],
+                                                                      [-7.02042144e-03, 7.02042144e-03],
+                                                                      [3.099291e-02, -1.459773e-02]])
 
 
 def testAEP_topfarm(get_fuga):
     pyFuga = get_fuga()
     init_pos = [[0, 0], [1000, 0]]
-    tf = TopFarm(init_pos, pyFuga.get_TopFarm_cost_component(), 160, init_pos, boundary_type='square')
-    tf.evaluate()
-    np.testing.assert_array_almost_equal(tf.get_cost(), -16.579337831174865)
+    tf = TopFarm(init_pos, pyFuga.get_TopFarm_cost_component(), 160, init_pos, boundary_type='square', record_id=False)
+    cost, _ = tf.evaluate()
+    np.testing.assert_array_almost_equal(cost, -16.579337831174865)
 
 
 def test_pyfuga_cmd():
@@ -112,6 +119,71 @@ def test_pyfuga_cmd():
     pyFuga.execute(r'echo "ColonelInit"')
     assert pyFuga.log.strip().split("\n")[-1] == 'ColonelInit'
 
+
+
+
+def testAEP_topfarm_optimization_4tb(get_fuga):
+    D = 80.0
+    B = 3 * D + 10
+    init_pos = np.array([(0, 3 * D), (0, D), (0, -D), (0, -3 * D)])
+    init_pos[:, 0] += [-80, 0, 0, 80]
+
+    wind_atlas = 'MyFarm/north_pm45_only.lib'
+    pyFuga = get_fuga(init_pos[:1, 0], init_pos[:1, 1], wind_atlas=wind_atlas)
+    AEP_pr_tb = pyFuga.get_aep()[1]
+    pyFuga = get_fuga(init_pos[:, 0], init_pos[:, 1], wind_atlas=wind_atlas)
+    boundary = [(-B, B), (B, B), (B, -B), (-B, -B), (-B, B)]
+
+    plot_comp = NoPlot()
+    #plot_comp= PlotComp()
+
+    cost_comp = pyFuga.get_TopFarm_cost_component()
+    tf = TopFarm(init_pos, cost_comp, 2 * D, boundary=boundary, plot_comp=plot_comp)
+    cost, _, rec = tf.optimize()
+    uta.assertAlmostEqual(-cost, AEP_pr_tb * 4, delta=.2)
+
+    tf.plot_comp.show()
+
+#     # Plot wake map
+#     f, a, k = lib_reader.read_lib(fuga_path + 'LUTs-T/Farms/' + wind_atlas)
+#     wr = WindResource(f, a, k, np.zeros_like(k))
+#     pyFuga.plot_wind_field_with_boundary(10, zip(range(360)[::2], wr.f[::2] * 2), 'XY', 70, boundary)
+
+
+@pytest.mark.parametrize('scale', [(.001),
+                                   (1),
+                                   (1000)])
+def testAEP_topfarm_optimization_2tb_scale(get_fuga, scale):
+    D = 80.0
+    B = 2 * D + 10
+    init_pos = np.array([(-10, 1 * D), (10, - D)])
+
+    wind_atlas = 'MyFarm/north_pm30_only.lib'
+    pyFuga = get_fuga(init_pos[:1, 0], init_pos[:1, 1], wind_atlas=wind_atlas)
+    AEP_pr_tb = pyFuga.get_aep()[1]
+    pyFuga = get_fuga(init_pos[:, 0], init_pos[:, 1], wind_atlas=wind_atlas)
+    boundary = [(-B, B), (B, B), (B, -B), (-B, -B), (-B, B)]
+
+    plot_comp = NoPlot()
+    #plot_comp = PlotComp()
+
+    cost_comp = AEPCostModelComponent(['turbineX', 'turbineY'], init_pos.shape[0],
+                                      lambda turbineX, turbineY: scale * pyFuga.get_aep(np.array([turbineX, turbineY]).T)[0],  # only aep
+                                      lambda turbineX, turbineY: scale * pyFuga.get_aep_gradients(np.array([turbineX, turbineY]).T)[:2])  # only dAEPdx and dAEPdy
+
+    tf = TopFarm(init_pos, cost_comp, 2 * D, boundary=boundary,
+                 plot_comp=plot_comp, driver=EasyScipyOptimizeDriver(tol=1e-8, disp=False),
+                 expected_cost=AEP_pr_tb * 2 * scale)
+    cost, _, rec = tf.optimize()
+    tf.plot_comp.show()
+    uta.assertAlmostEqual(-cost / scale, AEP_pr_tb * 2, delta=.02)
+
+
+#     # Plot wake map
+#     f, a, k = lib_reader.read_lib(fuga_path + 'LUTs-T/Farms/' + wind_atlas)
+#     wr = WindResource(f, a, k, np.zeros_like(k))
+#     #pyFuga.plot_wind_field_with_boundary(10, zip(range(360)[::2], wr.f[::2] * 2), 'XY', 70, boundary)
+#     pyFuga.plot_wind_field_with_boundary(10, 0, 'XY', 70, boundary)
 
 # @pytest.mark.xfail
 # def test_parallel():
