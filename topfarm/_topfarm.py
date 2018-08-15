@@ -81,7 +81,8 @@ class TopFarmProblem(Problem):
         self.driver.add_recorder(self.recorder)
         self.run_driver()
         self.cleanup()
-        self.driver._rec_mgr._recorders.remove(self.recorder)
+        if self.driver._rec_mgr._recorders!=[]: # in openmdao<2.4 cleanup does not delete recorders
+            self.driver._rec_mgr._recorders.remove(self.recorder)
         if isinstance(self.driver, DOEDriver):
             costs = self.recorder.get('cost')
             cases = self.recorder.driver_cases
