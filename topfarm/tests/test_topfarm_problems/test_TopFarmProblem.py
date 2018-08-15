@@ -23,6 +23,7 @@ optimize
 check_gradients
 as_component
 get_DOE_list
+get_DOE_array
 
 
 """
@@ -80,7 +81,7 @@ def test_optimize(turbineTypeOptimizationProblem):
     cost, state, recorder = tf.optimize()
     assert cost == 0
     np.testing.assert_array_equal(state['turbineType'], [2, 0, 1])
-    doe_list = np.squeeze(tf.get_DOE_list())
+    doe_list = np.squeeze(tf.get_DOE_array())
     np.testing.assert_array_almost_equal(recorder.get('cost'), np.sum((doe_list - [2, 0, 1])**2, 1))
 
 
@@ -139,9 +140,21 @@ def testTopFarmProblem_as_component(turbineTypeOptimizationProblem):
 
 def testTopFarmProblem_get_DOE_list(turbineTypeOptimizationProblem):
     tf = turbineTypeOptimizationProblem
-    npt.assert_array_equal(tf.get_DOE_list().shape, (27, 1, 3))
-    npt.assert_array_equal(tf.get_DOE_list()[:5], [[[0, 0, 0]],
+    npt.assert_array_equal(len(tf.get_DOE_list()), 27)
+    (k,v), = tf.get_DOE_list()[1]
+    assert k=="indeps.turbineType"
+    npt.assert_array_equal(v, [1,0,0])
+    
+    #npt.assert_array_equal(tf.get_DOE_list()[1], [[('indeps.turbineType', array([0., 0., 0.]))], [('indeps.turbineType', array([1., 0., 0.]))]])
+
+
+def testTopFarmProblem_get_DOE_array(turbineTypeOptimizationProblem):
+    tf = turbineTypeOptimizationProblem
+    npt.assert_array_equal(tf.get_DOE_array().shape, (27, 1, 3))
+    npt.assert_array_equal(tf.get_DOE_array()[:5], [[[0, 0, 0]],
                                                    [[1, 0, 0]],
                                                    [[2, 0, 0]],
                                                    [[0, 1, 0]],
                                                    [[1, 1, 0]]])
+
+
