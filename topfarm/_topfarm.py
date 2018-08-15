@@ -115,7 +115,10 @@ class TopFarmProblem(Problem):
     def get_DOE_list(self):
         assert isinstance(self.driver, DOEDriver), 'get_DOE_list only applies to DOEDrivers, and the current driver is: %s' % type(self.driver)
         case_gen = self.driver.options['generator']
-        return np.array([[var[1] for var in c] for c in case_gen(self.model.get_design_vars(recurse=True), self.model)])
+        return [c for c in case_gen(self.model.get_design_vars(recurse=True), self.model)]
+    
+    def get_DOE_array(self):
+        return np.array([[v for k,v in c] for c in self.get_DOE_list()])
 
 
 class TurbineTypeOptimizationProblem(TopFarmProblem):
