@@ -20,6 +20,8 @@ class ListRecorder(BaseRecorder):
         self._prom2abs = {'input': {}, 'output': {}}
         self._abs2meta = {}
         self._driver_cases = None
+        self.scaling_vecs = None
+        self.user_options = None
 
     def startup(self, recording_requester):
         """
@@ -35,10 +37,10 @@ class ListRecorder(BaseRecorder):
         # grab the system
         if isinstance(recording_requester, Driver):
             system = recording_requester._problem.model
-#         elif isinstance(recording_requester, System):
-#             system = recording_requester
-#         else:
-#             system = recording_requester._system
+        elif isinstance(recording_requester, System):
+            system = recording_requester
+        else:
+            system = recording_requester._system
 
         # grab all of the units and type (collective calls)
         states = system._list_states_allprocs()
@@ -123,6 +125,17 @@ class ListRecorder(BaseRecorder):
         self.driver_class = type(recording_requester).__name__
         self.model_viewer_data = recording_requester._model_viewer_data
 
+    def record_metadata_system(self, recording_requester):
+        """
+        Record system metadata.
+
+        Parameters
+        ----------
+        recording_requester : System
+            The System that would like to record its metadata.
+        """
+        self.scaling_vecs, self.user_options = self._get_metadata_system(recording_requester)
+
     def record_iteration_driver(self, recording_requester, data, metadata):
         """
         Record data and metadata from a Driver.
@@ -151,7 +164,9 @@ class ListRecorder(BaseRecorder):
              '_prom2abs': self._prom2abs,
              '_abs2meta': self._abs2meta,
              'driver_class': self.driver_class,
-             'model_viewer_data': self.model_viewer_data
+             'model_viewer_data': self.model_viewer_data,
+             'scaling_vecs': self.scaling_vecs,
+             'user_options': self.user_options
              }
 
         if os.path.dirname(filename) != "":
@@ -241,11 +256,11 @@ class TopFarmListRecorder(ListRecorder):
         ln += title,
 
         def init():
-            if len(boundary)>0:
+            if len(boundary) > 0:
                 plt.plot(boundary[:, 0], boundary[:, 1], 'k')
             else:
-                ax.set_xlim([np.min(x),np.max(x)])
-                ax.set_ylim([np.min(y),np.max(y)])
+                ax.set_xlim([np.min(x), np.max(x)])
+                ax.set_ylim([np.min(y), np.max(y)])
             plt.axis('equal')
             return ln
 
@@ -257,7 +272,7 @@ class TopFarmListRecorder(ListRecorder):
                 if plot_initial:
                     ln[i + n_wt].set_data(np.r_[x[0, i], x[frame, i]], np.r_[y[0, i], y[frame, i]])
                 ln[i + 2 * n_wt].set_data(x[frame, i], y[frame, i])
-            
+
             return ln
 
         ani = animation.FuncAnimation(fig, update, frames=len(x),
@@ -307,8 +322,8 @@ class TopFarmListRecorder(ListRecorder):
         else:
             load_case = int(load_case)
         self.driver_iteration_lst = self.driver_iteration_lst[:load_case]
-        self.iteration_coordinate_lst = self.iteration_coordinate_lst[:load_case] 
-        
+        self.iteration_coordinate_lst = self.iteration_coordinate_lst[:load_case]
+
         self.filename, self.load_case = filename, load_case
         return self
 
