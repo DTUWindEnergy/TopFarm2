@@ -18,7 +18,7 @@ setup(name='topfarm',
       install_requires=[
         'matplotlib',  # for plotting
         'numpy',  # for numerical calculations
-        'openmdao',  # for optimization
+        'openmdao==2.3.1',  # for optimization
         'pytest',  # for testing
         'pytest-cov',  # for calculating coverage
         'scipy',  # constraints
