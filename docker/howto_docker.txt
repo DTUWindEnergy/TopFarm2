@@ -1,0 +1,47 @@
+Docker image for synnefo linux test machine
+===========================================
+
+Image hosted at:
+https://hub.docker.com/r/dtuwindenergy/topfarm2/
+
+pull image
+----------
+docker pull dtuwindenergy/topfarm2
+
+Build image
+-----------
+cd topfarm2/docker
+docker build -f Dockerfile_simple ../ -t dtuwindenergy/topfarm2
+
+Run image
+---------
+docker run -v <path to topfarm2>:/TopFarm2 -it -t dtuwindenergy/topfarm2
+
+Push image
+----------
+docker login
+docker push dtuwindenergy/topfarm2
+
+
+Docker image with Fuga
+======================
+replace line endings of install_ipopt2.sh with lf
+
+cd docker
+docker build -f Dockerfile ../ -t <tag>
+docker run -v <path to topfarm>:/TopFarm2 -it -t <tag>
+
+cd TopFarm2 &&
+pip install -e . &&
+lazbuild /TopFarm2/topfarm/cost_models/fuga/Colonel/FugaLib/FugaLib.lpr
+
+python topfarm/cost_models/fuga/tests/test_pyfuga.py
+
+
+Docker commands
+===============
+# Delete all containers
+docker rm $(docker ps -a -q)
+
+# Delete all images
+docker rmi $(docker images -q)
