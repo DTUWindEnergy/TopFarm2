@@ -37,18 +37,18 @@ def test_list_driver(get_tf):
            [('turbineX', [4, 3]), ('turbineY', [6, 5]), ('turbineZ', [2, 1])]]
 
     tf = get_tf(driver=lst)  # pure list
-    npt.assert_array_equal(tf.get_DOE_list(), xyz)
+    npt.assert_array_equal(tf.get_DOE_array(), xyz)
 
     tf = get_tf(driver=ListGenerator(lst))  # list generator
-    npt.assert_array_equal(tf.get_DOE_list(), xyz)
+    npt.assert_array_equal(tf.get_DOE_array(), xyz)
 
     tf = get_tf(driver=DOEDriver(ListGenerator(lst)))  # DOEDriver
-    npt.assert_array_equal(tf.get_DOE_list(), xyz)
+    npt.assert_array_equal(tf.get_DOE_array(), xyz)
 
 
 def test_with_uniform_generator(get_tf):
     tf = get_tf(driver=DOEDriver(UniformGenerator(10)))
-    arr = tf.get_DOE_list()
+    arr = tf.get_DOE_array()
     uta.assertGreaterEqual(arr[:, 0].min(), 10)  # x
     uta.assertLessEqual(arr[:, 0].max(), 11)  # x
     uta.assertGreaterEqual(arr[:, 1].min(), 6)  # y
@@ -63,7 +63,7 @@ def test_with_constrained_generator_convex_boundary(get_tf):
     tf = get_tf(xy_boundary=[(0, 0), (10, 0), (10, 10)], xy_boundary_type='convex_hull',
                 driver=ConstrainedXYZGenerator(UniformGenerator(10, 0)))
     print(tf.xy_boundary)
-    arr = tf.get_DOE_list()
+    arr = tf.get_DOE_array()
     print(arr.shape)
     x, y, z = [arr[:, i] for i in range(3)]
     uta.assertGreaterEqual(x.min(), 0)  # x
@@ -75,7 +75,7 @@ def test_with_constrained_generator_polygon(get_tf):
     tf = get_tf(xy_boundary=[(0, 0), (10, 0), (10, 10)],
                 xy_boundary_type='polygon',
                 driver=ConstrainedXYZGenerator(UniformGenerator(10, 0)))
-    arr = tf.get_DOE_list()
+    arr = tf.get_DOE_array()
     print(arr.shape)
     x, y = [arr[:, i] for i in range(2)]
     uta.assertGreaterEqual(x.min(), 0)  # x
@@ -91,8 +91,7 @@ def test_with_constrained_generator_spacing(get_tf):
                 xy_boundary_type='rectangle',
                 min_spacing=2,
                 driver=ConstrainedXYZGenerator(lst))
-    arr = tf.get_DOE_list()
-    print(arr)
-    #x, y, z = [arr[:, i] for i in range(3)]
+    arr = tf.get_DOE_array()
 
-    
+    x, y, z = [arr[:, i] for i in range(3)]
+    assert all(np.sqrt(np.diff(x)**2 + np.diff(y)**2) >= 2)

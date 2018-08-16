@@ -81,7 +81,7 @@ class TopFarmProblem(Problem):
         self.driver.add_recorder(self.recorder)
         self.run_driver()
         self.cleanup()
-        if self.driver._rec_mgr._recorders!=[]: # in openmdao<2.4 cleanup does not delete recorders
+        if self.driver._rec_mgr._recorders != []:  # in openmdao<2.4 cleanup does not delete recorders
             self.driver._rec_mgr._recorders.remove(self.recorder)
         if isinstance(self.driver, DOEDriver):
             costs = self.recorder.get('cost')
@@ -115,7 +115,10 @@ class TopFarmProblem(Problem):
     def get_DOE_list(self):
         assert isinstance(self.driver, DOEDriver), 'get_DOE_list only applies to DOEDrivers, and the current driver is: %s' % type(self.driver)
         case_gen = self.driver.options['generator']
-        return np.array([[var[1] for var in c] for c in case_gen(self.model.get_design_vars(recurse=True), self.model)])
+        return [c for c in case_gen(self.model.get_design_vars(recurse=True), self.model)]
+
+    def get_DOE_array(self):
+        return np.array([[v for k, v in c] for c in self.get_DOE_list()])
 
 
 class TurbineTypeOptimizationProblem(TopFarmProblem):
@@ -326,16 +329,16 @@ def try_me():
             plot_comp=plot_comp,
             driver=EasyScipyOptimizeDriver(disp=False),
             record_id='test:latest')
-        
+
         cost, state, recorder = xyz_opt_problem.optimize()
         recorder.save()
-        
+
         tf = TurbineTypeOptimizationProblem(
             cost_comp=xyz_opt_problem,
             turbineTypes=[0, 0], lower=0, upper=1,
             driver=DOEDriver(FullFactorialGenerator(2)))
         cost, state, recorder = tf.optimize()
-        print (state)
+        print(state)
         plot_comp.show()
 
 
