@@ -17,9 +17,6 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
 
 
 # -- General configuration ------------------------------------------------
@@ -180,3 +177,5 @@ intersphinx_mapping = {
 'pandas': ('http://pandas-docs.github.io/pandas-docs-travis', None),
 'numpy': ('http://docs.scipy.org/doc/numpy-1.13.0', None)
 }
+
+figure_language_filename = 'examples/{basename}{ext}'
