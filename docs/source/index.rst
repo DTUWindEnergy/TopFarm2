@@ -10,13 +10,9 @@ Welcome to TOPFARM, the wind-farm optimizer
     :maxdepth: 2
 
     installation
-    examples
 
+.. toctree::
+    :caption: Examples
+    :maxdepth: 2
 
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+    examples/example_1_constrained_layout_optimization
