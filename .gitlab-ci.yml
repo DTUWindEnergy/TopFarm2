@@ -39,6 +39,7 @@ pages:  # "pages" is a job specifically for GitLab pages [1]
     - public
   only:  # only run for these branches
   - master
+  - test_docs
   tags:  # only runners with this tag can do the job [3]
   - python
 
