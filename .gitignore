@@ -5,7 +5,6 @@
 /.pydevproject
 /cost_models/fuga/pascal_test
 snopt
-*.png
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
