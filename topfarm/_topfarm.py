@@ -75,9 +75,13 @@ class TopFarmProblem(Problem):
             self.recorder = NestedTopFarmListRecorder(self.cost_comp, self.record_id)
         else:
             self.recorder = TopFarmListRecorder(self.record_id)
-        if state == {} and len(self.recorder.driver_iteration_lst) > 0:
-            state = {k: self.recorder.get(k)[-1] for k in self.state.keys()}
         self.update_state(state)
+        if len(self.recorder.driver_iteration_lst) > 0:
+            try:
+                self.update_state({k: self.recorder.get(k)[-1] for k in self.state.keys() if k not in state})
+            except ValueError:
+                pass # loaded state does not fit into dimension of current state
+            
         self.driver.add_recorder(self.recorder)
         self.run_driver()
         self.cleanup()
