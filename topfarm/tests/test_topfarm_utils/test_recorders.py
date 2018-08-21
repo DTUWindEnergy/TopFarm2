@@ -70,6 +70,8 @@ def test_ListRecorder():
     cases = recorder.driver_cases
     assert cases.num_cases == 4
     npt.assert_array_equal(recorder.get('counter'), range(1, 5))
+    npt.assert_array_equal(recorder['counter'], range(1, 5))
+    
     npt.assert_array_almost_equal(recorder.get(['x', 'y', 'f_xy']), xyf, 4)
     for xyf, k in zip(xyf[0], ['x', 'y', 'f_xy']):
         npt.assert_allclose(cases.get_case(0).outputs[k][0], xyf)

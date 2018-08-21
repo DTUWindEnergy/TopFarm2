@@ -116,6 +116,9 @@ class ListRecorder(BaseRecorder):
         if res.shape[-1] == 1:
             res = res[:, 0]
         return res
+    
+    def __getitem__(self, key):
+        return self.get(key)
 
     def keys(self):
         return list(np.unique(['counter', 'iteration_coordinate', 'timestamp', 'success', 'msg'] +
@@ -263,6 +266,8 @@ class TopFarmListRecorder(ListRecorder):
                 ax.set_ylim([np.min(y), np.max(y)])
             plt.axis('equal')
             return ln
+
+        init()
 
         def update(frame):
             title.set_text("%f (%.2f%%)" % (cost[frame],
