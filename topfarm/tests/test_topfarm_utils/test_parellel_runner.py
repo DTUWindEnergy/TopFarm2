@@ -1,12 +1,10 @@
 from openmdao.drivers.doe_driver import DOEDriver
-from openmdao.drivers.doe_generators import FullFactorialGenerator,\
-    ListGenerator, UniformGenerator
+from openmdao.drivers.doe_generators import UniformGenerator
 import pytest
 from topfarm._topfarm import InitialXYZOptimizationProblem
 import numpy as np
 from topfarm.cost_models.dummy import DummyCost
-from topfarm.tests import npt, uta
-from topfarm.constraint_components.constrained_generator import ConstrainedXYZGenerator
+from topfarm.tests import npt
 from topfarm.constraint_components.boundary_component import BoundaryComp
 from topfarm.parallel_runner import ParallelRunner
 
