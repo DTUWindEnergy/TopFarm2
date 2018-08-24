@@ -1,6 +1,7 @@
 from topfarm.constraint_components.boundary_component import BoundaryComp
 from topfarm.constraint_components.spacing_component import SpacingComp
 from topfarm.plotting import PlotComp
+from topfarm.utils import smart_start
 import os
 import time
 import numpy as np
@@ -239,6 +240,11 @@ class TurbineXYZOptimizationProblem(TopFarmProblem):
     @property
     def z_boundary(self):
         return self.boundary_comp.z_boundary
+
+    def smart_start(self, x, y ,val):
+        x, y = smart_start(x, y ,val, self.n_wt, self.min_spacing)
+        self.update_state({'turbineX': x, 'turbineY': y})
+        return x, y
 
 
 class InitialXYZOptimizationProblem(TurbineXYZOptimizationProblem):
