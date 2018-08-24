@@ -16,3 +16,4 @@ Welcome to TOPFARM, the wind-farm optimizer
     :maxdepth: 2
 
     examples/example_1_constrained_layout_optimization
+    examples/example_2_wake_comparison
