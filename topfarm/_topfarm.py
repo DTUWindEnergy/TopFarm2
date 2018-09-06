@@ -16,16 +16,30 @@ from openmdao.api import Problem, ScipyOptimizeDriver, IndepVarComp
 
 
 class TopFarmProblem(Problem):
-    def __init__(self, cost_comp, record_id, expected_cost):
+    def __init__(self, cost_comp, driver, plot_comp, record_id, expected_cost):
         Problem.__init__(self)
         if isinstance(cost_comp, TopFarmProblem):
             cost_comp = cost_comp.as_component()
         cost_comp.parent = self
-        self.record_id = record_id
         self.cost_comp = cost_comp
+        
+        if isinstance(driver, list):
+            driver = DOEDriver(ListGenerator(driver))
+        elif isinstance(driver, DOEGenerator):
+            driver = DOEDriver(generator=driver)
+        self.driver = driver
+
+        self.plot_comp = plot_comp
+
+        self.record_id = record_id
+
         self.indeps = self.model.add_subsystem('indeps', IndepVarComp(), promotes=['*'])
         self.model.add_subsystem('cost_comp', cost_comp, promotes=['*'])
         self.model.add_objective('cost', scaler=1 / abs(expected_cost))
+
+        if plot_comp:
+            self.model.add_subsystem('plot_comp', plot_comp, promotes=['*'])
+            plot_comp.problem = self
 
     @property
     def cost(self):
@@ -55,10 +69,10 @@ class TopFarmProblem(Problem):
     def evaluate(self, state={}):
         t = time.time()
         self.update_state(state)
-        rec = ListRecorder()
-        self.driver.add_recorder(rec)
+        self.recorder = ListRecorder()
+        self.driver.add_recorder(self.recorder)
         self.run_model()
-        self.driver._rec_mgr._recorders.remove(rec)
+        self.driver._rec_mgr._recorders.remove(self.recorder)
         print("Evaluated in\t%.3fs" % (time.time() - t))
         return self.cost, self.state
 
@@ -81,8 +95,8 @@ class TopFarmProblem(Problem):
             try:
                 self.update_state({k: self.recorder.get(k)[-1] for k in self.state.keys() if k not in state})
             except ValueError:
-                pass # loaded state does not fit into dimension of current state
-            
+                pass  # loaded state does not fit into dimension of current state
+
         self.driver.add_recorder(self.recorder)
         self.run_driver()
         self.cleanup()
@@ -127,8 +141,8 @@ class TopFarmProblem(Problem):
 
 
 class TurbineTypeOptimizationProblem(TopFarmProblem):
-    def __init__(self, cost_comp, turbineTypes, lower, upper, driver, record_id=None, expected_cost=1):
-        TopFarmProblem.__init__(self, cost_comp, record_id, expected_cost)
+    def __init__(self, cost_comp, turbineTypes, lower, upper, driver, plot_comp=None, record_id=None, expected_cost=1):
+        TopFarmProblem.__init__(self, cost_comp, driver, plot_comp, record_id, expected_cost)
         self.turbineTypes = turbineTypes
         self.lower = lower
         self.upper = upper
@@ -142,13 +156,15 @@ class TurbineTypeOptimizationProblem(TopFarmProblem):
 
         self.model.add_constraint('turbineType', lower=lim[:, 0], upper=lim[:, 1])
         self.indeps.add_output('turbineType', np.array(turbineTypes).astype(np.int))
-        self.driver = driver
+
         self.model.add_design_var('turbineType', lower=lim[:, 0], upper=lim[:, 1])
+        if self.plot_comp:
+            plot_comp.n_wt = n_wt
         self.setup(check=True, mode='fwd')
 
     @property
     def state(self):
-        state = {'turbineType': np.array(self['turbineType']).astype(np.int)}
+        state = {'turbineType': np.round(self['turbineType']).astype(np.int)}
         state.update(TopFarmProblem.state.fget(self))
         return state
 
@@ -156,11 +172,16 @@ class TurbineTypeOptimizationProblem(TopFarmProblem):
 class TurbineXYZOptimizationProblem(TopFarmProblem):
     def __init__(self, cost_comp, turbineXYZ, boundary_comp, min_spacing=None,
                  driver=ScipyOptimizeDriver(), plot_comp=None, record_id=None, expected_cost=1):
-        self.turbineXYZ = turbineXYZ
-        TopFarmProblem.__init__(self, cost_comp, record_id, expected_cost)
-
         turbineXYZ = np.array(turbineXYZ)
+        self.turbineXYZ = turbineXYZ
         self.n_wt = n_wt = turbineXYZ.shape[0]
+
+        if plot_comp:
+            if plot_comp == "default":
+                plot_comp = PlotComp()
+
+        TopFarmProblem.__init__(self, cost_comp, driver, plot_comp, record_id, expected_cost)
+
         turbineXYZ = np.hstack((turbineXYZ, np.zeros((n_wt, 4 - turbineXYZ.shape[1]))))
         self.min_spacing = min_spacing
 
@@ -170,7 +191,7 @@ class TurbineXYZOptimizationProblem(TopFarmProblem):
         self.boundary_comp = boundary_comp
         boundary_comp.setup_as_constraints(self)
 
-        do = driver.options
+        do = self.driver.options
         if len(boundary_comp.xy_boundary) > 0:
 
             ref0_x, ref0_y = self.boundary_comp.xy_boundary.min(0)
@@ -203,20 +224,13 @@ class TurbineXYZOptimizationProblem(TopFarmProblem):
         self.indeps.add_output('turbineY', turbineXYZ[:, 1], units='m')
         self.indeps.add_output('turbineZ', turbineXYZ[:, 2], units='m')
 
-        self.driver = driver
-
         if plot_comp:
-            if plot_comp == "default":
-                plot_comp = PlotComp()
-
             plot_comp.n_wt = n_wt
             if self.boundary_comp:
                 plot_comp.n_vertices = len(self.boundary_comp.xy_boundary)
             else:
                 plot_comp.n_vertices = 0
-            self.model.add_subsystem('plot_comp', plot_comp, promotes=['*'])
 
-        self.plot_comp = plot_comp
         self.setup(check=True, mode='fwd')
 
     @property
@@ -252,10 +266,6 @@ class InitialXYZOptimizationProblem(TurbineXYZOptimizationProblem):
                  driver=None, plot_comp=None):
         #          if driver is None:
         #              driver = DOEDriver(shuffle_generator(self, 10))
-        if isinstance(driver, list):
-            driver = DOEDriver(ListGenerator(driver))
-        elif isinstance(driver, DOEGenerator):
-            driver = DOEDriver(generator=driver)
         TurbineXYZOptimizationProblem.__init__(self, cost_comp, turbineXYZ,
                                                boundary_comp, min_spacing,
                                                driver=driver, plot_comp=plot_comp)

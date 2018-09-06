@@ -2,6 +2,30 @@ from openmdao.drivers.doe_generators import DOEGenerator, ListGenerator
 import numpy as np
 
 
+
+class ConstrainedDiscardXYZGenerator(DOEGenerator):
+    def __init__(self, generator):
+        DOEGenerator.__init__(self)
+        if isinstance(generator, list):
+            generator = ListGenerator(generator)
+        self.generator = generator
+        
+    def __call__(self, design_vars, model=None):
+        xy_boundary_comp = model._get_subsystem('xy_bound_comp')
+        spacing_comp = model._get_subsystem('spacing_comp')
+        for xyz_tuple_lst in self.generator(design_vars, model=model):
+            x, y, z = ([np.array(t[1]) for t in xyz_tuple_lst] + [0])[:3]
+            if spacing_comp:
+                dist = spacing_comp._compute(x, y)
+                if np.any(dist < spacing_comp.min_spacing**2):
+                    continue
+                 
+            if xy_boundary_comp:
+                dist_to_boundary =xy_boundary_comp.distances(x,y)
+                if np.any(dist_to_boundary<0):
+                    continue
+            yield xyz_tuple_lst
+
 class ConstrainedXYZGenerator(DOEGenerator):
     def __init__(self, generator, n_iter=1000, step_size=0.1, offset=0.5, verbose=False):
         DOEGenerator.__init__(self)
@@ -17,16 +41,15 @@ class ConstrainedXYZGenerator(DOEGenerator):
         xy_boundary_comp = model._get_subsystem('xy_bound_comp')
         spacing_comp = model._get_subsystem('spacing_comp')
         for xyz_tuple_lst in self.generator(design_vars, model=model):
-            x, y, z = [np.array(t[1]) for t in xyz_tuple_lst]
+            x, y, z = ([np.array(t[1]).astype(np.float) for t in xyz_tuple_lst] + [0])[:3]
             if spacing_comp:
                 for j in range(self.n_iter):
                     dist = spacing_comp._compute(x, y)
                     dx, dy = spacing_comp._compute_partials(x, y)
-                    dx, dy = dx[0], dy[0]
-                    index = np.argmin(dist)
+                    index = int(np.argmin(dist))
                     if dist[index] < spacing_comp.min_spacing**2 or j == 0:
-                        x[index] += dx[index] * self.step_size
-                        y[index] += dy[index] * self.step_size
+                        x += dx[index] * self.step_size
+                        y += dy[index] * self.step_size
                         if xy_boundary_comp:
                             x, y, z = xy_boundary_comp.move_inside(x, y, z)
                     else:

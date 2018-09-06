@@ -21,15 +21,19 @@ def mypause(interval):
 class PlotComp(ExplicitComponent):
     colors = ['b', 'r', 'm', 'c', 'g', 'y', 'orange', 'indigo', 'grey'] * 100
 
-    def __init__(self, memory=10, delay=0.001, plot_initial=True,
-                 animate=False):
+    def __init__(self, memory=10, delay=0.001, plot_initial=True, ax=None):
         ExplicitComponent.__init__(self)
+        self.ax_ = ax
         self.memory = memory
         self.delay = delay
         self.plot_initial = plot_initial
         self.history = []
         self.counter = 0
-        self.animate = animate
+        self.by_pass = False
+
+    @property
+    def ax(self):
+        return self.ax_ or plt.gca()
 
     def show(self):
         plt.show()
@@ -38,66 +42,92 @@ class PlotComp(ExplicitComponent):
         self.add_input('turbineX', np.zeros(self.n_wt), units='m')
         self.add_input('turbineY', np.zeros(self.n_wt), units='m')
         self.add_input('cost', 0.)
-        self.add_input('boundary', np.zeros((self.n_vertices, 2)), units='m')
+        if hasattr(self, 'n_vertices'):
+            self.add_input('boundary', np.zeros((self.n_vertices, 2)), units='m')
 
-    def init_plot(self, boundary):
-        plt.cla()
-        plt.axis('equal')
-        b = np.r_[boundary[:], boundary[:1]]
-        plt.plot(b[:, 0], b[:, 1], 'k')
-        mi = b.min(0)
-        ma = b.max(0)
+    def init_plot(self, limits):
+        self.ax.cla()
+        self.ax.axis('equal')
+        mi = limits.min(0)
+        ma = limits.max(0)
         ra = ma - mi
         ext = .1
         xlim, ylim = np.array([mi - ext * ra, ma + ext * ra]).T
-        plt.xlim(xlim)
-        plt.ylim(ylim)
+        self.ax.set_xlim(xlim)
+        self.ax.set_ylim(ylim)
+
+    def plot_boundary(self, boundary):
+        b = np.r_[boundary[:], boundary[:1]]
+        plt.plot(b[:, 0], b[:, 1], 'k')
+
+    def plot_history(self, x, y):
+        rec = self.problem.recorder
+        if rec.num_cases > 0:
+            x = np.r_[rec['turbineX'][-self.memory:], [x]]
+            y = np.r_[rec['turbineY'][-self.memory:], [y]]
+            for c, x_, y_ in zip(self.colors, x.T, y.T):
+                self.ax.plot(x_, y_, '--', color=c)
+
+    def plot_initial2current(self, x0, y0, x, y):
+        rec = self.problem.recorder
+        if rec.num_cases > 0:
+            x0 = rec['turbineX'][0]
+            y0 = rec['turbineY'][0]
+            for c, x0_, y0_, x_, y_ in zip(self.colors, x0, y0, x, y):
+                self.ax.plot((x0_, x_), (y0_, y_), '-', color=c)
+
+    def plot_current_position(self, x, y):
+        for c, x_, y_ in zip(self.colors, x, y):
+            self.ax.plot(x_, y_, 'o', color=c, ms=5)
+            self.ax.plot(x_, y_, 'xk', ms=4)
+
+    def set_title(self, cost0, cost):
+        rec = self.problem.recorder
+        if cost0 != 0:
+            self.ax.set_title("%d: %f (%.2f%%)" % (rec.num_cases, cost, (cost0 - cost) / cost0 * 100))
+        else:
+            self.ax.set_title("%d: %f" % (rec.num_cases, cost))
+
+    def get_initial(self):
+        rec = self.problem.recorder
+        if rec.num_cases > 0:
+            x0 = rec['turbineX'][0]
+            y0 = rec['turbineY'][0]
+            cost0 = rec['cost'][0]
+            return x0, y0, cost0
 
     def compute(self, inputs, outputs):
-        x = inputs['turbineX']
-        y = inputs['turbineY']
-        cost = inputs['cost'][0]
-        if not hasattr(self, "initial"):
-            self.initial = np.array([x, y]).T, cost
-        self.history = [(x.copy(), y.copy())] + self.history[:self.memory]
+        if self.by_pass is False:
+            x = inputs['turbineX']
+            y = inputs['turbineY']
+            cost = inputs['cost'][0]
 
-        boundary = inputs['boundary']
-        self.init_plot(boundary)
-        plt.title("%d: %f (%.2f%%)" % (self.counter, cost,
-                  (self.initial[1]-cost)/self.initial[1]*100))
+            if 'boundary' in inputs:
+                boundary = inputs['boundary']
+                self.init_plot(boundary)
+                self.plot_boundary(boundary)
+            else:
+                self.init_plot(np.array([x, y]).T)
 
-        history_arr = np.array(self.history)
-        for i, c, x_, y_ in zip(range(len(x)), self.colors, x, y):
-            if self.plot_initial:
-                plt.plot([self.initial[0][i, 0], x_],
-                         [self.initial[0][i, 1], y_], '-', color=c, lw=1)
-            plt.plot(history_arr[:, 0, i], history_arr[:, 1, i], '.--',
-                     color=c, lw=1)
-            plt.plot(x_, y_, 'o', color=c, ms=5)
-            plt.plot(x_, y_, 'x' + 'k', ms=4)
-            self.temp = '../__animations__'
-            if not os.path.exists(self.temp):
-                os.makedirs(self.temp)
-            if self.animate:
-                path = os.path.join(self.temp,
-                                    'plot_{:05d}.png'.format(self.counter))
-                plt.savefig(path)
+            initial = self.get_initial()
 
-        if self.counter == 0:
-            plt.pause(.01)
-        mypause(self.delay)
+            if initial is not None:
+                x0, y0, cost0 = initial
+                if self.plot_initial:
+                    self.plot_initial2current(x0, y0, x, y)
+                if self.memory > 0:
+                    self.plot_history(x, y)
+            else:
+                cost0 = cost
 
-        self.counter += 1
+            self.plot_current_position(x, y)
+            self.set_title(cost0, cost)
 
-    def run_animate(self, anim_time=10, verbose=False):
-        N = anim_time/self.counter
-        string = 'ffmpeg -f image2 -r 1/'
-        string += '{} -i {}//plot_%05d.png'.format(N, self.temp)
-        string += ' -vcodec mpeg4 -y {}//animation.mp4'.format(self.temp)
-        if verbose:
-            print('\nCreating animation:')
-            print(string)
-        os.system(string)
+            if self.counter == 0:
+                plt.pause(.01)
+            mypause(self.delay)
+
+            self.counter += 1
 
 
 class NoPlot(PlotComp):
@@ -108,10 +138,35 @@ class NoPlot(PlotComp):
         pass
 
     def setup(self):
-        self.add_input('turbineX', np.zeros(self.n_wt), units='m')
-        self.add_input('turbineY', np.zeros(self.n_wt), units='m')
         self.add_input('cost', 0.)
-        self.add_input('boundary', np.zeros((self.n_vertices, 2)), units='m')
 
     def compute(self, inputs, outputs):
         pass
+
+
+class TurbineTypePlotComponent(PlotComp):
+    colors = ['b', 'r', 'm', 'c', 'g', 'y', 'orange', 'indigo', 'grey'] * 100
+    markers = np.array(list(".ov^<>12348spP*hH+xXDd|_"))
+
+    def __init__(self, turbine_type_names, memory=10, delay=0.001, plot_initial=True):
+        self.turbine_type_names = turbine_type_names
+        PlotComp.__init__(self, memory=memory, delay=delay, plot_initial=plot_initial)
+
+    def setup(self):
+        PlotComp.setup(self)
+        self.add_input('turbineType', np.zeros(self.n_wt, dtype=np.int))
+
+    def compute(self, inputs, outputs):
+        self.types = np.asarray(inputs['turbineType'], dtype=np.int)
+        PlotComp.compute(self, inputs, outputs)
+
+    def init_plot(self, limits):
+        PlotComp.init_plot(self, limits)
+        for m, n in zip(self.markers, self.turbine_type_names):
+            self.ax.plot([], [], m + 'k', label=n)
+        self.ax.legend()
+
+    def plot_current_position(self, x, y):
+        for m, c, x_, y_ in zip(self.markers[self.types], self.colors, x, y):
+            #self.ax.plot(x_, y_, 'o', color=c, ms=5)
+            self.ax.plot(x_, y_,  m + 'k', markeredgecolor=c, markeredgewidth=1, ms=8)

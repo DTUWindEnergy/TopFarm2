@@ -84,6 +84,10 @@ class ListRecorder(BaseRecorder):
             self._abs2meta[name]['explicit'] = True
             if name in states:
                 self._abs2meta[name]['explicit'] = False
+                
+    @property
+    def num_cases(self):
+        return len(self.driver_iteration_lst)
 
     @property
     def driver_cases(self):
