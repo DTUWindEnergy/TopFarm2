@@ -13,14 +13,14 @@ from topfarm.constraint_components.boundary_component import BoundaryComp
 @pytest.fixture
 def get_tf():
     def get_InitialXYZOptimizationProblem(driver,
-                                          cost_comp=DummyCost([(1, 0, 4),
-                                                               (0, 1, 3)]),
                                           min_spacing=None,
                                           turbineXYZ=[[0, 0, 0],
                                                       [2, 2, 2]],
                                           xy_boundary=[(10, 6), (11, 8)],
                                           xy_boundary_type='rectangle',
                                           z_boundary=[3, 4]):
+        cost_comp = DummyCost([(1, 0, 4),
+                               (0, 1, 3)])
         return InitialXYZOptimizationProblem(
             cost_comp, turbineXYZ,
             BoundaryComp(len(turbineXYZ), xy_boundary, z_boundary, xy_boundary_type),

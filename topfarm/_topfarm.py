@@ -186,10 +186,17 @@ class TurbineXYZOptimizationProblem(TopFarmProblem):
         self.min_spacing = min_spacing
 
         spacing_comp = SpacingComp(n_wt, min_spacing)
-        spacing_comp.setup_as_constraints(self)
-
         self.boundary_comp = boundary_comp
-        boundary_comp.setup_as_constraints(self)
+
+        if self.driver.supports['inequality_constraints']:
+            spacing_comp.setup_as_constraints(self)
+            boundary_comp.setup_as_constraints(self)
+            mode = 'fwd'
+        else:
+            spacing_comp.setup_as_penalty(self)
+            boundary_comp.setup_as_penalty(self)
+            mode = 'rev'
+        
 
         do = self.driver.options
         if len(boundary_comp.xy_boundary) > 0:
@@ -231,7 +238,8 @@ class TurbineXYZOptimizationProblem(TopFarmProblem):
             else:
                 plot_comp.n_vertices = 0
 
-        self.setup(check=True, mode='fwd')
+        self.plot_comp = plot_comp
+        self.setup(check=True, mode=mode)
 
     @property
     def turbine_positions(self):

@@ -58,6 +58,48 @@ class BoundaryBaseComp(ExplicitComponent):
         if len(self.z_boundary):
             problem.model.add_constraint('turbineZ', lower=self.z_boundary[:, 0], upper=self.z_boundary[:, 1])
 
+    def setup_as_penalty(self, problem, penalty=1e20):
+        if len(self.xy_boundary) == 0 and len(self.z_boundary) == 0:
+            return  # no boundary or hub-height constraints
+
+        if len(self.xy_boundary) > 0:
+            subsystem_order = [ss.name for ss in problem.model._static_subsystems_allprocs]
+            problem.model.add_subsystem('xy_bound_comp', self, promotes=['*'])
+            subsystem_order.insert(subsystem_order.index('cost_comp'), 'xy_bound_comp')
+            problem.model.set_order(subsystem_order)
+
+            def xy_boundary_satisfied(inputs):
+                return not np.any(inputs['boundaryDistances'] < self.zeros)
+        else:
+            def xy_boundary_satisfied(inputs):
+                return True
+
+        if len(self.z_boundary):
+            def z_boundary_satisfied(inputs):
+                return not (np.any(inputs['turbineZ'] < self.z_boundary[:, 0]) or np.any(inputs['turbineZ'] > self.z_boundary[:, 1]))
+        else:
+            def z_boundary_satisfied(inputs):
+                return True
+
+        self._cost_comp = problem.cost_comp
+        self._org_setup = self._cost_comp.setup
+        self._org_compute = self._cost_comp.compute
+
+        def new_setup():
+            self._org_setup()
+            if len(self.xy_boundary) > 0:
+                self._cost_comp.add_input('boundaryDistances', val=self.zeros)
+
+        self._cost_comp.setup = new_setup
+
+        def new_compute(inputs, outputs):
+            if xy_boundary_satisfied(inputs) and z_boundary_satisfied(inputs):
+                self._org_compute(inputs, outputs)
+            else:
+                outputs['cost'] = penalty
+        self._cost_comp.compute = new_compute
+        problem._mode = 'rev'
+
 
 class ConvexBoundaryComp(BoundaryBaseComp):
     def __init__(self, n_wt, xy_boundary=None, z_boundary=None, xy_boundary_type='convex_hull'):
@@ -66,6 +108,9 @@ class ConvexBoundaryComp(BoundaryBaseComp):
             self.boundary_type = xy_boundary_type
             self.calculate_boundary_and_normals()
             self.calculate_gradients()
+            self.zeros = np.zeros([self.n_wt, self.nVertices])
+        else:
+            self.zeros = np.zeros([self.n_wt, 0])
 
     def calculate_boundary_and_normals(self):
         if self.boundary_type == 'convex_hull':
@@ -179,7 +224,7 @@ class ConvexBoundaryComp(BoundaryBaseComp):
 
         # Explicitly size output array
         # (vector with positive elements if turbines outside of hull)
-        self.add_output('boundaryDistances', np.zeros([self.n_wt, self.nVertices]),
+        self.add_output('boundaryDistances', self.zeros,
                         desc="signed perpendicular distances from each turbine to each face CCW; + is inside")
 
         self.declare_partials('boundaryDistances', ['turbineX', 'turbineY'])
@@ -227,6 +272,7 @@ class PolygonBoundaryComp(BoundaryBaseComp):
         BoundaryBaseComp.__init__(self, n_wt, xy_boundary=xy_boundary, z_boundary=z_boundary, **kwargs)
 
         self.nTurbines = n_wt
+        self.zeros = np.zeros(self.nTurbines)
         vertices = self.xy_boundary
         self.nVertices = vertices.shape[0]
 
@@ -271,7 +317,7 @@ class PolygonBoundaryComp(BoundaryBaseComp):
 
         # Explicitly size output array
         # (vector with positive elements if turbines outside of hull)
-        self.add_output('boundaryDistances', np.zeros(self.nTurbines),
+        self.add_output('boundaryDistances', self.zeros,
                         desc="signed perpendicular distances from each turbine to each face CCW; + is inside")
 
         self.declare_partials('boundaryDistances', ['turbineX', 'turbineY'])
