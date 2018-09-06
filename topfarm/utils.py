@@ -4,10 +4,6 @@ from topfarm.constraint_components.spacing_component import SpacingComp
 import os
 import numpy as np
 from openmdao.api import CaseReader
-import matplotlib.pyplot as plt
-
-
-
 
 
 def pos_from_case(case_recorder_filename):
@@ -89,6 +85,7 @@ def _shuffle_postions_rel(init_pos, offset, boundary, n_wt, plot):
     ba = np.array(boundary).T
     turbines = np.array(init_pos) + np.random.rand(n_wt, 2)*2*offset-offset
     if plot:
+        plt.figure()
         plt.cla()
         plt.plot(ba[0], ba[1])
         plt.plot(turbineX, turbineY, '.')
@@ -103,6 +100,7 @@ def _shuffle_positions_abs(turbineX, turbineY, boundary, n_wt, n_iter,
     min_space2 = min_space**2
     ba = np.array(boundary).T
     if plot:
+        plt.figure()
         plt.cla()
         plt.plot(ba[0], ba[1])
         plt.plot(turbineX, turbineY, '.')
@@ -144,18 +142,42 @@ def _move_inside_boundary(n_wt, turbineX, turbineY, boundary_comp, pad):
     return turbineX, turbineY
 
 
+def smart_start(x, y, val, N_WT, min_space):
+    '''
+    Selects the a number of gridpoints (N_WT) in the grid defined by x and y,
+    where val has the maximum value, while chosen points spacing (min_space)
+    is respected.
+    Input:
+        x and y: arrays (nD) with coordinates
+        val: array (nD), the corresponding value of the desired variable in the
+        grid points. This could be e.g. the AEP or wind speed.
+        N_WT: integer, number of wind turbines
+        min_space: float, minimum space between turbines
+    Output:
+        Positions where the aep or wsp is highest, while
+        respecting the minimum spacing requirement.
+    '''
+    arr = np.array([x.flatten(), y.flatten(), val.flatten()])
+    xs, ys = [], []
+    for i in range(N_WT):
+        try:
+            max_ind = np.argmax(arr[2])
+            x0 = arr[0][max_ind]
+            y0 = arr[1][max_ind]
+            xs.append(x0)
+            ys.append(y0)
+            index = np.where((arr[0]-x0)**2+(arr[1]-y0)**2 >= min_space**2)[0]
+            arr = arr[:, index]
+        except ValueError:
+            xs.append(np.nan)
+            ys.append(np.nan)
+            print('Could not respect the spacing constraint')
+    return xs, ys
+
+
 if __name__ == '__main__':
-    this_dir = os.getcwd()
-    crf = r"tests\test_files\recordings\cases_20180703_152607.sql"
-    case_recorder_filename = crf
-    path = os.path.join(this_dir, crf)
-    turbines = pos_from_case(path)
-    print(turbines)
-
-    case_recorder_dir = r'tests\test_files\recordings'
-    latest_id = latest_id(case_recorder_dir)
-    print(latest_id)
-
+    import matplotlib.pyplot as plt
+    plt.clf()
     boundary = [(0, 0), (6, 1), (7, -11), (-1, -10), (0, 0)]
     n_wt = 20
     init_pos = np.column_stack((np.random.randint(0, 6, (n_wt)),
@@ -164,3 +186,22 @@ if __name__ == '__main__':
     turbines = shuffle_positions(boundary, n_wt, min_space, init_pos,
                                  shuffle_type='rel')
     print(turbines)
+
+    x = np.arange(0, 20, 0.1)
+    y = np.arange(0, 10, 0.1)
+    YY, XX = np.meshgrid(y, x)
+    val = np.sin(XX) + np.sin(YY)
+    N_WT = 30
+    min_space = 2.1
+    xs, ys = smart_start(XX, YY, val, N_WT, min_space)
+    plt.figure(1)
+    c = plt.contourf(XX, YY, val, 100)
+    plt.colorbar(c)
+    for i in range(N_WT):
+        circle = plt.Circle((xs[i], ys[i]), min_space/2, color='b', fill=False)
+        plt.gcf().gca().add_artist(circle)
+        plt.plot(xs[i], ys[i], 'rx')
+    plt.axis('equal')
+    plt.show()
+
+
