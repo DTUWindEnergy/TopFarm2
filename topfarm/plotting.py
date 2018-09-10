@@ -25,7 +25,7 @@ class PlotComp(ExplicitComponent):
         ExplicitComponent.__init__(self)
         self.ax_ = ax
         self.memory = memory
-        self.delay = delay
+        self.delay = max([delay, 1e-6])
         self.plot_initial = plot_initial
         self.history = []
         self.counter = 0

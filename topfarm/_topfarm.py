@@ -13,6 +13,7 @@ from openmdao.core.explicitcomponent import ExplicitComponent
 from topfarm.recorders import ListRecorder, NestedTopFarmListRecorder,\
     TopFarmListRecorder
 from openmdao.api import Problem, ScipyOptimizeDriver, IndepVarComp
+from openmdao.drivers.genetic_algorithm_driver import SimpleGADriver
 
 
 class TopFarmProblem(Problem):
@@ -22,7 +23,7 @@ class TopFarmProblem(Problem):
             cost_comp = cost_comp.as_component()
         cost_comp.parent = self
         self.cost_comp = cost_comp
-        
+
         if isinstance(driver, list):
             driver = DOEDriver(ListGenerator(driver))
         elif isinstance(driver, DOEGenerator):
@@ -196,16 +197,18 @@ class TurbineXYZOptimizationProblem(TopFarmProblem):
             spacing_comp.setup_as_penalty(self)
             boundary_comp.setup_as_penalty(self)
             mode = 'rev'
-        
 
         do = self.driver.options
+        dont_scale = (('optimizer' in do and do['optimizer'] == 'SLSQP') or  # scaling disturbs SLSQP
+                      isinstance(driver, DOEDriver) or
+                      isinstance(driver, SimpleGADriver))
         if len(boundary_comp.xy_boundary) > 0:
 
             ref0_x, ref0_y = self.boundary_comp.xy_boundary.min(0)
             ref_x, ref_y = self.boundary_comp.xy_boundary.max(0)
-            if (('optimizer' in do and do['optimizer'] == 'SLSQP') or  # scaling disturbs SLSQP
-                    isinstance(driver, DOEDriver)):
+            if (dont_scale):
                 ref0_x, ref0_y, ref_x, ref_y = 0, 0, 1, 1
+
             vertices = self.boundary_comp.xy_boundary
             self.indeps.add_output('boundary', vertices, units='m')
 
@@ -221,11 +224,13 @@ class TurbineXYZOptimizationProblem(TopFarmProblem):
 
         if len(boundary_comp.z_boundary) > 0:
             ref0_z, ref_z = np.min(self.boundary_comp.z_boundary), np.max(self.boundary_comp.z_boundary)
-            if (('optimizer' in do and do['optimizer'] == 'SLSQP') or  # scaling disturbs SLSQP
-                    isinstance(driver, DOEDriver)):
+            if (dont_scale):
                 ref0_z, ref_z = 0, 1
             l, u = [self.boundary_comp.z_boundary[:, i] * (ref_z - ref0_z) + ref0_z for i in range(2)]
-            self.model.add_design_var('turbineZ', lower=l, upper=u, ref0=ref0_z, ref=ref_z)
+            if 'optimizer' in do and do['optimizer'] == 'SLSQP':
+                self.model.add_design_var('turbineZ', lower=np.nan, upper=np.nan)
+            else:
+                self.model.add_design_var('turbineZ', lower=l, upper=u, ref0=ref0_z, ref=ref_z)
 
         self.indeps.add_output('turbineX', turbineXYZ[:, 0], units='m')
         self.indeps.add_output('turbineY', turbineXYZ[:, 1], units='m')
@@ -263,8 +268,8 @@ class TurbineXYZOptimizationProblem(TopFarmProblem):
     def z_boundary(self):
         return self.boundary_comp.z_boundary
 
-    def smart_start(self, x, y ,val):
-        x, y = smart_start(x, y ,val, self.n_wt, self.min_spacing)
+    def smart_start(self, x, y, val):
+        x, y = smart_start(x, y, val, self.n_wt, self.min_spacing)
         self.update_state({'turbineX': x, 'turbineY': y})
         return x, y
 
