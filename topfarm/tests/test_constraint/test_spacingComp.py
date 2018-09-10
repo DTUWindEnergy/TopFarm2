@@ -48,4 +48,4 @@ def test_spacing_as_penalty():
         # check normal result if spacing constraint is satisfied
         assert tf.evaluate()[0] == 45
         # check penalized result if spacing constraint is not satisfied
-        assert tf.evaluate({'turbineX': [3, 7, 4.], 'turbineY': [-3., -7., -3.], 'turbineZ': [0., 0., 0.]})[0] == 1e20
+        assert tf.evaluate({'turbineX': [3, 7, 4.], 'turbineY': [-3., -7., -3.], 'turbineZ': [0., 0., 0.]})[0] == 1e10 + 3

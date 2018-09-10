@@ -58,7 +58,7 @@ class BoundaryBaseComp(ExplicitComponent):
         if len(self.z_boundary):
             problem.model.add_constraint('turbineZ', lower=self.z_boundary[:, 0], upper=self.z_boundary[:, 1])
 
-    def setup_as_penalty(self, problem, penalty=1e20):
+    def setup_as_penalty(self, problem, penalty=1e10):
         if len(self.xy_boundary) == 0 and len(self.z_boundary) == 0:
             return  # no boundary or hub-height constraints
 
@@ -68,18 +68,18 @@ class BoundaryBaseComp(ExplicitComponent):
             subsystem_order.insert(subsystem_order.index('cost_comp'), 'xy_bound_comp')
             problem.model.set_order(subsystem_order)
 
-            def xy_boundary_satisfied(inputs):
-                return not np.any(inputs['boundaryDistances'] < self.zeros)
+            def xy_boundary_penalty(inputs):
+                return -np.minimum(inputs['boundaryDistances'], 0).sum()
         else:
-            def xy_boundary_satisfied(inputs):
-                return True
+            def xy_boundary_penalty(inputs):
+                return 0
 
         if len(self.z_boundary):
-            def z_boundary_satisfied(inputs):
-                return not (np.any(inputs['turbineZ'] < self.z_boundary[:, 0]) or np.any(inputs['turbineZ'] > self.z_boundary[:, 1]))
+            def z_boundary_penalty(inputs):
+                return -np.minimum(inputs['turbineZ'] - self.z_boundary[:, 0], 0).sum() + np.maximum(inputs['turbineZ'] - self.z_boundary[:, 1], 0).sum()
         else:
-            def z_boundary_satisfied(inputs):
-                return True
+            def z_boundary_penalty(inputs):
+                return 0
 
         self._cost_comp = problem.cost_comp
         self._org_setup = self._cost_comp.setup
@@ -93,10 +93,11 @@ class BoundaryBaseComp(ExplicitComponent):
         self._cost_comp.setup = new_setup
 
         def new_compute(inputs, outputs):
-            if xy_boundary_satisfied(inputs) and z_boundary_satisfied(inputs):
+            p = xy_boundary_penalty(inputs) + z_boundary_penalty(inputs)
+            if p==0:
                 self._org_compute(inputs, outputs)
             else:
-                outputs['cost'] = penalty
+                outputs['cost'] = penalty + p
         self._cost_comp.compute = new_compute
         problem._mode = 'rev'
 

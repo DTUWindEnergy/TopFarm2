@@ -1,4 +1,6 @@
 from openmdao.drivers.scipy_optimizer import ScipyOptimizeDriver
+from openmdao.drivers.genetic_algorithm_driver import SimpleGADriver
+from topfarm.drivers.MySimpleGADriver import MySimpleGADriver
 
 
 class EasyScipyOptimizeDriver(ScipyOptimizeDriver):
@@ -46,3 +48,30 @@ except ModuleNotFoundError:
 
     EasyPyOptSparseSLSQP = PyOptSparseMissingDriver
     EasyPyOptSparseIPOPT = PyOptSparseMissingDriver
+
+
+
+class EasySimpleGADriver(MySimpleGADriver):
+    def __init__(self, max_gen=100, pop_size=25, Pm=None, Pc=.5, elitism=True, bits={}, debug_print=[], run_parallel=False):
+        """SimpleGA driver with optional arguments
+
+        Parameters
+        ----------
+        max_gen : int
+            Number of generations before termination.
+        pop_size : int
+            Number of points in the GA.
+        pm : float
+            Probability of mutation.
+        pc : float 
+             Probability of cross over.
+        elitism : bool, optional
+            If True, replace worst performing point with best from previous generation each iteration.
+        bits : dict, optional
+            Number of bits of resolution. Default is an empty dict, where every unspecified variable is assumed to be integer, and the number of bits is calculated automatically. If you have a continuous var, you should set a bits value as a key in this dictionary.
+        debug_print : list, optional
+            List of what type of Driver variables to print at each iteration. Valid items in list are ‘desvars’,’ln_cons’,’nl_cons’,’objs’
+        run_parallel : bool
+            Set to True to execute the points in a generation in parallel.
+        """
+        MySimpleGADriver.__init__(self, max_gen=max_gen, pop_size=pop_size, Pm=Pm, Pc=Pc, elitism=elitism, bits=bits, debug_print=debug_print, run_parallel=run_parallel)

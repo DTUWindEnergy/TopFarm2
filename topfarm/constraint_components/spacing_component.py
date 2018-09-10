@@ -19,13 +19,13 @@ class SpacingComp(ExplicitComponent):
             zero = np.zeros(int(((self.n_wt - 1.) * self.n_wt / 2.)))
             problem.model.add_constraint('wtSeparationSquared', lower=zero + (self.min_spacing)**2)
 
-    def setup_as_penalty(self, problem, penalty=1e20):
+    def setup_as_penalty(self, problem, penalty=1e10):
         if self.min_spacing is not None:
             subsystem_order = [ss.name for ss in problem.model._static_subsystems_allprocs]
             problem.model.add_subsystem('spacing_comp', self, promotes=['*'])
             subsystem_order.insert(subsystem_order.index('cost_comp'), 'spacing_comp')
             problem.model.set_order(subsystem_order)
-            
+
             zero = np.zeros(int(((self.n_wt - 1.) * self.n_wt / 2.)))
 
             self._cost_comp = problem.cost_comp
@@ -39,10 +39,11 @@ class SpacingComp(ExplicitComponent):
             self._cost_comp.setup = new_setup
 
             def new_compute(inputs, outputs):
-                if np.any(inputs['wtSeparationSquared'] < zero + self.min_spacing**2):
-                    outputs['cost'] = penalty
-                else:
+                p = -np.minimum(inputs['wtSeparationSquared'] - self.min_spacing**2, 0).sum()
+                if p == 0:
                     self._org_compute(inputs, outputs)
+                else:
+                    outputs['cost'] = penalty + p
             self._cost_comp.compute = new_compute
 
     def setup(self):
