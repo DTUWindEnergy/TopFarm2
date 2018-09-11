@@ -114,7 +114,7 @@ def test_NestedTopFarmListRecorder(tf_generator):
     npt.assert_array_almost_equal(recorder.get('cost'), [1, 0, 2])
 
     for sub_rec in recorder.get('recorder'):
-        npt.assert_array_almost_equal(sub_rec.get(['turbineX', 'turbineY', 'turbineZ'])[:, -1], np.array(optimal)[:, :3])
+        npt.assert_array_almost_equal(np.array([sub_rec[k][-1] for k in ['turbineX', 'turbineY', 'turbineZ']]).T, np.array(optimal)[:, :3])
 
 
 @pytest.mark.parametrize('record_id,filename,load_case', [
@@ -154,7 +154,7 @@ def test_TopFarmListRecorderLoad_none(load_case):
     # load case is "none"
     fn = tfp + 'recordings/COBYLA_10iter:%s' % load_case
     rec = TopFarmListRecorder().load(fn)
-    assert len(rec.driver_iteration_lst) == 0
+    assert rec.num_cases == 0
     assert len(rec['cost']) == 0
 
 
@@ -165,7 +165,7 @@ def test_TopFarmListRecorderLoad_Nothing(fn):
     with pytest.raises(FileNotFoundError, match=r"No such file '.*'"):
         TopFarmListRecorder().load(fn)
     rec = TopFarmListRecorder().load_if_exists(fn)
-    assert len(rec.driver_iteration_lst) == 0
+    assert rec.num_cases == 0
 
 
 @pytest.mark.parametrize('load_case,n_rec,n_fev', [('', 53, 1),
@@ -181,7 +181,7 @@ def test_TopFarmListRecorder_continue(tf_generator, load_case, n_rec, n_fev):
     pyFuga = test_pyfuga.get_fuga()(init_pos[:, 0], init_pos[:, 1], wind_atlas='MyFarm/north_pm45_only.lib')
     boundary = [(-D2, -D2), (D2, D2)]
     plot_comp = PlotComp()
-    #plot_comp = NoPlot()
+    plot_comp = NoPlot()
     tf = TurbineXYZOptimizationProblem(
         cost_comp=pyFuga.get_TopFarm_cost_component(),
         turbineXYZ=init_pos, min_spacing=2 * D,

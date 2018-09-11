@@ -100,8 +100,11 @@ class ListRecorder(BaseRecorder):
 
     def get(self, key):
         if isinstance(key, (tuple, list)):
-            return np.hstack([self.get(k) for k in key])
-        return np.array(self.driver_iteration_dict[key])
+            return np.array([self.get(k) for k in key]).T
+        res = np.array(self.driver_iteration_dict[key])
+        if len(res.shape) > 1 and res.shape[-1] == 1:
+            res = np.squeeze(res, -1)
+        return res
 
     def __getitem__(self, key):
         return self.get(key)
@@ -367,13 +370,9 @@ class NestedTopFarmListRecorder(TopFarmListRecorder):
             Dictionary containing execution metadata.
         """
         recorder = getattr(self.nested_comp.problem, 'recorder', None)
+        if self.num_cases == 0:
+            self.driver_iteration_dict['recorder'] = []
         TopFarmListRecorder.record_iteration_driver(self, recording_requester, data, metadata)
-        self.driver_iteration_lst[-1] = self.driver_iteration_lst[-1] + (recorder,)
+         
+        self.driver_iteration_dict['recorder'].append(recorder)
 
-    def get(self, key):
-        if key == 'recorder':
-            return [r[-1] for r in self.driver_iteration_lst]
-        return ListRecorder.get(self, key)
-
-    def keys(self):
-        return TopFarmListRecorder.keys(self) + ['recorder']
