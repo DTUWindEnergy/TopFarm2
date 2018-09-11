@@ -71,21 +71,21 @@ def test_ListRecorder():
     assert cases.num_cases == 4
     npt.assert_array_equal(recorder.get('counter'), range(1, 5))
     npt.assert_array_equal(recorder['counter'], range(1, 5))
-    
+
     npt.assert_array_almost_equal(recorder.get(['x', 'y', 'f_xy']), xyf, 4)
     for xyf, k in zip(xyf[0], ['x', 'y', 'f_xy']):
         npt.assert_allclose(cases.get_case(0).outputs[k][0], xyf)
 
-    with pytest.raises(KeyError, match="'missing' not found in meta, input or output"):
+    with pytest.raises(KeyError, match="missing"):
         recorder.get('missing')
 
 
-# @pytest.mark.xfail("RuntimeError: Requested MovieWriter (ffmpeg) not available")
+# #@pytest.mark.xfail("RuntimeError: Requested MovieWriter (ffmpeg) not available")
 # def test_TopFarmListRecorderAnimation(tf_generator):
 #     tf = tf_generator()
 #     _, _, recorder = tf.optimize()
 #     # Generate test file:
-#     # recorder.save('topfarm/tests/test_files/recordings/COBYLA_10iter.pkl')
+#     recorder.save('topfarm/tests/test_files/recordings/COBYLA_10iter.pkl')
 #     fn = tfp + "/tmp/test.mp4"
 #     if os.path.exists(fn):
 #         os.remove(fn)
@@ -138,13 +138,13 @@ def test_recordid2filename(record_id, filename, load_case):
 
 
 @pytest.mark.parametrize('load_case,n,cost',
-                         [("latest", 10, 3.4273293099380067),
-                          ('best', 8, 2.42732931),
-                          ("2", 2, 31)])
+                         [("latest", 10, 12.82842712),
+                          ('best', 6, 3),
+                          ("2", 2, 43)])
 def test_TopFarmListRecorderLoad(load_case, n, cost):
     fn = tfp + 'recordings/COBYLA_10iter:%s' % load_case
     rec = TopFarmListRecorder().load(fn)
-    npt.assert_equal(len(rec.driver_iteration_lst), n)
+    npt.assert_equal(rec.num_cases, n)
     npt.assert_almost_equal(rec.get('cost')[-1], cost)
 
 
@@ -155,8 +155,7 @@ def test_TopFarmListRecorderLoad_none(load_case):
     fn = tfp + 'recordings/COBYLA_10iter:%s' % load_case
     rec = TopFarmListRecorder().load(fn)
     assert len(rec.driver_iteration_lst) == 0
-    with pytest.raises(ValueError, match="Driver iteration list empty"):
-        rec.get('cost')
+    assert len(rec['cost']) == 0
 
 
 @pytest.mark.parametrize('fn', [(None),
@@ -182,7 +181,7 @@ def test_TopFarmListRecorder_continue(tf_generator, load_case, n_rec, n_fev):
     pyFuga = test_pyfuga.get_fuga()(init_pos[:, 0], init_pos[:, 1], wind_atlas='MyFarm/north_pm45_only.lib')
     boundary = [(-D2, -D2), (D2, D2)]
     plot_comp = PlotComp()
-    plot_comp = NoPlot()
+    #plot_comp = NoPlot()
     tf = TurbineXYZOptimizationProblem(
         cost_comp=pyFuga.get_TopFarm_cost_component(),
         turbineXYZ=init_pos, min_spacing=2 * D,
@@ -194,7 +193,7 @@ def test_TopFarmListRecorder_continue(tf_generator, load_case, n_rec, n_fev):
         plot_comp=plot_comp, record_id=tfp + 'recordings/test_TopFarmListRecorder_continue:%s' % load_case, expected_cost=25)
 
     _, _, recorder = tf.optimize()
-    # recorder.save() # create test file
+    # if load_case=="": recorder.save() # create test file
     npt.assert_equal(recorder.driver_cases.num_cases, n_rec)
     npt.assert_equal(tf.driver.result['nfev'], n_fev)
 
