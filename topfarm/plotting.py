@@ -21,8 +21,10 @@ def mypause(interval):
 class PlotComp(ExplicitComponent):
     colors = ['b', 'r', 'm', 'c', 'g', 'y', 'orange', 'indigo', 'grey'] * 100
 
-    def __init__(self, memory=10, delay=0.001, plot_initial=True, ax=None):
+    def __init__(self, memory=10, delay=0.001, plot_initial=True, plot_improvements_only=False, ax=None):
         ExplicitComponent.__init__(self)
+        self.delay = delay
+        self.plot_improvements_only = plot_improvements_only
         self.ax_ = ax
         self.memory = memory
         self.delay = max([delay, 1e-6])
@@ -98,9 +100,14 @@ class PlotComp(ExplicitComponent):
 
     def compute(self, inputs, outputs):
         if self.by_pass is False:
+            cost = inputs['cost'][0]
+            if (self.plot_improvements_only and
+                len(self.problem.recorder['cost']) and
+                cost > self.problem.recorder['cost'].min()):
+                return
+
             x = inputs['turbineX']
             y = inputs['turbineY']
-            cost = inputs['cost'][0]
 
             if 'boundary' in inputs:
                 boundary = inputs['boundary']

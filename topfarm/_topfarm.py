@@ -33,7 +33,8 @@ class TopFarmProblem(Problem):
         self.plot_comp = plot_comp
 
         self.record_id = record_id
-
+        self.load_recorder()
+        
         self.indeps = self.model.add_subsystem('indeps', IndepVarComp(), promotes=['*'])
         self.model.add_subsystem('cost_comp', cost_comp, promotes=['*'])
         self.model.add_objective('cost', scaler=1 / abs(expected_cost))
@@ -67,13 +68,19 @@ class TopFarmProblem(Problem):
             except KeyError:
                 pass
 
+    def load_recorder(self):
+        if hasattr(self.cost_comp, 'problem'):
+            self.recorder = NestedTopFarmListRecorder(self.cost_comp, self.record_id)
+        else:
+            self.recorder = TopFarmListRecorder(self.record_id)
+
     def evaluate(self, state={}):
         t = time.time()
         self.update_state(state)
-        self.recorder = ListRecorder()
-        self.driver.add_recorder(self.recorder)
+        tmp_recorder = ListRecorder()
+        self.driver.add_recorder(tmp_recorder)
         self.run_model()
-        self.driver._rec_mgr._recorders.remove(self.recorder)
+        self.driver._rec_mgr._recorders.remove(tmp_recorder)
         print("Evaluated in\t%.3fs" % (time.time() - t))
         return self.cost, self.state
 
@@ -87,12 +94,9 @@ class TopFarmProblem(Problem):
         return res
 
     def optimize(self, state={}):
-        if hasattr(self.cost_comp, 'problem'):
-            self.recorder = NestedTopFarmListRecorder(self.cost_comp, self.record_id)
-        else:
-            self.recorder = TopFarmListRecorder(self.record_id)
+        self.load_recorder()
         self.update_state(state)
-        if len(self.recorder.driver_iteration_lst) > 0:
+        if self.recorder.num_cases > 0:
             try:
                 self.update_state({k: self.recorder.get(k)[-1] for k in self.state.keys() if k not in state})
             except ValueError:

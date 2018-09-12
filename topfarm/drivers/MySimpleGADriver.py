@@ -241,6 +241,7 @@ class MyGeneticAlgorithm(GeneticAlgorithm):
             new_gen = self.tournament(old_gen, fitness)
             new_gen = self.crossover(new_gen, Pc)
             new_gen = self.mutate(new_gen, Pm)
+            print (generation)
 
         return xopt, fopt, nfit
 
@@ -299,8 +300,8 @@ class MyGeneticAlgorithm(GeneticAlgorithm):
         """
         interval = (vub - vlb) / (2**bits - 1)
         gen = np.empty(self.lchrom)
-        assert np.all(x > vlb)
-        assert np.all(x < vub)
+        x = np.maximum(x, vlb)
+        x = np.minimum(x, vub)
         x = np.round((x - vlb) / interval).astype(np.int)
     
         byte_str = [("0" * b + bin(i)[2:])[-b:] for i,b in zip(x, bits)]

@@ -107,7 +107,7 @@ def testLargeOffset(pyFuga):
 def testAEP_topfarm(get_fuga):
     pyFuga = get_fuga()
     init_pos = [[0, 0], [1000, 0]]
-    tf = TopFarm(init_pos, pyFuga.get_TopFarm_cost_component(), 160, init_pos, boundary_type='square', record_id=False)
+    tf = TopFarm(init_pos, pyFuga.get_TopFarm_cost_component(), 160, init_pos, boundary_type='square')
     cost, _ = tf.evaluate()
     np.testing.assert_array_almost_equal(cost, -16.579337831174865)
 
