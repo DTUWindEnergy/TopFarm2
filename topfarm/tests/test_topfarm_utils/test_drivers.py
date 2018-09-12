@@ -4,8 +4,9 @@ import pytest
 from topfarm.cost_models.dummy import DummyCost
 from topfarm.plotting import NoPlot
 from topfarm.easy_drivers import EasyScipyOptimizeDriver, EasyPyOptSparseIPOPT,\
-    EasySimpleGADriver
+    EasySimpleGADriver, EasyRandomSearchDriver
 from topfarm.tests import npt, uta
+from topfarm.drivers.random_search_driver import RandomizeTurbinePosition
 
 
 initial = np.array([[6, 0], [6, -8], [1, 1]])  # initial turbine layouts
@@ -16,10 +17,10 @@ desired = np.array([[3, -3], [7, -7], [4, -3]])  # desired turbine layouts
 
 @pytest.fixture
 def topfarm_generator():
-    def _topfarm_obj(driver, xy_scale=[1, 1], cost_scale=1, cost_offset=0):
+    def _topfarm_obj(driver, xy_scale=[1, 1], cost_scale=1, cost_offset=0, spacing=2):
         from topfarm.cost_models.dummy import DummyCostPlotComp
 
-        plot_comp = DummyCostPlotComp(desired * xy_scale)
+        plot_comp = DummyCostPlotComp(desired * xy_scale, plot_improvements_only=True)
         plot_comp = NoPlot()
 
         class DummyCostScaled(DummyCost):
@@ -32,7 +33,7 @@ def topfarm_generator():
                 return [(2 * cost_scale * (kwargs[n] - opt[:, i])) for i, n in enumerate(self.input_keys)]
 
         return TopFarm(initial * xy_scale, DummyCostScaled(desired * xy_scale, ['turbineX', 'turbineY']),
-                       2 * xy_scale[0], plot_comp=plot_comp, boundary=boundary * xy_scale, driver=driver,
+                       spacing * xy_scale[0], plot_comp=plot_comp, boundary=boundary * xy_scale, driver=driver,
                        expected_cost=1.5 * cost_scale)
     return _topfarm_obj
 
@@ -110,3 +111,17 @@ def find_optimal_scaling(topfarm_generator):
     plt.plot(res[:, 0], res[:, 1])
     plt.xscale('log')
     plt.show()
+
+
+def test_random_search_driver(topfarm_generator):
+
+    driver = EasyRandomSearchDriver(randomize_func=RandomizeTurbinePosition(1), max_iter=1000)
+    tf = topfarm_generator(driver, spacing=1)
+    cost, _, recorder = tf.optimize()
+    tb_pos = tf.turbine_positions[:, :2]
+    tol = 1e-1
+    assert tb_pos[1][0] < 6 + tol  # check within border
+    if isinstance(driver, EasySimpleGADriver):
+        assert cost == recorder['cost'].min()
+    else:
+        np.testing.assert_array_almost_equal(tb_pos, [[3, -3], [6, -7], [4, -3]], -int(np.log10(tol)))

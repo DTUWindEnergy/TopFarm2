@@ -102,6 +102,7 @@ class PlotComp(ExplicitComponent):
         if self.by_pass is False:
             cost = inputs['cost'][0]
             if (self.plot_improvements_only and
+                'cost' in self.problem.recorder.driver_iteration_dict and 
                 len(self.problem.recorder['cost']) and
                     cost > self.problem.recorder['cost'].min()):
                 return

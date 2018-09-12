@@ -43,8 +43,8 @@ class TurbineTypeDummyCost(DummyCost):
 
 
 class DummyCostPlotComp(PlotComp):
-    def __init__(self, optimal, memory=10, delay=0.001):
-        super().__init__(memory, delay)
+    def __init__(self, optimal, memory=10, delay=0.001, **kwargs):
+        super().__init__(memory, delay, **kwargs)
         self.optimal = optimal
 
     def init_plot(self, boundary):

@@ -14,6 +14,7 @@ from topfarm.recorders import ListRecorder, NestedTopFarmListRecorder,\
     TopFarmListRecorder
 from openmdao.api import Problem, ScipyOptimizeDriver, IndepVarComp
 from openmdao.drivers.genetic_algorithm_driver import SimpleGADriver
+from topfarm.drivers.random_search_driver import RandomSearchDriver
 
 
 class TopFarmProblem(Problem):
@@ -205,7 +206,8 @@ class TurbineXYZOptimizationProblem(TopFarmProblem):
         do = self.driver.options
         dont_scale = (('optimizer' in do and do['optimizer'] == 'SLSQP') or  # scaling disturbs SLSQP
                       isinstance(driver, DOEDriver) or
-                      isinstance(driver, SimpleGADriver))
+                      isinstance(driver, SimpleGADriver) or
+                      isinstance(driver, RandomSearchDriver))
         if len(boundary_comp.xy_boundary) > 0:
 
             ref0_x, ref0_y = self.boundary_comp.xy_boundary.min(0)
