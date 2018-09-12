@@ -8,6 +8,7 @@ from topfarm.plotting import NoPlot
 import numpy as np
 from topfarm.easy_drivers import EasyScipyOptimizeDriver
 from topfarm.constraint_components.boundary_component import BoundaryComp
+from topfarm.tests import npt
 optimal = [(0, 2, 4, 1), (4, 2, 1, 0)]
 
 boundary_comp = BoundaryComp(2, xy_boundary=[(0, 0), (4, 4)],
@@ -64,13 +65,12 @@ def test_turbine_Type_multistart_XYZ_optimization():
     cost, state, recorder = tf.optimize()
     print(cost)
     #print (state)
-    #print (recorder.driver_iteration_lst)
     print(recorder.get('turbineType'))
     print(recorder.get('cost'))
     best_index = np.argmin(recorder.get('cost'))
-    initial_xyz_recorder = recorder.driver_iteration_lst[best_index][-1]
+    initial_xyz_recorder = recorder['recorder'][best_index]
     xyz_recorder = initial_xyz_recorder.get('recorder')[0]
-    print(xyz_recorder.get(['turbineX', 'turbineY', 'turbineZ']))
+    npt.assert_almost_equal(xyz_recorder['cost'][-1], cost)
 
 
 if __name__ == '__main__':

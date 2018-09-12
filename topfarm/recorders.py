@@ -1,7 +1,6 @@
 from openmdao.recorders.base_recorder import BaseRecorder
 from openmdao.recorders.cases import BaseCases
-from openmdao.recorders.case import PromotedToAbsoluteMap, DriverCase
-from openmdao.recorders.base_case_reader import BaseCaseReader
+from openmdao.recorders.case import DriverCase
 from openmdao.core.driver import Driver
 from openmdao.core.system import System
 from openmdao.utils.record_util import values_to_array
@@ -14,7 +13,7 @@ import pickle
 class ListRecorder(BaseRecorder):
     def __init__(self):
         BaseRecorder.__init__(self)
-        self.driver_iteration_lst = []
+        self.driver_iteration_dict = {}
         self.iteration_coordinate_lst = []
         self._abs2prom = {'input': {}, 'output': {}}
         self._prom2abs = {'input': {}, 'output': {}}
@@ -22,6 +21,7 @@ class ListRecorder(BaseRecorder):
         self._driver_cases = None
         self.scaling_vecs = None
         self.user_options = None
+        self.dtypes = []
 
     def startup(self, recording_requester):
         """
@@ -84,14 +84,14 @@ class ListRecorder(BaseRecorder):
             self._abs2meta[name]['explicit'] = True
             if name in states:
                 self._abs2meta[name]['explicit'] = False
-                
+
     @property
     def num_cases(self):
-        return len(self.driver_iteration_lst)
+        return len(self.iteration_coordinate_lst)
 
     @property
     def driver_cases(self):
-        self._driver_cases = DriverCases(self.driver_iteration_lst, self._abs2prom,
+        self._driver_cases = DriverCases(self.driver_iteration_dict, self.dtypes, self._abs2prom,
                                          self._abs2meta, self._prom2abs)
         self._driver_cases._case_keys = self.iteration_coordinate_lst
         self._driver_cases.num_cases = len(self._driver_cases._case_keys)
@@ -99,28 +99,13 @@ class ListRecorder(BaseRecorder):
         return self._driver_cases
 
     def get(self, key):
-        if len(self.driver_iteration_lst) == 0:
-            raise ValueError("Driver iteration list empty")
         if isinstance(key, (tuple, list)):
             return np.array([self.get(k) for k in key]).T
-        meta = ['counter', 'iteration_coordinate', 'timestamp', 'success', 'msg']
-        if key in meta:
-            i = meta.index(key)
-            return np.array([r[i] for r in self.driver_iteration_lst])
-        elif key in self._prom2abs['input']:
-            abs_name = self._prom2abs['input'][key][0]
-            i = self.driver_iteration_lst[0][5].dtype.names.index(abs_name)
-            res = np.array([r[5][0][i] for r in self.driver_iteration_lst])
-        elif key in self._prom2abs['output']:
-            abs_name = self._prom2abs['output'][key][0]
-            i = self.driver_iteration_lst[0][6].dtype.names.index(abs_name)
-            res = np.array([r[6][0][i] for r in self.driver_iteration_lst])
-        else:
-            raise KeyError("'%s' not found in meta, input or output" % key)
-        if res.shape[-1] == 1:
-            res = res[:, 0]
+        res = np.array(self.driver_iteration_dict[key])
+        if len(res.shape) > 1 and res.shape[-1] == 1:
+            res = np.squeeze(res, -1)
         return res
-    
+
     def __getitem__(self, key):
         return self.get(key)
 
@@ -157,19 +142,43 @@ class ListRecorder(BaseRecorder):
             Dictionary containing execution metadata.
         """
         input_, output = [values_to_array(data[n]) for n in ['in', 'out']]
+        meta_fields = [('counter', self._counter),
+                       ('iteration_coordinate', self._iteration_coordinate),
+                       ('timestamp', metadata['timestamp']),
+                       ('success', metadata['success']),
+                       ('msg', metadata['msg'])]
+
+        data_fields = [(abs2prom[n], v)
+                       for struct_arr, abs2prom in [(input_[0], self._abs2prom['input']), (output[0], self._abs2prom['output'])]
+                       for n, v in zip(struct_arr.dtype.names, struct_arr)]
+
+        # first time -> create lists
+        if len(self.iteration_coordinate_lst) == 0:
+            for k, _ in meta_fields + data_fields:
+                self.driver_iteration_dict[k] = []
+            self.dtypes = [input_.dtype, output.dtype]
+
         self.iteration_coordinate_lst.append(self._iteration_coordinate)
-        self.driver_iteration_lst.append(
-            (self._counter, self._iteration_coordinate,
-             metadata['timestamp'], metadata['success'], metadata['msg'],
-             input_, output))
+        for k, v in meta_fields:
+            lst = self.driver_iteration_dict[k].append(v)
+        N = len(self.iteration_coordinate_lst)
+        for k, v in data_fields:
+            lst = self.driver_iteration_dict[k]
+            if len(lst) < N:
+                lst.append(v)
+            else:
+                #  # may be different due to scaling
+                #  # we hope the first is the right one
+                #  assert np.all(lst[-1] == v)
+                pass
 
     def save(self, filename):
-
-        d = {'driver_iteration_lst': [r[:7] for r in self.driver_iteration_lst],
+        d = {'driver_iteration_dict': self.driver_iteration_dict,
              'iteration_coordinate_lst': self.iteration_coordinate_lst,
              '_abs2prom': self._abs2prom,
              '_prom2abs': self._prom2abs,
              '_abs2meta': self._abs2meta,
+             'dtypes': self.dtypes,
              'driver_class': self.driver_class,
              'model_viewer_data': self.model_viewer_data,
              'scaling_vecs': self.scaling_vecs,
@@ -187,7 +196,7 @@ class ListRecorder(BaseRecorder):
         return self
 
     def load(self, filename):
-        if not filename or os.path.isfile(filename) == False:
+        if not filename or os.path.isfile(filename) is False:
             raise FileNotFoundError("No such file '%s'" % filename)
         with open(filename, 'rb') as fid:
             cls, attributes = pickle.load(fid)
@@ -201,9 +210,12 @@ class DriverCases(BaseCases):
     Case specific to the entries that might be recorded in a Driver iteration.
     """
 
-    def __init__(self, driver_iteration_lst, abs2prom, abs2meta, prom2abs):
+    def __init__(self, driver_iteration_dict, dtypes, abs2prom, abs2meta, prom2abs):
+        self.dtypes = dtypes
         BaseCases.__init__(self, "None", abs2prom, abs2meta, prom2abs)
-        self.driver_iteration_lst = driver_iteration_lst
+        self.driver_iteration_dict = driver_iteration_dict
+        self.meta_field_names = ['counter', 'iteration_coordinate', 'timestamp', 'success', 'msg']
+        self.abs2proms = [self._abs2prom[io] for io in ['input', 'output']]
 
     def get_case(self, case_id):
         """
@@ -219,12 +231,14 @@ class DriverCases(BaseCases):
             An instance of a Driver Case populated with data from the
             specified case/iteration.
         """
+        did = self.driver_iteration_dict
+        meta_fields = [did[k][case_id] for k in self.meta_field_names]
 
-        counter, iteration_coordinate, timestamp, success, msg, inputs, \
-            outputs, *_ = self.driver_iteration_lst[case_id]
+        inputs, outputs = [np.array(tuple([did[abs2prom[k]][case_id] for k in dtype.names]), dtype=dtype)
+                           for abs2prom, dtype in zip(self.abs2proms, self.dtypes)]
 
-        case = DriverCase(self.filename, counter, iteration_coordinate, timestamp, success, msg,
-                          inputs, outputs,
+        case = DriverCase(self.filename, *meta_fields,
+                          np.array([inputs]), np.array([outputs]),
                           self._prom2abs, self._abs2prom, self._abs2meta)
 
         return case
@@ -330,7 +344,7 @@ class TopFarmListRecorder(ListRecorder):
             load_case = 0
         else:
             load_case = int(load_case)
-        self.driver_iteration_lst = self.driver_iteration_lst[:load_case]
+        self.driver_iteration_dict = {k: v[:load_case] for k, v in self.driver_iteration_dict.items()}
         self.iteration_coordinate_lst = self.iteration_coordinate_lst[:load_case]
 
         self.filename, self.load_case = filename, load_case
@@ -356,13 +370,9 @@ class NestedTopFarmListRecorder(TopFarmListRecorder):
             Dictionary containing execution metadata.
         """
         recorder = getattr(self.nested_comp.problem, 'recorder', None)
+        if self.num_cases == 0:
+            self.driver_iteration_dict['recorder'] = []
         TopFarmListRecorder.record_iteration_driver(self, recording_requester, data, metadata)
-        self.driver_iteration_lst[-1] = self.driver_iteration_lst[-1] + (recorder,)
+         
+        self.driver_iteration_dict['recorder'].append(recorder)
 
-    def get(self, key):
-        if key == 'recorder':
-            return [r[-1] for r in self.driver_iteration_lst]
-        return ListRecorder.get(self, key)
-
-    def keys(self):
-        return TopFarmListRecorder.keys(self) + ['recorder']
