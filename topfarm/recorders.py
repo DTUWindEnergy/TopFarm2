@@ -373,6 +373,5 @@ class NestedTopFarmListRecorder(TopFarmListRecorder):
         if self.num_cases == 0:
             self.driver_iteration_dict['recorder'] = []
         TopFarmListRecorder.record_iteration_driver(self, recording_requester, data, metadata)
-         
-        self.driver_iteration_dict['recorder'].append(recorder)
 
+        self.driver_iteration_dict['recorder'].append(recorder)

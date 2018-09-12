@@ -61,7 +61,7 @@ def test_optimizers(driver, tol, topfarm_generator):
 @pytest.mark.parametrize('driver,tol,N', [
     (EasyScipyOptimizeDriver(disp=False), 1e-4, 28),
     (EasyScipyOptimizeDriver(optimizer='COBYLA', tol=1e-3, disp=False), 1e-2, 103),
-    #(EasyPyOptSparseIPOPT(), 1e-4, 25),
+    # (EasyPyOptSparseIPOPT(), 1e-4, 25),
 ][:])
 @pytest.mark.parametrize('cost_scale,cost_offset', [(1, 0),
                                                     (1000, 0),

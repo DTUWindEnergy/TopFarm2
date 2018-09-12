@@ -36,6 +36,7 @@ def lst():
 def seq_runner_example(lst):
     return get_InitialXYZOptimizationProblem(lst).optimize()
 
+
 def test_parallel_run(lst, parallelRunner):
     # run sequential
     s_cost, s_state, s_recorder = seq_runner_example(lst)

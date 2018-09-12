@@ -22,5 +22,5 @@ class TestWindResource(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'Test.testWindResource']
+    # import sys;sys.argv = ['', 'Test.testWindResource']
     unittest.main()

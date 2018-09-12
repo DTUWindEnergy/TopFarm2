@@ -1,10 +1,7 @@
-from topfarm import TopFarm
 import numpy as np
-import pytest
 from topfarm.cost_models.dummy import DummyCost
 from topfarm.plotting import NoPlot
-from topfarm.easy_drivers import EasyScipyOptimizeDriver, EasyPyOptSparseIPOPT
-from topfarm.tests import npt, uta
+
 from topfarm._topfarm import TurbineXYZOptimizationProblem
 from topfarm.constraint_components.boundary_component import BoundaryComp
 from openmdao.drivers.genetic_algorithm_driver import SimpleGADriver
@@ -20,7 +17,7 @@ desired = np.array([[3, -3], [7, -7], [4, -3]])  # desired turbine layouts
 def test_spacing():
     from topfarm.cost_models.dummy import DummyCostPlotComp
 
-    #plot_comp = DummyCostPlotComp(desired)
+    # plot_comp = DummyCostPlotComp(desired)
     plot_comp = NoPlot()
 
     tf = TurbineXYZOptimizationProblem(DummyCost(desired, ['turbineX', 'turbineY']), initial,

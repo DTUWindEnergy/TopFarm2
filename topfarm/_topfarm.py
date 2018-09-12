@@ -34,7 +34,7 @@ class TopFarmProblem(Problem):
 
         self.record_id = record_id
         self.load_recorder()
-        
+
         self.indeps = self.model.add_subsystem('indeps', IndepVarComp(), promotes=['*'])
         self.model.add_subsystem('cost_comp', cost_comp, promotes=['*'])
         self.model.add_objective('cost', scaler=1 / abs(expected_cost))

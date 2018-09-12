@@ -103,7 +103,7 @@ class PlotComp(ExplicitComponent):
             cost = inputs['cost'][0]
             if (self.plot_improvements_only and
                 len(self.problem.recorder['cost']) and
-                cost > self.problem.recorder['cost'].min()):
+                    cost > self.problem.recorder['cost'].min()):
                 return
 
             x = inputs['turbineX']
@@ -175,5 +175,5 @@ class TurbineTypePlotComponent(PlotComp):
 
     def plot_current_position(self, x, y):
         for m, c, x_, y_ in zip(self.markers[self.types], self.colors, x, y):
-            #self.ax.plot(x_, y_, 'o', color=c, ms=5)
-            self.ax.plot(x_, y_,  m + 'k', markeredgecolor=c, markeredgewidth=1, ms=8)
+            # self.ax.plot(x_, y_, 'o', color=c, ms=5)
+            self.ax.plot(x_, y_, m + 'k', markeredgecolor=c, markeredgewidth=1, ms=8)

@@ -16,9 +16,9 @@ import warnings
 class TestAEPCalculator(unittest.TestCase):
 
     def test_AEPCalculator(self):
-        f = [1,0,0,0]
-        A = [9.176929,10,10,10]
-        k = [2.392578,2,2,2]
+        f = [1, 0, 0, 0]
+        A = [9.176929, 10, 10, 10]
+        k = [2.392578, 2, 2, 2]
         wr = WindResource(np.array(f), A, k, ti=np.zeros_like(f) + .1)
         wf_3tb = testfilepath + "wind_farms/3tb.yml"
         with warnings.catch_warnings():
@@ -29,5 +29,5 @@ class TestAEPCalculator(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'Test.testName']
+    # import sys;sys.argv = ['', 'Test.testName']
     unittest.main()

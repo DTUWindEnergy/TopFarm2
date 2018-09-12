@@ -33,7 +33,7 @@ def latest_id(case_recorder_dir):
     files = [x for x in files if x.startswith('cases_') and x.endswith('.sql')]
     if len(files) == 0:
         string = 'No recorded files found in the specified directory: '
-        string += case_recorder_dir + '\n' + 9*' '
+        string += case_recorder_dir + '\n' + 9 * ' '
         string += 'Start a new optimization or specify another directory '
         string += 'for resumed optimization'
         raise Warning(string)
@@ -83,7 +83,7 @@ def _shuffle_postions_rel(init_pos, offset, boundary, n_wt, plot):
     turbineX = init_pos[:, 0]
     turbineY = init_pos[:, 1]
     ba = np.array(boundary).T
-    turbines = np.array(init_pos) + np.random.rand(n_wt, 2)*2*offset-offset
+    turbines = np.array(init_pos) + np.random.rand(n_wt, 2) * 2 * offset - offset
     if plot:
         plt.figure()
         plt.cla()
@@ -109,15 +109,15 @@ def _shuffle_positions_abs(turbineX, turbineY, boundary, n_wt, n_iter,
         dx, dy = spacing_comp._compute_partials(turbineX, turbineY)
         index = np.argmin(dist)
         if dist[index] < min_space2 or j == 0:
-            turbineX += dx[index]*step_size
-            turbineY += dy[index]*step_size
+            turbineX += dx[index] * step_size
+            turbineY += dy[index] * step_size
             turbineX, turbineY = _move_inside_boundary(n_wt, turbineX,
                                                        turbineY, boundary_comp,
                                                        pad)
         else:
             if verbose:
                 print('Obtained required spacing after {} iterations'.format(
-                        j))
+                    j))
             break
     if plot:
         plt.plot(turbineX, turbineY, 'o')
@@ -137,8 +137,8 @@ def _move_inside_boundary(n_wt, turbineX, turbineY, boundary_comp, pad):
         if dist < 0:
             dx = dng[1][i]
             dy = dng[2][i]
-            turbineX[i] -= dx*dist*pad
-            turbineY[i] -= dy*dist*pad
+            turbineX[i] -= dx * dist * pad
+            turbineY[i] -= dy * dist * pad
     return turbineX, turbineY
 
 
@@ -166,7 +166,7 @@ def smart_start(x, y, val, N_WT, min_space):
             y0 = arr[1][max_ind]
             xs.append(x0)
             ys.append(y0)
-            index = np.where((arr[0]-x0)**2+(arr[1]-y0)**2 >= min_space**2)[0]
+            index = np.where((arr[0] - x0)**2 + (arr[1] - y0)**2 >= min_space**2)[0]
             arr = arr[:, index]
         except ValueError:
             xs.append(np.nan)
@@ -198,10 +198,8 @@ if __name__ == '__main__':
     c = plt.contourf(XX, YY, val, 100)
     plt.colorbar(c)
     for i in range(N_WT):
-        circle = plt.Circle((xs[i], ys[i]), min_space/2, color='b', fill=False)
+        circle = plt.Circle((xs[i], ys[i]), min_space / 2, color='b', fill=False)
         plt.gcf().gca().add_artist(circle)
         plt.plot(xs[i], ys[i], 'rx')
     plt.axis('equal')
     plt.show()
-
-

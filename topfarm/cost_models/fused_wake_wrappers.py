@@ -24,13 +24,14 @@ class FusedWakeModel(object):
         if version:
             self.version = version
         self.wake_model = self.wake_model_cls(WF=self.windFarm, version=self.version, **kwargs)
-        
+
     def __call__(self, turbine_positions, no_wake_wdir, no_wake_wsp, no_wake_ti):
         if not hasattr(self.wake_model, 'update_position'):
             pytest.xfail("Method update_position missing in wakemodel")
         self.wake_model.update_position(turbine_positions)
         WD, WS, TI = (np.atleast_2d(v) for v in [no_wake_wdir, no_wake_wsp, no_wake_ti])
-        assert WD.shape == WS.shape == TI.shape, "Shape of no_wake_wdir, no_wake_wsp and no_wake_ti must equal: %s != %s != %s" % (WD.shape, WS.shape, TI.shape)
+        assert WD.shape == WS.shape == TI.shape, "Shape of no_wake_wdir, no_wake_wsp and no_wake_ti must equal: %s != %s != %s" % (
+            WD.shape, WS.shape, TI.shape)
         if len(WD.shape) == 3:
             WD, WS, TI = [np.mean(v, 0) for v in [WD, WS, TI]]
         self.run_wake_model(WS, WD, TI)
@@ -61,8 +62,8 @@ def try_me():
         noj, gcl = wake_models = [FusedWakeNOJWakeModel(hornsrev_yml, K=.1), FusedWakeGCLWakeModel(hornsrev_yml)]
         tb_pos = noj.windFarm.pos
         print(noj(tb_pos.T, no_wake_wdir=270, no_wake_wsp=8, no_wake_ti=0.1))
-    
-        for wm, c in zip(wake_models,'rk'):
+
+        for wm, c in zip(wake_models, 'rk'):
             WS_cases = np.arange(11, 12)
             WD_cases = np.arange(0, 360, 1)
             WD_ms, WS_ms = np.meshgrid(WD_cases, WS_cases)
@@ -73,6 +74,6 @@ def try_me():
             plt.legend()
             print(p.sum())
         plt.show()
-        
+
 
 try_me()

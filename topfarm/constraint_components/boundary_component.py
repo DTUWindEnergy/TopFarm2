@@ -10,28 +10,6 @@ def BoundaryComp(n_wt, xy_boundary, z_boundary, xy_boundary_type='convex_hull'):
         return ConvexBoundaryComp(n_wt, xy_boundary, z_boundary, xy_boundary_type)
 
 
-# def setup_xy_z_boundary(problem, n_wt, xy_boundary, z_boundary, xy_boundary_type):
-#     if xy_boundary is not None:
-#         if xy_boundary_type == 'polygon':
-#             xy_boundary_comp = PolygonBoundaryComp(xy_boundary, n_wt)
-#         else:
-#             xy_boundary_comp = BoundaryComp(xy_boundary, n_wt, xy_boundary_type)
-#         problem.model.add_subsystem('xy_bound_comp', xy_boundary_comp, promotes=['*'])
-#         problem.model.add_constraint('boundaryDistances', lower=np.zeros(xy_boundary_comp.nVertices * n_wt))
-#     else:
-#         xy_boundary_comp = None
-#
-#     if z_boundary is not None:
-#         z_boundary = np.array(z_boundary)
-#         assert z_boundary.shape[-1] == 2
-#         if len(z_boundary.shape) == 1:
-#             z_boundary = np.zeros((n_wt, 2)) + [z_boundary]
-#         assert z_boundary.shape == (n_wt, 2)
-#         assert np.all(z_boundary[:, 0] < z_boundary[:, 1])
-#         problem.model.add_constraint('turbineZ', lower=z_boundary[:, 0], upper=z_boundary[:, 1])
-#     return xy_boundary_comp, z_boundary
-
-
 class BoundaryBaseComp(ExplicitComponent):
     def __init__(self, n_wt, xy_boundary=None, z_boundary=None, **kwargs):
         ExplicitComponent.__init__(self, **kwargs)
@@ -94,7 +72,7 @@ class BoundaryBaseComp(ExplicitComponent):
 
         def new_compute(inputs, outputs):
             p = xy_boundary_penalty(inputs) + z_boundary_penalty(inputs)
-            if p==0:
+            if p == 0:
                 self._org_compute(inputs, outputs)
             else:
                 outputs['cost'] = penalty + p
@@ -212,7 +190,7 @@ class ConvexBoundaryComp(BoundaryBaseComp):
 
                 # calculate the sign of perpendicular distances from point to current face (+ is inside, - is outside)
                 face_distance[i, j] = np.vdot(d_vec, unit_normals[j])
-        #print (face_distance)
+        # print (face_distance)
         return face_distance
 
     def setup(self):
@@ -229,7 +207,7 @@ class ConvexBoundaryComp(BoundaryBaseComp):
                         desc="signed perpendicular distances from each turbine to each face CCW; + is inside")
 
         self.declare_partials('boundaryDistances', ['turbineX', 'turbineY'])
-        #self.declare_partials('boundaryDistances', ['boundaryVertices', 'boundaryNormals'], method='fd')
+        # self.declare_partials('boundaryDistances', ['boundaryVertices', 'boundaryNormals'], method='fd')
 
     def distances(self, turbineX, turbineY):
         return self.calculate_distance_to_boundary(np.array([turbineX, turbineY]).T)
@@ -322,13 +300,13 @@ class PolygonBoundaryComp(BoundaryBaseComp):
                         desc="signed perpendicular distances from each turbine to each face CCW; + is inside")
 
         self.declare_partials('boundaryDistances', ['turbineX', 'turbineY'])
-        #self.declare_partials('boundaryDistances', ['boundaryVertices', 'boundaryNormals'], method='fd')
+        # self.declare_partials('boundaryDistances', ['boundaryVertices', 'boundaryNormals'], method='fd')
 
     def calc_distance_and_gradients(self, x, y):
         """
         distances point(x,y) to edge((x1,y1)->(x2,y2))
-        +/-: inside/outside 
-        case (x,y) closest to edge: 
+        +/-: inside/outside
+        case (x,y) closest to edge:
             distances = edge_unit_vec dot (x1-x,y1-y)
             ddist_dx = -(y2-y2)/|edge|
             ddist_dy = (x2-x2)/|edge|
