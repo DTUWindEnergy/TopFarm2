@@ -49,9 +49,9 @@ class SpacingComp(ExplicitComponent):
     def setup(self):
 
         # set finite difference options (fd used for testing only)
-        #self.deriv_options['check_form'] = 'central'
-        #self.deriv_options['check_step_size'] = 1.0e-5
-        #self.deriv_options['check_step_calc'] = 'relative'
+        # self.deriv_options['check_form'] = 'central'
+        # self.deriv_options['check_step_size'] = 1.0e-5
+        # self.deriv_options['check_step_calc'] = 'relative'
 
         # Explicitly size input arrays
         self.add_input('turbineX', val=np.zeros(self.n_wt),
@@ -63,7 +63,7 @@ class SpacingComp(ExplicitComponent):
         self.add_output('wtSeparationSquared', val=np.zeros(int((self.n_wt - 1) * self.n_wt / 2)),
                         desc='spacing of all turbines in the wind farm')
 
-        #self.declare_partials('wtSeparationSquared', ['turbineX', 'turbineY'], method='fd')
+        # self.declare_partials('wtSeparationSquared', ['turbineX', 'turbineY'], method='fd')
         self.declare_partials('wtSeparationSquared', ['turbineX', 'turbineY'])
 
     def compute(self, inputs, outputs):
@@ -97,8 +97,8 @@ class SpacingComp(ExplicitComponent):
         n_wt = self.n_wt
 
         # initialize gradient calculation array
-        dSdx = np.zeros((int((n_wt - 1.) * n_wt / 2.),  n_wt))  # col: dx_1-dx_n, row: d12, d13,..,d1n, d23..d2n,..
-        dSdy = np.zeros((int((n_wt - 1.) * n_wt / 2.),  n_wt))
+        dSdx = np.zeros((int((n_wt - 1.) * n_wt / 2.), n_wt))  # col: dx_1-dx_n, row: d12, d13,..,d1n, d23..d2n,..
+        dSdy = np.zeros((int((n_wt - 1.) * n_wt / 2.), n_wt))
 
         # set turbine pair counter to zero
         k = 0

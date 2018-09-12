@@ -1,9 +1,6 @@
-import unittest
-
 import numpy as np
 from topfarm.cost_models.dummy import DummyCost, DummyCostPlotComp
-from topfarm import TopFarm
-import pytest
+
 from topfarm._topfarm import TurbineXYZOptimizationProblem
 from topfarm.constraint_components.boundary_component import BoundaryComp
 from topfarm.plotting import NoPlot
@@ -19,7 +16,7 @@ desired = np.array([[3, -3, 1], [7, -7, 2], [4, -3, 3]])  # desired turbine layo
 def test_setup_as_constraint_xy():
     from topfarm.cost_models.dummy import DummyCostPlotComp
 
-    #plot_comp = DummyCostPlotComp(desired)
+    # plot_comp = DummyCostPlotComp(desired)
     plot_comp = NoPlot()
 
     tf = TurbineXYZOptimizationProblem(DummyCost(desired[:, :2], ['turbineX', 'turbineY']), initial[:, :2],
@@ -64,7 +61,7 @@ def test_setup_as_penalty_xy():
 
 def test_setup_as_penalty_z():
     driver = SimpleGADriver()
-    tf = TurbineXYZOptimizationProblem(DummyCost(desired[:,2:], ['turbineZ']), initial,
+    tf = TurbineXYZOptimizationProblem(DummyCost(desired[:, 2:], ['turbineZ']), initial,
                                        boundary_comp=BoundaryComp(3, None, [0, 2]),
                                        driver=driver)
 
@@ -72,7 +69,7 @@ def test_setup_as_penalty_z():
     assert tf.evaluate()[0] == 14
     # check penalized result if height constraint is not satisfied
     assert tf.evaluate({'turbineX': [2.5, 7, 4.5], 'turbineY': [-3., -7., -3.], 'turbineZ': [0., 0., 3.]})[0] == 1e10 + 1
-    assert tf.evaluate({'turbineX': [2.5, 7, 4.5], 'turbineY': [-3., -7., -3.], 'turbineZ': [-1., 0., 0.]})[0] == 1e10 + 1 
+    assert tf.evaluate({'turbineX': [2.5, 7, 4.5], 'turbineY': [-3., -7., -3.], 'turbineZ': [-1., 0., 0.]})[0] == 1e10 + 1
 
 
 def test_setup_as_penalty_xyz():
@@ -87,6 +84,7 @@ def test_setup_as_penalty_xyz():
     assert tf.evaluate({'turbineX': [2.5, 7, 4.5], 'turbineY': [-3., -7., -3.], 'turbineZ': [0., 0., 0.]})[0] == 1e10 + 1  # outside border
     assert tf.evaluate({'turbineX': [2.5, 7, 4.5], 'turbineY': [-3., -7., -3.], 'turbineZ': [0., 0., 3.]})[0] == 1e10 + 2  # above limit and outside
     assert tf.evaluate({'turbineX': [2.5, 7, 4.5], 'turbineY': [-3., -7., -3.], 'turbineZ': [-2., 0., 0.]})[0] == 1e10 + 3  # below limit and outside
+
 
 def test_setup_as_penalty_none():
     driver = SimpleGADriver()

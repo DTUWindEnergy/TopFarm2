@@ -7,10 +7,7 @@ import numpy as np
 import pytest
 from topfarm.tests import npt
 from topfarm import TopFarm
-
-import numpy as np
 from topfarm.cost_models.cost_model_wrappers import CostModelComponent
-import pytest
 
 """Test methods in TopFarmProblem
 
@@ -141,20 +138,18 @@ def testTopFarmProblem_as_component(turbineTypeOptimizationProblem):
 def testTopFarmProblem_get_DOE_list(turbineTypeOptimizationProblem):
     tf = turbineTypeOptimizationProblem
     npt.assert_array_equal(len(tf.get_DOE_list()), 27)
-    (k,v), = tf.get_DOE_list()[1]
-    assert k=="indeps.turbineType"
-    npt.assert_array_equal(v, [1,0,0])
-    
-    #npt.assert_array_equal(tf.get_DOE_list()[1], [[('indeps.turbineType', array([0., 0., 0.]))], [('indeps.turbineType', array([1., 0., 0.]))]])
+    (k, v), = tf.get_DOE_list()[1]
+    assert k == "indeps.turbineType"
+    npt.assert_array_equal(v, [1, 0, 0])
+
+    # npt.assert_array_equal(tf.get_DOE_list()[1], [[('indeps.turbineType', array([0., 0., 0.]))], [('indeps.turbineType', array([1., 0., 0.]))]])
 
 
 def testTopFarmProblem_get_DOE_array(turbineTypeOptimizationProblem):
     tf = turbineTypeOptimizationProblem
     npt.assert_array_equal(tf.get_DOE_array().shape, (27, 1, 3))
     npt.assert_array_equal(tf.get_DOE_array()[:5], [[[0, 0, 0]],
-                                                   [[1, 0, 0]],
-                                                   [[2, 0, 0]],
-                                                   [[0, 1, 0]],
-                                                   [[1, 1, 0]]])
-
-
+                                                    [[1, 0, 0]],
+                                                    [[2, 0, 0]],
+                                                    [[0, 1, 0]],
+                                                    [[1, 1, 0]]])

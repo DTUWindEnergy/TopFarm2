@@ -4,7 +4,7 @@ from openmdao.drivers.doe_driver import DOEDriver
 from topfarm.cost_models.dummy import DummyCost
 from topfarm.tests import npt
 
-optimal = [[1],[0]]
+optimal = [[1], [0]]
 
 
 def test_turbineType_optimization():

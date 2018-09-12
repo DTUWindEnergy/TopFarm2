@@ -1,43 +1,7 @@
-from openmdao.core.explicitcomponent import ExplicitComponent
 import matplotlib.pyplot as plt
 import numpy as np
 from topfarm.plotting import PlotComp
 from topfarm.cost_models.cost_model_wrappers import CostModelComponent
-
-
-# class DummyCost(ExplicitComponent):
-#     """Sum of squared error between current positions and optimal positions
-#
-#         Evaluates the equation
-#         f(x,y) = SUM(x_i - optx_i)^2 + SUM(y_i + opty_i)^2.
-#     """
-#
-#     def __init__(self, optimal_positions):
-#         """Pass an Nx2 array (or list of lists) of optimal positions"""
-#         ExplicitComponent.__init__(self)
-#         self.optimal = np.array(optimal_positions)
-#         self.n_wt = self.optimal.shape[0]
-#
-#     def setup(self):
-#         self.add_input('turbineX', val=np.zeros(self.n_wt), units='m')
-#         self.add_input('turbineY', val=np.zeros(self.n_wt), units='m')
-#         self.add_output('cost', val=0.0)
-#         self.declare_partials('cost', '*')
-#
-#     def compute(self, inputs, outputs):
-#         """
-#         f(x,y) = SUM(x_i - optx_i)^2 + SUM(y_i + opty_i)^2
-#         """
-#         x = inputs['turbineX']
-#         y = inputs['turbineY']
-#         opt_x, opt_y = self.optimal.T[0:2]
-#         outputs['cost'] = np.sum((x - opt_x)**2 + (y - opt_y)**2)
-#
-#     def compute_partials(self, inputs, J):
-#         x = inputs['turbineX']
-#         y = inputs['turbineY']
-#         J['cost', 'turbineX'] = (2 * x - 2 * np.array(self.optimal)[:, 0])
-#         J['cost', 'turbineY'] = (2 * y - 2 * np.array(self.optimal)[:, 1])
 
 
 class DummyCost(CostModelComponent):
@@ -105,7 +69,8 @@ def try_me():
 
         boundary = [(0, 0), (6, 0), (6, -10), (0, -10)]
 
-        tf = TopFarm(turbines, DummyCost(optimal,['turbineX','turbineY']), minSpacing * rotorDiameter, boundary=boundary, plot_comp=plot_comp, record_id=None)
+        tf = TopFarm(turbines, DummyCost(optimal, ['turbineX', 'turbineY']), minSpacing *
+                     rotorDiameter, boundary=boundary, plot_comp=plot_comp, record_id=None)
         # tf.check()
         tf.optimize()
         # plot_comp.show()

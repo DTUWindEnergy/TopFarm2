@@ -186,8 +186,8 @@ def test_TopFarmListRecorder_continue(tf_generator, load_case, n_rec, n_fev):
         cost_comp=pyFuga.get_TopFarm_cost_component(),
         turbineXYZ=init_pos, min_spacing=2 * D,
         boundary_comp=BoundaryComp(len(init_pos),
-                                   xy_boundary=boundary, 
-                                   z_boundary=None, 
+                                   xy_boundary=boundary,
+                                   z_boundary=None,
                                    xy_boundary_type='square'),
         driver=EasyScipyOptimizeDriver(tol=1e-10, disp=False),
         plot_comp=plot_comp, record_id=tfp + 'recordings/test_TopFarmListRecorder_continue:%s' % load_case, expected_cost=25)

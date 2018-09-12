@@ -64,7 +64,7 @@ def test_turbine_Type_multistart_XYZ_optimization():
     case_gen = tf.driver.options['generator']
     cost, state, recorder = tf.optimize()
     print(cost)
-    #print (state)
+    # print (state)
     print(recorder.get('turbineType'))
     print(recorder.get('cost'))
     best_index = np.argmin(recorder.get('cost'))

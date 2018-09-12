@@ -50,7 +50,6 @@ except ModuleNotFoundError:
     EasyPyOptSparseIPOPT = PyOptSparseMissingDriver
 
 
-
 class EasySimpleGADriver(MySimpleGADriver):
     def __init__(self, max_gen=100, pop_size=25, Pm=None, Pc=.5, elitism=True, bits={}, debug_print=[], run_parallel=False):
         """SimpleGA driver with optional arguments
@@ -63,7 +62,7 @@ class EasySimpleGADriver(MySimpleGADriver):
             Number of points in the GA.
         pm : float
             Probability of mutation.
-        pc : float 
+        pc : float
              Probability of cross over.
         elitism : bool, optional
             If True, replace worst performing point with best from previous generation each iteration.
@@ -74,4 +73,5 @@ class EasySimpleGADriver(MySimpleGADriver):
         run_parallel : bool
             Set to True to execute the points in a generation in parallel.
         """
-        MySimpleGADriver.__init__(self, max_gen=max_gen, pop_size=pop_size, Pm=Pm, Pc=Pc, elitism=elitism, bits=bits, debug_print=debug_print, run_parallel=run_parallel)
+        MySimpleGADriver.__init__(self, max_gen=max_gen, pop_size=pop_size, Pm=Pm, Pc=Pc, elitism=elitism,
+                                  bits=bits, debug_print=debug_print, run_parallel=run_parallel)

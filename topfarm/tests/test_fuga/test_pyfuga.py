@@ -120,8 +120,6 @@ def test_pyfuga_cmd():
     assert pyFuga.log.strip().split("\n")[-1] == 'ColonelInit'
 
 
-
-
 def testAEP_topfarm_optimization_4tb(get_fuga):
     D = 80.0
     B = 3 * D + 10
@@ -135,7 +133,7 @@ def testAEP_topfarm_optimization_4tb(get_fuga):
     boundary = [(-B, B), (B, B), (B, -B), (-B, -B), (-B, B)]
 
     plot_comp = NoPlot()
-    #plot_comp= PlotComp()
+    # plot_comp= PlotComp()
 
     cost_comp = pyFuga.get_TopFarm_cost_component()
     tf = TopFarm(init_pos, cost_comp, 2 * D, boundary=boundary, plot_comp=plot_comp)
@@ -165,7 +163,7 @@ def testAEP_topfarm_optimization_2tb_scale(get_fuga, scale):
     boundary = [(-B, B), (B, B), (B, -B), (-B, -B), (-B, B)]
 
     plot_comp = NoPlot()
-    #plot_comp = PlotComp()
+    # plot_comp = PlotComp()
 
     cost_comp = AEPCostModelComponent(['turbineX', 'turbineY'], init_pos.shape[0],
                                       lambda turbineX, turbineY: scale * pyFuga.get_aep(np.array([turbineX, turbineY]).T)[0],  # only aep

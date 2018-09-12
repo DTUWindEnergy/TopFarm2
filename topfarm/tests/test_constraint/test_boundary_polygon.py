@@ -40,7 +40,7 @@ def testPolygonTwoRegionsStartInWrong():
     optimal = [(1, 1), (4, 1)]
     boundary = [(0, 0), (5, 0), (5, 2), (3, 2), (3, 0), (2, 0), (2, 2), (0, 2), (0, 0)]
     plot_comp = NoPlot()
-    #plot_comp = DummyCostPlotComp(optimal, delay=.1)
+    # plot_comp = DummyCostPlotComp(optimal, delay=.1)
     initial = [(3.5, 1.5), (2, 1)]
     tf = TopFarm(initial, DummyCost(optimal, inputs=['turbineX', 'turbineY']), 0,
                  boundary=boundary, boundary_type='polygon', plot_comp=plot_comp,

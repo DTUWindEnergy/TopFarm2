@@ -38,7 +38,7 @@ def try_me():
         wm = FusedWakeGCLWakeModel(wf_3tb)
         aep_calc = AEPCalculator(wr, wm)
 
-        print(aep_calc(wm.windFarm.pos[:,0], wm.windFarm.pos[:,1]))
+        print(aep_calc(wm.windFarm.pos[:, 0], wm.windFarm.pos[:, 1]))
 
 
 try_me()

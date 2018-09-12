@@ -15,6 +15,18 @@ test_topfarm:  # name the job what we like
   tags:  # only runners with this tag can do the job [3]
   - python
 
+  
+# ===== TEST TOPFARM =====
+test_topfarm_pep8:  # name the job what we like
+  stage:  # build, test, deploy defined by default [2]
+    test
+  script:
+  - pip install --upgrade git+git://github.com/FUSED-Wind/FUSED-Wake@master
+  - pip install scipy==1.0.1
+  - pip install openmdao==2.3.1
+  - pycodestyle --ignore=E501 --exclude="*Colonel*" topfarm
+  tags:  # only runners with this tag can do the job [3]
+  - python
 
 # ===== TEST TOPFARM on Windows =====
 test_topfarm_windows:  # name the job what we like
