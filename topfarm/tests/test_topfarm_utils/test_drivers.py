@@ -4,8 +4,10 @@ import pytest
 from topfarm.cost_models.dummy import DummyCost
 from topfarm.plotting import NoPlot
 from topfarm.easy_drivers import EasyScipyOptimizeDriver, EasyPyOptSparseIPOPT,\
-    EasySimpleGADriver
-from topfarm.tests import npt, uta
+    EasySimpleGADriver, EasyRandomSearchDriver
+from topfarm.tests import uta
+from topfarm.drivers.random_search_driver import RandomizeTurbinePosition_Square,\
+    RandomizeTurbinePosition_Circle
 
 
 initial = np.array([[6, 0], [6, -8], [1, 1]])  # initial turbine layouts
@@ -16,10 +18,10 @@ desired = np.array([[3, -3], [7, -7], [4, -3]])  # desired turbine layouts
 
 @pytest.fixture
 def topfarm_generator():
-    def _topfarm_obj(driver, xy_scale=[1, 1], cost_scale=1, cost_offset=0):
+    def _topfarm_obj(driver, xy_scale=[1, 1], cost_scale=1, cost_offset=0, spacing=2):
         from topfarm.cost_models.dummy import DummyCostPlotComp
 
-        plot_comp = DummyCostPlotComp(desired * xy_scale)
+        # plot_comp = DummyCostPlotComp(desired * xy_scale, plot_improvements_only=True)
         plot_comp = NoPlot()
 
         class DummyCostScaled(DummyCost):
@@ -32,7 +34,7 @@ def topfarm_generator():
                 return [(2 * cost_scale * (kwargs[n] - opt[:, i])) for i, n in enumerate(self.input_keys)]
 
         return TopFarm(initial * xy_scale, DummyCostScaled(desired * xy_scale, ['turbineX', 'turbineY']),
-                       2 * xy_scale[0], plot_comp=plot_comp, boundary=boundary * xy_scale, driver=driver,
+                       spacing * xy_scale[0], plot_comp=plot_comp, boundary=boundary * xy_scale, driver=driver,
                        expected_cost=1.5 * cost_scale)
     return _topfarm_obj
 
@@ -50,7 +52,7 @@ def test_optimizers(driver, tol, topfarm_generator):
         pytest.xfail("Driver missing")
     tf = topfarm_generator(driver)
     tf.evaluate()
-    cost, state, recorder = tf.optimize()
+    cost, _, recorder = tf.optimize()
     print(recorder.driver_cases.num_cases)
     tb_pos = tf.turbine_positions[:, :2]
     assert sum((tb_pos[2] - tb_pos[0])**2) > 2**2 - tol  # check min spacing
@@ -79,7 +81,7 @@ def test_optimizers_scaling(driver, tol, N, cost_scale, cost_offset, topfarm_gen
         pytest.xfail("Driver missing")
 
     tf = topfarm_generator(driver, cost_scale=cost_scale, cost_offset=cost_offset)
-    cost, _, recorder = tf.optimize()
+    _, _, recorder = tf.optimize()
     uta.assertLessEqual(recorder.driver_cases.num_cases, N)
 
     tb_pos = tf.turbine_positions[:, :2]
@@ -110,3 +112,19 @@ def find_optimal_scaling(topfarm_generator):
     plt.plot(res[:, 0], res[:, 1])
     plt.xscale('log')
     plt.show()
+
+
+@pytest.mark.parametrize('randomize_func', [RandomizeTurbinePosition_Circle(1),
+                                            RandomizeTurbinePosition_Square(1)])
+def test_random_search_driver(topfarm_generator, randomize_func):
+    np.random.seed(1)
+    driver = EasyRandomSearchDriver(randomize_func, max_iter=1000)
+    tf = topfarm_generator(driver, spacing=1)
+    cost, _, recorder = tf.optimize()
+    tb_pos = tf.turbine_positions[:, :2]
+    tol = 1e-1
+    assert tb_pos[1][0] < 6 + tol  # check within border
+    if isinstance(driver, EasySimpleGADriver):
+        assert cost == recorder['cost'].min()
+    else:
+        np.testing.assert_array_almost_equal(tb_pos, [[3, -3], [6, -7], [4, -3]], -int(np.log10(tol)))
