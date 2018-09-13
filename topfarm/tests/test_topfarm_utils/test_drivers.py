@@ -21,8 +21,8 @@ def topfarm_generator():
     def _topfarm_obj(driver, xy_scale=[1, 1], cost_scale=1, cost_offset=0, spacing=2):
         from topfarm.cost_models.dummy import DummyCostPlotComp
 
-        plot_comp = DummyCostPlotComp(desired * xy_scale, plot_improvements_only=True)
-        #plot_comp = NoPlot()
+        # plot_comp = DummyCostPlotComp(desired * xy_scale, plot_improvements_only=True)
+        plot_comp = NoPlot()
 
         class DummyCostScaled(DummyCost):
             def cost(self, **kwargs):
@@ -52,7 +52,7 @@ def test_optimizers(driver, tol, topfarm_generator):
         pytest.xfail("Driver missing")
     tf = topfarm_generator(driver)
     tf.evaluate()
-    cost, state, recorder = tf.optimize()
+    cost, _, recorder = tf.optimize()
     print(recorder.driver_cases.num_cases)
     tb_pos = tf.turbine_positions[:, :2]
     assert sum((tb_pos[2] - tb_pos[0])**2) > 2**2 - tol  # check min spacing
@@ -81,7 +81,7 @@ def test_optimizers_scaling(driver, tol, N, cost_scale, cost_offset, topfarm_gen
         pytest.xfail("Driver missing")
 
     tf = topfarm_generator(driver, cost_scale=cost_scale, cost_offset=cost_offset)
-    cost, _, recorder = tf.optimize()
+    _, _, recorder = tf.optimize()
     uta.assertLessEqual(recorder.driver_cases.num_cases, N)
 
     tb_pos = tf.turbine_positions[:, :2]

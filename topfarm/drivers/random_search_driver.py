@@ -131,7 +131,7 @@ class RandomSearchDriver(Driver):
         n_iter = 0
 
         desvar_info = [(abs2prom[name], *self._desvar_idx[name], meta['lower'], meta['upper']) for name, meta in iteritems(desvars)]
-        desvar_dict = {name: (x0[i:j], lower_bound[i:j], upper_bound[i:j]) for (name, i, j, l, u) in desvar_info}
+        desvar_dict = {name: (x0[i:j], lbound[i:j], ubound[i:j]) for (name, i, j, lbound, ubound) in desvar_info}
         while n_iter < max_iter:
 
             for name, i, j, _, _ in desvar_info:
@@ -224,7 +224,7 @@ class RandomSearchDriver(Driver):
 
 
 class RandomizeTurbinePosition():
-    def __init__(self, max_step):
+    def __init__(self, max_step=None):
         self.max_step = max_step
 
     def __call__(self, desvar_dict):
@@ -248,4 +248,4 @@ class RandomizeTurbinePosition_Circle(RandomizeTurbinePosition):
 
 class RandomizeTurbinePosition_Square(RandomizeTurbinePosition):
     def _xy_step(self, max_step_xy):
-        return (np.random.rand()*2-1) * max_step_xy[0], (np.random.rand()*2-1) * max_step_xy[1]
+        return (np.random.rand() * 2 - 1) * max_step_xy[0], (np.random.rand() * 2 - 1) * max_step_xy[1]
