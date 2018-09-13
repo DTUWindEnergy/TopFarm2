@@ -130,7 +130,7 @@ class RandomSearchDriver(Driver):
         x1 = x0.copy()
         n_iter = 0
 
-        desvar_info = [(abs2prom[name], *self._desvar_idx[name], meta['lower'], meta['upper']) for name, meta in iteritems(desvars)]
+        desvar_info = [(abs2prom[name], *self._desvar_idx[name], lower_bound, upper_bound) for name, meta in iteritems(desvars)]
         desvar_dict = {name: (x0[i:j], lbound[i:j], ubound[i:j]) for (name, i, j, lbound, ubound) in desvar_info}
         while n_iter < max_iter:
 
