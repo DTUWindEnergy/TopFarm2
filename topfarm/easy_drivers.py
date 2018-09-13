@@ -51,7 +51,7 @@ except ModuleNotFoundError:
 
 
 class EasySimpleGADriver(MySimpleGADriver):
-    def __init__(self, max_gen=100, pop_size=25, Pm=None, Pc=.5, elitism=True, bits={}, debug_print=[], run_parallel=False):
+    def __init__(self, max_gen=100, pop_size=25, Pm=None, Pc=.5, elitism=True, bits={}, debug_print=[], run_parallel=False, random_state=None):
         """SimpleGA driver with optional arguments
 
         Parameters
@@ -75,3 +75,5 @@ class EasySimpleGADriver(MySimpleGADriver):
         """
         MySimpleGADriver.__init__(self, max_gen=max_gen, pop_size=pop_size, Pm=Pm, Pc=Pc, elitism=elitism,
                                   bits=bits, debug_print=debug_print, run_parallel=run_parallel)
+        if random_state is not None:
+            self._randomstate = random_state

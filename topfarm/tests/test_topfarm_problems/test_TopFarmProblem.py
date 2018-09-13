@@ -64,6 +64,12 @@ def test_update_state(turbineTypeOptimizationProblem, types, cost):
     c, state = tf.evaluate({'turbineType': types})
     npt.assert_equal(c, cost)
     npt.assert_array_equal(state['turbineType'], types)
+    # wrong shape
+    c, state = tf.evaluate({'turbineType': [types]})
+    npt.assert_equal(c, cost)
+    npt.assert_array_equal(state['turbineType'], types)
+    # missing key
+    c, state = tf.evaluate({'missing': types})
 
 
 def test_evaluate(turbineTypeOptimizationProblem):

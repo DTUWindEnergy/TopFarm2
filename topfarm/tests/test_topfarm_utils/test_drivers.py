@@ -3,7 +3,8 @@ import numpy as np
 import pytest
 from topfarm.cost_models.dummy import DummyCost
 from topfarm.plotting import NoPlot
-from topfarm.easy_drivers import EasyScipyOptimizeDriver, EasyPyOptSparseIPOPT
+from topfarm.easy_drivers import EasyScipyOptimizeDriver, EasyPyOptSparseIPOPT,\
+    EasySimpleGADriver
 from topfarm.tests import npt, uta
 
 
@@ -41,6 +42,7 @@ def topfarm_generator():
     (EasyScipyOptimizeDriver(tol=1e-3, disp=False), 1e-2),
     (EasyScipyOptimizeDriver(maxiter=14, disp=False), 1e-1),
     (EasyScipyOptimizeDriver(optimizer='COBYLA', tol=1e-3, disp=False), 1e-2),
+    (EasySimpleGADriver(max_gen=10, pop_size=100, bits={'turbineX': [12] * 3, 'turbineY':[12] * 3}, random_state=1), 1e-1),
     (EasyPyOptSparseIPOPT(), 1e-4),
 ][:])
 def test_optimizers(driver, tol, topfarm_generator):
@@ -48,14 +50,15 @@ def test_optimizers(driver, tol, topfarm_generator):
         pytest.xfail("Driver missing")
     tf = topfarm_generator(driver)
     tf.evaluate()
-    _, _, recorder = tf.optimize()
+    cost, state, recorder = tf.optimize()
     print(recorder.driver_cases.num_cases)
     tb_pos = tf.turbine_positions[:, :2]
-    tf.plot_comp.show()
-
     assert sum((tb_pos[2] - tb_pos[0])**2) > 2**2 - tol  # check min spacing
     assert tb_pos[1][0] < 6 + tol  # check within border
-    np.testing.assert_array_almost_equal(tb_pos, optimal, -int(np.log10(tol)))
+    if isinstance(driver, EasySimpleGADriver):
+        assert cost == recorder['cost'].min()
+    else:
+        np.testing.assert_array_almost_equal(tb_pos, optimal, -int(np.log10(tol)))
 
 
 @pytest.mark.parametrize('driver,tol,N', [
