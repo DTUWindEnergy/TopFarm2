@@ -5,8 +5,9 @@ from topfarm.cost_models.dummy import DummyCost
 from topfarm.plotting import NoPlot
 from topfarm.easy_drivers import EasyScipyOptimizeDriver, EasyPyOptSparseIPOPT,\
     EasySimpleGADriver, EasyRandomSearchDriver
-from topfarm.tests import npt, uta
-from topfarm.drivers.random_search_driver import RandomizeTurbinePosition
+from topfarm.tests import uta
+from topfarm.drivers.random_search_driver import RandomizeTurbinePosition_DirStep,\
+    RandomizeTurbinePosition_Uniform
 
 
 initial = np.array([[6, 0], [6, -8], [1, 1]])  # initial turbine layouts
@@ -113,9 +114,11 @@ def find_optimal_scaling(topfarm_generator):
     plt.show()
 
 
-def test_random_search_driver(topfarm_generator):
+@pytest.mark.parametrize('randomize_func', [RandomizeTurbinePosition_DirStep(1),
+                                            RandomizeTurbinePosition_Uniform()])
+def test_random_search_driver(topfarm_generator, randomize_func):
 
-    driver = EasyRandomSearchDriver(randomize_func=RandomizeTurbinePosition(1), max_iter=1000)
+    driver = EasyRandomSearchDriver(randomize_func, max_iter=2000)
     tf = topfarm_generator(driver, spacing=1)
     cost, _, recorder = tf.optimize()
     tb_pos = tf.turbine_positions[:, :2]

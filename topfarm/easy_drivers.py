@@ -79,8 +79,8 @@ class EasySimpleGADriver(MySimpleGADriver):
                                   bits=bits, debug_print=debug_print, run_parallel=run_parallel)
         if random_state is not None:
             self._randomstate = random_state
-            
-            
+
+
 class EasyRandomSearchDriver(RandomSearchDriver):
     def __init__(self, randomize_func, max_iter=100, disp=False):
         RandomSearchDriver.__init__(self, randomize_func=randomize_func, max_iter=max_iter, disp=disp)
