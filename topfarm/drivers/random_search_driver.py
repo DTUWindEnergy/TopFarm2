@@ -131,7 +131,7 @@ class RandomSearchDriver(Driver):
         n_iter = 0
 
         desvar_info = [(abs2prom[name], *self._desvar_idx[name], meta['lower'], meta['upper']) for name, meta in iteritems(desvars)]
-        desvar_dict = {name: (x0[i:j], l, u) for (name, i, j, l, u) in desvar_info}
+        desvar_dict = {name: (x0[i:j], lower_bound[i:j], upper_bound[i:j]) for (name, i, j, l, u) in desvar_info}
         while n_iter < max_iter:
 
             for name, i, j, _, _ in desvar_info:
@@ -223,29 +223,29 @@ class RandomSearchDriver(Driver):
         return obj, success
 
 
-class RandomizeTurbinePosition_DirStep():
-    def __init__(self, max_move_step):
-        self.max_move_step = max_move_step
+class RandomizeTurbinePosition():
+    def __init__(self, max_step):
+        self.max_step = max_step
 
     def __call__(self, desvar_dict):
         i_wt = np.random.randint(len(desvar_dict['turbineX'][0]))
-        step = np.random.rand() * self.max_move_step
+
+        max_step_xy = [self.max_step or (desvar_dict['turbine' + xy][2][i_wt] - desvar_dict['turbine' + xy][1][i_wt])
+                       for xy in 'XY']
+        dxy = self._xy_step(max_step_xy)
+        for (xy, lbound, ubound), dxy_ in zip([desvar_dict['turbineX'], desvar_dict['turbineY']],
+                                              dxy):
+            xy[i_wt] = np.maximum(np.minimum(xy[i_wt] + dxy_, ubound[i_wt]), lbound[i_wt])
+        return desvar_dict
+
+
+class RandomizeTurbinePosition_Circle(RandomizeTurbinePosition):
+    def _xy_step(self, max_step_xy):
+        step = np.random.rand() * max(max_step_xy)
         theta = np.random.rand() * np.pi * 2
-        for (xy, l, u), dxy in [(desvar_dict['turbineX'], step * np.cos(theta)),
-                                (desvar_dict['turbineY'], step * np.sin(theta))]:
-            xy[i_wt] = np.maximum(np.minimum(xy[i_wt] + dxy, u), l)
-        return desvar_dict
+        return step * np.cos(theta), step * np.sin(theta)
 
 
-class RandomizeTurbinePosition_Uniform():
-    def __call__(self, desvar_dict):
-        i_wt = np.random.randint(len(desvar_dict['turbineX'][0]))
-        for xy, lbound, ubound in [(desvar_dict['turbineX']),
-                                   (desvar_dict['turbineY'])]:
-            if hasattr(lbound, 'len'):
-                lbound = lbound[i_wt]
-            if hasattr(ubound, 'len'):
-                ubound = ubound[i_wt]
-            v = np.random.rand() * (ubound - lbound) + lbound
-            xy[i_wt] = np.maximum(np.minimum(v, ubound), lbound)
-        return desvar_dict
+class RandomizeTurbinePosition_Square(RandomizeTurbinePosition):
+    def _xy_step(self, max_step_xy):
+        return (np.random.rand()*2-1) * max_step_xy[0], (np.random.rand()*2-1) * max_step_xy[1]
