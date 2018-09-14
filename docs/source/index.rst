@@ -10,6 +10,7 @@ Welcome to TOPFARM, the wind-farm optimizer
     :maxdepth: 2
 
     installation
+    using_topfarm
 
 .. toctree::
     :caption: Examples
