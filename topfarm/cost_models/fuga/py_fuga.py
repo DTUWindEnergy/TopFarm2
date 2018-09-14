@@ -1,4 +1,3 @@
-
 import os
 import pytest
 import numpy as np
@@ -31,7 +30,7 @@ def try_me():
                      turbine_model_path=fuga_path + 'LUTs-T/', turbine_model_name='Vestas_V80_(2_MW_offshore)[h=70.00]',
                      tb_x=[423974, 424033], tb_y=[6151447, 6150889],
                      mast_position=(0, 0, 70), z0=0.03, zi=400, zeta0=0,
-                     farms_dir=fuga_path + 'LUTs-T/Farms/', wind_atlas_path='MyFarm\DEN05JBgr_7.813E_55.489N_7.4_5.lib')
+                     farms_dir=fuga_path + 'LUTs-T/Farms/', wind_atlas_path=r'MyFarm\DEN05JBgr_7.813E_55.489N_7.4_5.lib')
 
         print(pyFuga.get_no_turbines())
         print(pyFuga.get_aep(np.array([[0, 0], [0, 1000]])))

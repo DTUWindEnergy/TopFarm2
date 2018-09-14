@@ -223,16 +223,38 @@ class RandomSearchDriver(Driver):
         return obj, success
 
 
-class RandomizeTurbinePosition():
-    def __init__(self, max_step=None):
-        self.max_step = max_step
+def randomize_turbine_type(desvar_dict, i_wt=None):
+    types, lbound, ubound = desvar_dict['turbineType']
+    i_wt = i_wt or np.random.randint(len(types))
+    types[i_wt] = np.random.random_integers(lbound[i_wt], ubound[i_wt])
+    return desvar_dict
 
-    def __call__(self, desvar_dict):
-        i_wt = np.random.randint(len(desvar_dict['turbineX'][0]))
+
+def xy_step_circle(max_step_xy):
+    step = np.random.rand() * max(max_step_xy)
+    theta = np.random.rand() * np.pi * 2
+    return step * np.cos(theta), step * np.sin(theta)
+
+
+def xy_step_square(max_step_xy):
+    return (np.random.rand() * 2 - 1) * max_step_xy[0], (np.random.rand() * 2 - 1) * max_step_xy[1]
+
+
+def xy_step_normal(max_step_xy):
+    return np.random.normal(0, max_step_xy[0] / 2), np.random.normal(0, max_step_xy[1] / 2)
+
+
+class RandomizeTurbinePosition():
+    def __init__(self, max_step=None, xy_step_function=xy_step_circle):
+        self.max_step = max_step
+        self.xy_step_function = xy_step_function
+
+    def __call__(self, desvar_dict, i_wt=None):
+        i_wt = i_wt or np.random.randint(len(desvar_dict['turbineX'][0]))
 
         max_step_xy = [self.max_step or (desvar_dict['turbine' + xy][2][i_wt] - desvar_dict['turbine' + xy][1][i_wt])
                        for xy in 'XY']
-        dxy = self._xy_step(max_step_xy)
+        dxy = self.xy_step_function(max_step_xy)
         for (xy, lbound, ubound), dxy_ in zip([desvar_dict['turbineX'], desvar_dict['turbineY']],
                                               dxy):
             xy[i_wt] = np.maximum(np.minimum(xy[i_wt] + dxy_, ubound[i_wt]), lbound[i_wt])
@@ -240,12 +262,26 @@ class RandomizeTurbinePosition():
 
 
 class RandomizeTurbinePosition_Circle(RandomizeTurbinePosition):
-    def _xy_step(self, max_step_xy):
-        step = np.random.rand() * max(max_step_xy)
-        theta = np.random.rand() * np.pi * 2
-        return step * np.cos(theta), step * np.sin(theta)
+    def __init__(self, max_step=None):
+        RandomizeTurbinePosition.__init__(self, max_step=max_step, xy_step_function=xy_step_circle)
 
 
 class RandomizeTurbinePosition_Square(RandomizeTurbinePosition):
-    def _xy_step(self, max_step_xy):
-        return (np.random.rand() * 2 - 1) * max_step_xy[0], (np.random.rand() * 2 - 1) * max_step_xy[1]
+    def __init__(self, max_step=None):
+        RandomizeTurbinePosition.__init__(self, max_step=max_step, xy_step_function=xy_step_square)
+
+
+class RandomizeTurbinePosition_Normal(RandomizeTurbinePosition):
+    def __init__(self, max_step=None):
+        RandomizeTurbinePosition.__init__(self, max_step=max_step, xy_step_function=xy_step_normal)
+
+
+class RandomizeTurbineTypeAndPosition(RandomizeTurbinePosition):
+    def __init__(self, max_step=None, xy_step_function=xy_step_circle):
+        RandomizeTurbinePosition.__init__(self, xy_step_function=xy_step_function, max_step=max_step)
+
+    def __call__(self, desvar_dict, i_wt=None):
+        i_wt = i_wt or np.random.randint(len(desvar_dict['turbineX'][0]))
+        desvar_dict = randomize_turbine_type(desvar_dict, i_wt=i_wt)
+        desvar_dict = RandomizeTurbinePosition.__call__(self, desvar_dict, i_wt=i_wt)
+        return desvar_dict

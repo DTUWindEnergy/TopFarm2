@@ -3,7 +3,7 @@ from openmdao.api import Group, IndepVarComp, ExecComp, ExplicitComponent, Probl
 from scipy.spatial import ConvexHull
 
 
-def BoundaryComp(n_wt, xy_boundary, z_boundary, xy_boundary_type='convex_hull'):
+def BoundaryComp(n_wt, xy_boundary, z_boundary=None, xy_boundary_type='convex_hull'):
     if xy_boundary_type == 'polygon':
         return PolygonBoundaryComp(n_wt, xy_boundary, z_boundary)
     else:

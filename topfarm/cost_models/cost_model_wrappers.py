@@ -34,7 +34,8 @@ class CostModelComponent(ExplicitComponent):
                     J['cost', k] = dCostdk
 
 
-class AEPCostModelComponent(CostModelComponent):
+class IncomeModelComponent(CostModelComponent):
+
     def compute(self, inputs, outputs):
         CostModelComponent.compute(self, inputs, outputs)
         outputs['cost'] *= -1
@@ -42,5 +43,9 @@ class AEPCostModelComponent(CostModelComponent):
     def compute_partials(self, inputs, J):
         if self.cost_gradient_function:
             CostModelComponent.compute_partials(self, inputs, J)
-            J['cost', 'turbineX'] *= -1
-            J['cost', 'turbineY'] *= -1
+            for k in dict(inputs).keys():
+                J['cost', k] *= -1
+
+
+class AEPCostModelComponent(IncomeModelComponent):
+    pass
