@@ -82,10 +82,9 @@ def test_ListRecorder():
 
 def test_TopFarmListRecorderAnimation(tf_generator):
     try:
-        import matplotlib.pyplot as plt
         from matplotlib import animation
         animation.writers['ffmpeg']
-    except:
+    except Exception:
         pytest.xfail("No matplotlib, animation or ffmpeg writer")
 
     tf = tf_generator()
