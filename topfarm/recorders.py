@@ -252,17 +252,11 @@ class TopFarmListRecorder(ListRecorder):
 
     def animate_turbineXY(self, duration=10, tail=5, plot_initial=True, filename=None):
         import matplotlib.pyplot as plt
-        # plt.plot()
         x, y = self.get('turbineX'), self.get('turbineY')
         cost = self.get('cost')
         boundary = self.get('boundary')[0]
         boundary = np.r_[boundary, boundary[:1]]
-#         plt.plot(boundary[:,0], boundary[:,1],'k')
-#         plt.plot(x[:,0],y[:,0],'.-')
-#         plt.plot(x[:,1],y[:,1],'.-')
-#         plt.show()
         n_wt = x.shape[1]
-        import matplotlib.pyplot as plt
         from matplotlib import animation
 
         color_cycle = iter(matplotlib.rcParams['axes.prop_cycle'])

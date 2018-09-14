@@ -3,4 +3,4 @@ omit =
 	*/Colonel/*
 	topfarm/tests/*
 [report]
-fail_under = 80
+fail_under = 85

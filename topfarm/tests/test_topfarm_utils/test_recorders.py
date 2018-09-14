@@ -80,17 +80,22 @@ def test_ListRecorder():
         recorder.get('missing')
 
 
-# #@pytest.mark.xfail("RuntimeError: Requested MovieWriter (ffmpeg) not available")
-# def test_TopFarmListRecorderAnimation(tf_generator):
-#     tf = tf_generator()
-#     _, _, recorder = tf.optimize()
-#     # Generate test file:
-#     recorder.save('topfarm/tests/test_files/recordings/COBYLA_10iter.pkl')
-#     fn = tfp + "/tmp/test.mp4"
-#     if os.path.exists(fn):
-#         os.remove(fn)
-#     recorder.animate_turbineXY(duration=5, filename=fn)
-#     assert os.path.isfile(fn)
+def test_TopFarmListRecorderAnimation(tf_generator):
+    try:
+        from matplotlib import animation
+        animation.writers['ffmpeg']
+    except Exception:
+        pytest.xfail("No matplotlib, animation or ffmpeg writer")
+
+    tf = tf_generator()
+    _, _, recorder = tf.optimize()
+    # Generate test file:
+    recorder.save('topfarm/tests/test_files/recordings/COBYLA_10iter.pkl')
+    fn = tfp + "/tmp/test.mp4"
+    if os.path.exists(fn):
+        os.remove(fn)
+    recorder.animate_turbineXY(duration=5, filename=fn)
+    assert os.path.isfile(fn)
 
 
 def test_NestedTopFarmListRecorder(tf_generator):

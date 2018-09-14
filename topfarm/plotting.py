@@ -154,11 +154,11 @@ class NoPlot(PlotComp):
 
 class TurbineTypePlotComponent(PlotComp):
     colors = ['b', 'r', 'm', 'c', 'g', 'y', 'orange', 'indigo', 'grey'] * 100
-    markers = np.array(list(".ov^<>12348spP*hH+xXDd|_"))
+    markers = np.array(list("123v^<>.o48spP*hH+xXDd|_"))
 
-    def __init__(self, turbine_type_names, memory=10, delay=0.001, plot_initial=True):
+    def __init__(self, turbine_type_names, **kwargs):
         self.turbine_type_names = turbine_type_names
-        PlotComp.__init__(self, memory=memory, delay=delay, plot_initial=plot_initial)
+        PlotComp.__init__(self, **kwargs)
 
     def setup(self):
         PlotComp.setup(self)
