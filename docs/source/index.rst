@@ -11,6 +11,7 @@ Welcome to TOPFARM, the wind-farm optimizer
 
     installation
     using_topfarm
+    api
 
 .. toctree::
     :caption: Examples

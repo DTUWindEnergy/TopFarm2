@@ -1,23 +1,66 @@
+"""TOPFARM OpenMDAO Problems.
+
+This module contains the different OpenMDAO problems that are defined for
+different types of optimization problems.
+
+Notes
+-----
+
+A new OpenMDAO problem must be constructed for every optimization problem that
+has different design variables. For example, if one problem optimizes a
+wind-farm layout but another optimizes turbine types at fixed turbine
+positions, these require OpenMDAO problems that are constructed differently.
+
+To get around this, TOPFARM has a base optimization problem,
+``TopFarmProblem`` that inherits from the ``Problem`` class in OpenMDAO. The
+methods and attributes in this TOPFARM base class are inherited by the other
+types of problems and then expanded to reflect the particular characteristics
+of each optimization problem.
+"""
+import time
+
+import numpy as np
+from openmdao.api import Problem, ScipyOptimizeDriver, IndepVarComp
+from openmdao.core.explicitcomponent import ExplicitComponent
+from openmdao.drivers.doe_driver import DOEDriver
+from openmdao.drivers.doe_generators import DOEGenerator, ListGenerator
+from openmdao.drivers.genetic_algorithm_driver import SimpleGADriver
+
 from topfarm.constraint_components.boundary_component import BoundaryComp
 from topfarm.constraint_components.spacing_component import SpacingComp
-from topfarm.plotting import PlotComp
-from topfarm.utils import smart_start
-import time
-import numpy as np
-from openmdao.drivers.doe_generators import DOEGenerator, ListGenerator
-from openmdao.drivers.doe_driver import DOEDriver
-from openmdao.core.explicitcomponent import ExplicitComponent
-from topfarm.recorders import ListRecorder, NestedTopFarmListRecorder,\
-    TopFarmListRecorder
-from openmdao.api import Problem, ScipyOptimizeDriver, IndepVarComp
-from openmdao.drivers.genetic_algorithm_driver import SimpleGADriver
+from topfarm.drivers import random_search_driver
 from topfarm.drivers.random_search_driver import RandomSearchDriver
 from topfarm.easy_drivers import EasyRandomSearchDriver
-from topfarm.drivers import random_search_driver
+from topfarm.plotting import PlotComp
+from topfarm.recorders import ListRecorder, NestedTopFarmListRecorder,\
+    TopFarmListRecorder
+from topfarm.utils import smart_start
 
 
 class TopFarmProblem(Problem):
+    """Base OpenMDAO problem for TOPFARM optimizations.
+
+    Parameters
+    ----------
+    cost_comp : OpenMDAO-style cost component.
+        A cost component in the style of an OpenMDAO v2 ExplicitComponent.
+        For an example, see the ``CostModelComponent`` class in
+        ``topfarm.cost_models.cost_model_wrappers``.
+    driver : OpenMDAO-style optimization driver.
+        Driver used to solve the optimization driver. For an example, see the
+        ``EasyScipyOptimizeDriver`` class in ``topfarm.easy_drivers``.
+    plot_comp : Plotting component.
+        OpenMDAO ExplicitComponent to specify which type of plotting you want.
+        For no plotting, pass in the ``topfarm.plotting.NoPlot`` class.
+    record_id : str.
+        Identifier for the optimization. Allows a user to restart an
+        optimization where it left off.
+    expected_cost : float
+        Approximate expected value of the final cost. Used for scaling the cost
+        to condition it for optimization.
+    """
     def __init__(self, cost_comp, driver, plot_comp, record_id, expected_cost):
+        """Initialize a TopFarmProblem."""
         Problem.__init__(self)
         if isinstance(cost_comp, TopFarmProblem):
             cost_comp = cost_comp.as_component()
@@ -79,6 +122,7 @@ class TopFarmProblem(Problem):
             self.recorder = TopFarmListRecorder(self.record_id)
 
     def evaluate(self, state={}):
+        """Evaluate the cost model."""
         t = time.time()
         self.update_state(state)
         tmp_recorder = ListRecorder()
@@ -89,6 +133,7 @@ class TopFarmProblem(Problem):
         return self.cost, self.state
 
     def evaluate_gradients(self):
+        """Evaluate the gradients."""
         t = time.time()
         rec = ListRecorder()
         self.driver.add_recorder(rec)
@@ -98,6 +143,7 @@ class TopFarmProblem(Problem):
         return res
 
     def optimize(self, state={}):
+        """Run the optimization problem."""
         self.load_recorder()
         self.update_state(state)
         if self.recorder.num_cases > 0:
@@ -120,8 +166,7 @@ class TopFarmProblem(Problem):
             self.update_state({k: best_case.outputs[k] for k in best_case.outputs})
         return self.cost, self.state, self.recorder
 
-    def check_gradients(self, all=False, tol=1e-3):
-        """Check gradient computations"""
+    def check_gradients(self, all=False, tol=1e-3):  # check gradient computations
         if all:
             comp_name_lst = [comp.pathname for comp in self.model.system_iter()
                              if comp._has_compute_partials]
@@ -181,6 +226,36 @@ class TurbineTypeOptimizationProblem(TopFarmProblem):
 
 
 class TurbineXYZOptimizationProblem(TopFarmProblem):
+    """Optimize the turbine locations in a wind farm.
+
+    Parameters
+    ----------
+    cost_comp : OpenMDAO-style cost component.
+        A cost component in the style of an OpenMDAO v2 ExplicitComponent.
+        For an example, see the ``CostModelComponent`` class in
+        ``topfarm.cost_models.cost_model_wrappers``.
+    turbineXYZ : np.ndarray.
+        Array of the initial locations of the wind turbines, with dimensions
+        [n_wt x n_d].
+    boundary_comp : TOPFARM boundary component.
+        OpenMDAO for defining the boundary of the wind farm.
+    min_spacing : float, optional.
+        Minimum allowable distance between turbines in meters.
+    driver : OpenMDAO-style optimization driver, optional.
+        Driver used to solve the optimization driver. For an example, see the
+        ``EasyScipyOptimizeDriver`` class in ``topfarm.easy_drivers``. Default
+        is the ScipyOptimizeDriver.
+    plot_comp : Plotting component, optional.
+        OpenMDAO ExplicitComponent to specify which type of plotting you want.
+        For no plotting, pass in the ``topfarm.plotting.NoPlot`` class. Default
+        is none.
+    record_id : str, optional.
+        Identifier for the optimization. Allows a user to restart an
+        optimization where it left off. Default is none.
+    expected_cost : float, optional.
+        Approximate expected value of the final cost. Used for scaling the cost
+        to condition it for optimization. Default is 1.
+    """
     def __init__(self, cost_comp, turbineXYZ, boundary_comp, min_spacing=None,
                  driver=ScipyOptimizeDriver(), plot_comp=None, record_id=None, expected_cost=1):
         if plot_comp:
