@@ -1,4 +1,3 @@
-from openmdao.drivers.genetic_algorithm_driver import SimpleGADriver
 from openmdao.drivers.scipy_optimizer import ScipyOptimizeDriver
 
 from topfarm.drivers.my_simple_ga_driver import MySimpleGADriver
@@ -41,7 +40,9 @@ try:
         def __init__(self, max_iter=200):
             pyOptSparseDriver.__init__(self)
             self.options.update({'optimizer': 'IPOPT'})
-            self.opt_settings.update({'linear_solver': 'ma27', 'max_iter': max_iter})
+            self.opt_settings.update({'linear_solver': 'ma27', 'max_iter': max_iter,
+                                      'start_with_resto': 'yes',
+                                      'expect_infeasible_problem': 'yes'})
 
 
 except ModuleNotFoundError:
@@ -69,7 +70,12 @@ class EasySimpleGADriver(MySimpleGADriver):
         elitism : bool, optional
             If True, replace worst performing point with best from previous generation each iteration.
         bits : dict, optional
-            Number of bits of resolution. Default is an empty dict, where every unspecified variable is assumed to be integer, and the number of bits is calculated automatically. If you have a continuous var, you should set a bits value as a key in this dictionary.
+            Number of bits of resolution. Default is an empty dict, where every
+            unspecified variable is assumed to be integer, and the number of
+            bits is calculated automatically.
+            If you have a continuous var, you should set a bits value as a key
+            in this dictionary.
+            Ex: {'x':16,'y':16}
         debug_print : list, optional
             List of what type of Driver variables to print at each iteration. Valid items in list are ‘desvars’,’ln_cons’,’nl_cons’,’objs’
         run_parallel : bool
@@ -82,5 +88,5 @@ class EasySimpleGADriver(MySimpleGADriver):
 
 
 class EasyRandomSearchDriver(RandomSearchDriver):
-    def __init__(self, randomize_func, max_iter=100, disp=False):
-        RandomSearchDriver.__init__(self, randomize_func=randomize_func, max_iter=max_iter, disp=disp)
+    def __init__(self, randomize_func, max_iter=100, max_time=600, disp=False):
+        RandomSearchDriver.__init__(self, randomize_func=randomize_func, max_iter=max_iter, max_time=max_time, disp=disp)

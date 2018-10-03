@@ -2,6 +2,8 @@ from openmdao.core.driver import Driver, RecordingDebugging
 from six import iteritems
 import numpy as np
 from openmdao.core.analysis_error import AnalysisError
+import topfarm
+import time
 
 
 class RandomSearchDriver(Driver):
@@ -56,8 +58,10 @@ class RandomSearchDriver(Driver):
         """
         Declare options before kwargs are processed in the init method.
         """
-        self.options.declare('max_iter', 200, lower=0,
-                             desc='Maximum number of iterations.')
+        self.options.declare('max_iter', 200,
+                             desc='Maximum number of iterations (set to None to disable)')
+        self.options.declare('max_time', 600,
+                             desc='Maximum time in seconds (set to None to disable)')
         self.options.declare('disp', True,
                              desc='Set to False to prevent printing')
 
@@ -113,7 +117,10 @@ class RandomSearchDriver(Driver):
             lower_bound[i:j] = meta['lower']
             upper_bound[i:j] = meta['upper']
             x0[i:j] = desvar_vals[name]
-        max_iter = self.options['max_iter']
+        max_iter = self.options['max_iter'] or 1e20
+        max_time = self.options['max_time'] or 1e20
+        assert max_iter < 1e20 or max_time < 1e20, "max_iter or max_time must be set"
+
         disp = self.options['disp']
 
         abs2prom = model._var_abs2prom['output']
@@ -131,11 +138,12 @@ class RandomSearchDriver(Driver):
         n_iter = 0
 
         desvar_info = [(abs2prom[name], *self._desvar_idx[name], lower_bound, upper_bound) for name, meta in iteritems(desvars)]
-        desvar_dict = {name: (x0[i:j], lbound[i:j], ubound[i:j]) for (name, i, j, lbound, ubound) in desvar_info}
-        while n_iter < max_iter:
+        desvar_dict = {name: (x0[i:j].copy(), lbound[i:j], ubound[i:j]) for (name, i, j, lbound, ubound) in desvar_info}
+        start = time.time()
+        while n_iter < max_iter and time.time() - start < max_time:
 
             for name, i, j, _, _ in desvar_info:
-                desvar_dict[name][0][:] = x0[i:j]
+                desvar_dict[name][0][:] = x0[i:j].copy()
             desvar_dict = self.randomize_func(desvar_dict)
             for name, i, j, _, _ in desvar_info:
                 x1[i:j] = desvar_dict[name][0][:]
@@ -224,7 +232,7 @@ class RandomSearchDriver(Driver):
 
 
 def randomize_turbine_type(desvar_dict, i_wt=None):
-    types, lbound, ubound = desvar_dict['turbineType']
+    types, lbound, ubound = desvar_dict[topfarm.type_key]
     i_wt = i_wt or np.random.randint(len(types))
     types[i_wt] = np.random.random_integers(lbound[i_wt], ubound[i_wt])
     return desvar_dict
@@ -250,12 +258,12 @@ class RandomizeTurbinePosition():
         self.xy_step_function = xy_step_function
 
     def __call__(self, desvar_dict, i_wt=None):
-        i_wt = i_wt or np.random.randint(len(desvar_dict['turbineX'][0]))
+        i_wt = i_wt or np.random.randint(len(desvar_dict[topfarm.x_key][0]))
 
-        max_step_xy = [self.max_step or (desvar_dict['turbine' + xy][2][i_wt] - desvar_dict['turbine' + xy][1][i_wt])
-                       for xy in 'XY']
+        max_step_xy = [self.max_step or (desvar_dict[xy][2][i_wt] - desvar_dict[xy][1][i_wt])
+                       for xy in [topfarm.x_key, topfarm.y_key]]
         dxy = self.xy_step_function(max_step_xy)
-        for (xy, lbound, ubound), dxy_ in zip([desvar_dict['turbineX'], desvar_dict['turbineY']],
+        for (xy, lbound, ubound), dxy_ in zip([desvar_dict[topfarm.x_key], desvar_dict[topfarm.y_key]],
                                               dxy):
             xy[i_wt] = np.maximum(np.minimum(xy[i_wt] + dxy_, ubound[i_wt]), lbound[i_wt])
         return desvar_dict
@@ -281,7 +289,7 @@ class RandomizeTurbineTypeAndPosition(RandomizeTurbinePosition):
         RandomizeTurbinePosition.__init__(self, xy_step_function=xy_step_function, max_step=max_step)
 
     def __call__(self, desvar_dict, i_wt=None):
-        i_wt = i_wt or np.random.randint(len(desvar_dict['turbineX'][0]))
+        i_wt = i_wt or np.random.randint(len(desvar_dict[topfarm.x_key][0]))
         desvar_dict = randomize_turbine_type(desvar_dict, i_wt=i_wt)
         desvar_dict = RandomizeTurbinePosition.__call__(self, desvar_dict, i_wt=i_wt)
         return desvar_dict

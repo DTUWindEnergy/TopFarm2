@@ -3,9 +3,12 @@ from topfarm.cost_models.fused_wake_wrappers import FusedWakeGCLWakeModel
 from topfarm.cost_models.utils.aep_calculator import AEPCalculator
 from topfarm.cost_models.utils.wind_resource import WindResource
 from topfarm.tests.test_files import tfp
-from topfarm._topfarm import TopFarm
+
 import pytest
 import warnings
+from topfarm.constraint_components.spacing import SpacingConstraint
+from topfarm.constraint_components.boundary import XYBoundaryConstraint
+from topfarm._topfarm import TopFarmProblem
 
 
 @pytest.fixture()
@@ -41,6 +44,10 @@ def test_GCL_Topfarm(aep_calc):
     init_pos = aep_calc.wake_model.windFarm.pos
     with warnings.catch_warnings():  # suppress "warning, make sure that this position array is oriented in ndarray([n_wt, 2]) or ndarray([n_wt, 3])"
         warnings.simplefilter("ignore")
-        tf = TopFarm(init_pos, aep_calc.get_TopFarm_cost_component(), 160, init_pos, boundary_type='square', record_id=None)
+        tf = TopFarmProblem(
+            dict(zip('xy', init_pos.T)),
+            aep_calc.get_TopFarm_cost_component(),
+            constraints=[SpacingConstraint(160),
+                         XYBoundaryConstraint(init_pos, 'square')])
         tf.evaluate()
     assert tf.cost == -19.85973533524627

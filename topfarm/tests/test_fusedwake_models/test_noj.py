@@ -1,12 +1,17 @@
+import warnings
+
 import pytest
 
 import numpy as np
-from topfarm.tests.test_files import tfp
-from topfarm._topfarm import TopFarm
+from topfarm._topfarm import TopFarmProblem
+from topfarm.constraint_components.boundary import XYBoundaryConstraint
+from topfarm.constraint_components.spacing import SpacingConstraint
 from topfarm.cost_models.fused_wake_wrappers import FusedWakeNOJWakeModel
 from topfarm.cost_models.utils.aep_calculator import AEPCalculator
 from topfarm.cost_models.utils.wind_resource import WindResource
-import warnings
+from topfarm.tests.test_files import tfp
+from topfarm.plotting import XYPlotComp
+from topfarm.easy_drivers import EasyScipyOptimizeDriver, EasySimpleGADriver
 
 
 @pytest.fixture()
@@ -34,6 +39,10 @@ def test_NOJ_Topfarm(aep_calc):
     init_pos = aep_calc.wake_model.windFarm.pos
     with warnings.catch_warnings():  # suppress "warning, make sure that this position array is oriented in ndarray([n_wt, 2]) or ndarray([n_wt, 3])"
         warnings.simplefilter("ignore")
-        tf = TopFarm(init_pos, aep_calc.get_TopFarm_cost_component(), 160, init_pos, boundary_type='square', record_id=None)
+        tf = TopFarmProblem(
+            dict(zip('xy', init_pos.T)),
+            aep_calc.get_TopFarm_cost_component(),
+            constraints=[SpacingConstraint(160),
+                         XYBoundaryConstraint(init_pos, 'square')])
         tf.evaluate()
     assert tf.cost == -18.90684500124578

@@ -1,30 +1,13 @@
-import numpy as np
 from topfarm.cost_models.dummy import DummyCost
 from topfarm.plotting import NoPlot
-
-from topfarm._topfarm import TurbineXYZOptimizationProblem
-from topfarm.constraint_components.boundary_component import BoundaryComp
 from openmdao.drivers.genetic_algorithm_driver import SimpleGADriver
-import warnings
-
-
-initial = np.array([[6, 0], [6, -8], [1, 1]])  # initial turbine layouts
-optimal = np.array([[2.5, -3], [6, -7], [4.5, -3]])  # desired turbine layouts
-boundary = np.array([(0, 0), (6, 0), (6, -10), (0, -10)])  # turbine boundaries
-desired = np.array([[3, -3], [7, -7], [4, -3]])  # desired turbine layouts
+from topfarm.tests.test_files import xy3tb
+from topfarm.constraint_components.spacing import SpacingConstraint, SpacingComp
+from topfarm.tests import npt
 
 
 def test_spacing():
-    from topfarm.cost_models.dummy import DummyCostPlotComp
-
-    # plot_comp = DummyCostPlotComp(desired)
-    plot_comp = NoPlot()
-
-    tf = TurbineXYZOptimizationProblem(DummyCost(desired, ['turbineX', 'turbineY']), initial,
-                                       boundary_comp=BoundaryComp(len(initial), boundary, None),
-                                       min_spacing=2, plot_comp=plot_comp)
-
-    tf.evaluate()
+    tf = xy3tb.get_tf(constraints=[SpacingConstraint(2)])
     tf.optimize()
     tb_pos = tf.turbine_positions[:, :2]
     tf.plot_comp.show()
@@ -33,16 +16,17 @@ def test_spacing():
 
 
 def test_spacing_as_penalty():
+    tf = xy3tb.get_tf(constraints=[SpacingConstraint(2)],
+                      driver=SimpleGADriver())
 
-    driver = SimpleGADriver()
+    # check normal result if spacing constraint is satisfied
+    assert tf.evaluate()[0] == 45
+    # check penalized result if spacing constraint is not satisfied
+    assert tf.evaluate({'x': [3, 7, 4.], 'y': [-3., -7., -3.], 'z': [0., 0., 0.]})[0] == 1e10 + 3
 
-    tf = TurbineXYZOptimizationProblem(DummyCost(desired, ['turbineX', 'turbineY']), initial,
-                                       boundary_comp=BoundaryComp(len(initial), None, None),
-                                       min_spacing=2, driver=driver)
 
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        # check normal result if spacing constraint is satisfied
-        assert tf.evaluate()[0] == 45
-        # check penalized result if spacing constraint is not satisfied
-        assert tf.evaluate({'turbineX': [3, 7, 4.], 'turbineY': [-3., -7., -3.], 'turbineZ': [0., 0., 0.]})[0] == 1e10 + 3
+def test_satisfy():
+    sc = SpacingComp(n_wt=3, min_spacing=2)
+    state = sc.satisfy(dict(zip('xy', xy3tb.desired.T)))
+    x, y = state['x'], state['y']
+    npt.assert_array_less(y, x)

@@ -28,9 +28,9 @@ trajectories during the optimizations are shown by the colored lines.
   its specified final location.  
 - Turbine 4 converges to its specified location.
 
-.. figure:: /../../examples/example_1_constrained_layout_optimization.png
+.. figure:: /../../examples/docs/figures/example_1_constrained_layout_optimization.png
 
 Code
 ----
 
-.. literalinclude:: /../../examples/example_1_constrained_layout_optimization.py
+.. literalinclude:: /../../examples/docs/example_1_constrained_layout_optimization.py

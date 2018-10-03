@@ -2,7 +2,7 @@ from openmdao.drivers.doe_driver import DOEDriver
 from openmdao.drivers.doe_generators import FullFactorialGenerator,\
     ListGenerator, UniformGenerator
 import pytest
-from topfarm._topfarm import InitialXYZOptimizationProblem
+from topfarm import InitialXYZOptimizationProblem
 import numpy as np
 from topfarm.cost_models.dummy import DummyCost
 from topfarm.tests import npt, uta
@@ -20,7 +20,7 @@ def get_tf():
                                           xy_boundary_type='rectangle',
                                           z_boundary=[3, 4]):
         cost_comp = DummyCost([(1, 0, 4),
-                               (0, 1, 3)])
+                               (0, 1, 3)], ['x', 'y', 'z'])
         return InitialXYZOptimizationProblem(
             cost_comp, turbineXYZ,
             BoundaryComp(len(turbineXYZ), xy_boundary, z_boundary, xy_boundary_type),
@@ -33,8 +33,8 @@ def get_tf():
 def test_list_driver(get_tf):
     xyz = [[[1, 2], [3, 4], [5, 6]],
            [[4, 3], [6, 5], [2, 1]]]
-    lst = [[('turbineX', [1, 2]), ('turbineY', [3, 4]), ('turbineZ', [5, 6])],
-           [('turbineX', [4, 3]), ('turbineY', [6, 5]), ('turbineZ', [2, 1])]]
+    lst = [[('x', [1, 2]), ('y', [3, 4]), ('z', [5, 6])],
+           [('x', [4, 3]), ('y', [6, 5]), ('z', [2, 1])]]
 
     tf = get_tf(driver=lst)  # pure list
     npt.assert_array_equal(tf.get_DOE_array(), xyz)
@@ -62,9 +62,7 @@ def test_with_uniform_generator(get_tf):
 def test_with_constrained_generator_convex_boundary(get_tf):
     tf = get_tf(xy_boundary=[(0, 0), (10, 0), (10, 10)], xy_boundary_type='convex_hull',
                 driver=ConstrainedXYZGenerator(UniformGenerator(10, 0)))
-    print(tf.xy_boundary)
     arr = tf.get_DOE_array()
-    print(arr.shape)
     x, y, z = [arr[:, i] for i in range(3)]
     uta.assertGreaterEqual(x.min(), 0)  # x
     uta.assertGreaterEqual(y.min(), 0)  # y
@@ -76,7 +74,6 @@ def test_with_constrained_generator_polygon(get_tf):
                 xy_boundary_type='polygon',
                 driver=ConstrainedXYZGenerator(UniformGenerator(10, 0)))
     arr = tf.get_DOE_array()
-    print(arr.shape)
     x, y = [arr[:, i] for i in range(2)]
     uta.assertGreaterEqual(x.min(), 0)  # x
     uta.assertGreaterEqual(y.min(), 0)  # y
@@ -84,8 +81,8 @@ def test_with_constrained_generator_polygon(get_tf):
 
 
 def test_with_constrained_generator_spacing(get_tf):
-    lst = [[('turbineX', [1, 1]), ('turbineY', [3, 4]), ('turbineZ', [5, 6])],
-           [('turbineX', [2, 2]), ('turbineY', [6, 5]), ('turbineZ', [2, 1])]]
+    lst = [[('x', [1, 1]), ('y', [3, 4]), ('z', [5, 6])],
+           [('x', [2, 2]), ('y', [6, 5]), ('z', [2, 1])]]
 
     tf = get_tf(xy_boundary=[(0, 0), (10, 10)],
                 xy_boundary_type='rectangle',

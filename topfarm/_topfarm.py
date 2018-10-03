@@ -1,66 +1,83 @@
-"""TOPFARM OpenMDAO Problems.
 
-This module contains the different OpenMDAO problems that are defined for
+"""TOPFARM OpenMDAO Problem.
+
+This module contains the OpenMDAO problem that can be used for
 different types of optimization problems.
 
 Notes
 -----
 
-A new OpenMDAO problem must be constructed for every optimization problem that
+A new TopFarmProblem must be constructed for every optimization problem that
 has different design variables. For example, if one problem optimizes a
 wind-farm layout but another optimizes turbine types at fixed turbine
 positions, these require OpenMDAO problems that are constructed differently.
 
 To get around this, TOPFARM has a base optimization problem,
-``TopFarmProblem`` that inherits from the ``Problem`` class in OpenMDAO. The
-methods and attributes in this TOPFARM base class are inherited by the other
-types of problems and then expanded to reflect the particular characteristics
-of each optimization problem.
+``TopFarmProblem`` that inherits from the ``Problem`` class in OpenMDAO.
 """
 import time
-
 import numpy as np
-from openmdao.api import Problem, ScipyOptimizeDriver, IndepVarComp
-from openmdao.core.explicitcomponent import ExplicitComponent
-from openmdao.drivers.doe_driver import DOEDriver
 from openmdao.drivers.doe_generators import DOEGenerator, ListGenerator
-from openmdao.drivers.genetic_algorithm_driver import SimpleGADriver
+from openmdao.drivers.doe_driver import DOEDriver
 
-from topfarm.constraint_components.boundary_component import BoundaryComp
-from topfarm.constraint_components.spacing_component import SpacingComp
-from topfarm.drivers import random_search_driver
-from topfarm.drivers.random_search_driver import RandomSearchDriver
-from topfarm.easy_drivers import EasyRandomSearchDriver
-from topfarm.plotting import PlotComp
 from topfarm.recorders import ListRecorder, NestedTopFarmListRecorder,\
-    TopFarmListRecorder
+    TopFarmListRecorder, split_record_id
+from openmdao.api import Problem, IndepVarComp
+from topfarm.plotting import NoPlot
+import warnings
+import topfarm
+from openmdao.core.explicitcomponent import ExplicitComponent
+from topfarm.easy_drivers import EasyScipyOptimizeDriver
 from topfarm.utils import smart_start
+from topfarm.constraint_components.spacing import SpacingComp
+from topfarm.constraint_components.boundary import BoundaryBaseComp
+import copy
 
 
 class TopFarmProblem(Problem):
-    """Base OpenMDAO problem for TOPFARM optimizations.
 
-    Parameters
-    ----------
-    cost_comp : OpenMDAO-style cost component.
-        A cost component in the style of an OpenMDAO v2 ExplicitComponent.
-        For an example, see the ``CostModelComponent`` class in
-        ``topfarm.cost_models.cost_model_wrappers``.
-    driver : OpenMDAO-style optimization driver.
-        Driver used to solve the optimization driver. For an example, see the
-        ``EasyScipyOptimizeDriver`` class in ``topfarm.easy_drivers``.
-    plot_comp : Plotting component.
-        OpenMDAO ExplicitComponent to specify which type of plotting you want.
-        For no plotting, pass in the ``topfarm.plotting.NoPlot`` class.
-    record_id : str.
-        Identifier for the optimization. Allows a user to restart an
-        optimization where it left off.
-    expected_cost : float
-        Approximate expected value of the final cost. Used for scaling the cost
-        to condition it for optimization.
-    """
-    def __init__(self, cost_comp, driver, plot_comp, record_id, expected_cost):
-        """Initialize a TopFarmProblem."""
+    def __init__(self, design_vars, cost_comp, driver=EasyScipyOptimizeDriver(),
+                 constraints=[], plot_comp=NoPlot(), record_id=None, expected_cost=1):
+        """
+        Parameters
+        ----------
+        design_vars : dict
+            Design variables for the problem.
+            Ex. {'x': [1,2,3], 'y':([3,2,1],0,1), 'z':([4,5,6],[4,5,4], [6,7,6])}
+            The keys ('x', 'y') is the names of the design variable and the values
+            are either the initial value or a tuple of
+            (initial value, lower bound, upper bound)
+        cost_comp : ExplicitComponent or TopFarmProblem
+            A cost component in the style of an OpenMDAO v2 ExplicitComponent.
+            Pure python cost functions can be wrapped using ``CostModelComponent``
+            class in ``topfarm.cost_models.cost_model_wrappers``.
+            For nested problems, this is typically a TopFarmProblem
+        driver : openmdao Driver, optinal
+            Driver used to solve the optimization driver. For an example, see the
+            ``EasyScipyOptimizeDriver`` class in ``topfarm.easy_drivers``.
+        constraints : list of Constraint-objects
+            E.g. XYBoundaryConstraint, SpacingConstraint
+        plot_comp : ExplicitComponent, optional
+            OpenMDAO ExplicitComponent used to plot the state (during
+            optimization).
+            For no plotting, pass in the ``topfarm.plotting.NoPlot`` class.
+        record_id : string "<record_id>:<case>", optional
+            Identifier for the optimization. Allows a user to restart an
+            optimization where it left off.
+            record_id can be name (saves as recordings/<name>.pkl), abs or relative path
+            Case can be:
+            - "", "latest", "-1": Continue from latest
+            - "best": Continue from best case (minimum cost)
+            - "0": Start from scratch (initial position)
+            - "4": Start from case number 4
+        Expected_cost : int or float
+            Used to scale the cost. This has influence on some drivers, e.g.
+            SLSQP where it affects the step size
+
+        Examples
+        --------
+        See main() in the bottom of this file
+        """
         Problem.__init__(self)
         if isinstance(cost_comp, TopFarmProblem):
             cost_comp = cost_comp.as_component()
@@ -72,23 +89,63 @@ class TopFarmProblem(Problem):
         elif isinstance(driver, DOEGenerator):
             driver = DOEDriver(generator=driver)
         self.driver = driver
-        if hasattr(self.driver, 'supports') and self.driver.supports['inequality_constraints']:
-            self.mode = 'fwd'
-        else:
-            self.mode = 'rev'
 
         self.plot_comp = plot_comp
 
         self.record_id = record_id
         self.load_recorder()
 
+        self.design_vars = design_vars
         self.indeps = self.model.add_subsystem('indeps', IndepVarComp(), promotes=['*'])
+        for k in [topfarm.x_key, topfarm.y_key, topfarm.type_key]:
+            if k in design_vars:
+                if isinstance(design_vars[k], tuple):
+                    self.n_wt = len(design_vars[k][0])
+                else:
+                    self.n_wt = len(design_vars[k])
+                break
+        else:
+            self.n_wt = 0
+
+        for constr in constraints:
+            if self.driver.supports['inequality_constraints']:
+                constr.setup_as_constraint(self)
+            else:
+                constr.setup_as_penalty(self)
+        self.model.constraint_components = [constr.constraintComponent for constr in constraints]
+
+        do = self.driver.options
+        for k, v in design_vars.items():
+            if isinstance(v, tuple):
+                assert len(v) == 3, "Design_vars values must be either value or (value, lower, upper)"
+                self.indeps.add_output(k, v[0])
+
+                if ('optimizer' in do and do['optimizer'] == 'COBYLA'):
+                    ref0 = np.min(v[1])
+                    ref1 = np.max(v[2])
+                    l, u = [lu * (ref1 - ref0) + ref0 for lu in [v[1], v[2]]]
+                    kwargs = {'ref0': ref0, 'ref': ref1, 'lower': l, 'upper': u}
+                else:
+                    kwargs = {'lower': v[1], 'upper': v[2]}
+            else:
+                self.indeps.add_output(k, v)
+                kwargs = {}
+
+            if 'optimizer' in do and do['optimizer'] == 'SLSQP':
+                # Upper and lower disturbs SLSQP when running with constraints. Add limits as constraints
+                self.model.add_constraint(k, kwargs.get('lower', None), kwargs.get('upper', None))
+                kwargs = {'lower': np.nan, 'upper': np.nan}  # Default +/- sys.float_info.max does not work for SLSQP
+            self.model.add_design_var(k, **kwargs)
+
         self.model.add_subsystem('cost_comp', cost_comp, promotes=['*'])
         self.model.add_objective('cost', scaler=1 / abs(expected_cost))
 
         if plot_comp:
             self.model.add_subsystem('plot_comp', plot_comp, promotes=['*'])
             plot_comp.problem = self
+            plot_comp.n_wt = self.n_wt
+
+        self.setup()
 
     @property
     def cost(self):
@@ -96,12 +153,14 @@ class TopFarmProblem(Problem):
 
     @property
     def state(self):
+        self.setup()
+        state = {k: self[k] for k in self.design_vars}
         if hasattr(self.cost_comp, 'state'):
-            return self.cost_comp.state
-        else:
-            return {}
+            state.update(self.cost_comp.state)
+        return state
 
     def state_array(self, keys):
+        self.setup()
         return np.array([self[k] for k in keys]).T
 
     def update_state(self, state):
@@ -121,40 +180,70 @@ class TopFarmProblem(Problem):
         else:
             self.recorder = TopFarmListRecorder(self.record_id)
 
-    def evaluate(self, state={}):
+    def setup(self):
+        if self._setup_status == 0:
+            Problem.setup(self, check=True)
+        if self._setup_status < 2:
+            with warnings.catch_warnings():
+                warnings.filterwarnings('error')
+                try:
+                    if len(self.driver._rec_mgr._recorders) == 0:
+                        tmp_recorder = ListRecorder()
+                        self.driver.add_recorder(tmp_recorder)
+                        Problem.final_setup(self)
+                        self.driver._rec_mgr._recorders.remove(tmp_recorder)
+                    else:
+                        Problem.final_setup(self)
+                except Warning as w:
+                    if str(w).startswith('Inefficient choice of derivative mode'):
+                        Problem.setup(self, check=True, mode='fwd')
+                    else:
+                        raise w
+
+    def evaluate(self, state={}, disp=False):
         """Evaluate the cost model."""
-        t = time.time()
-        self.update_state(state)
         tmp_recorder = ListRecorder()
         self.driver.add_recorder(tmp_recorder)
+        self.setup()
+        self.update_state(state)
+        t = time.time()
         self.run_model()
+        if disp:
+            print("Evaluated in\t%.3fs" % (time.time() - t))
         self.driver._rec_mgr._recorders.remove(tmp_recorder)
-        print("Evaluated in\t%.3fs" % (time.time() - t))
-        return self.cost, self.state
+        return self.cost, copy.deepcopy(self.state)
 
-    def evaluate_gradients(self):
+    def evaluate_gradients(self, disp=False):
         """Evaluate the gradients."""
+        self.setup()
         t = time.time()
         rec = ListRecorder()
         self.driver.add_recorder(rec)
-        res = self.compute_totals(['cost'], wrt=['turbineX', 'turbineY'], return_format='dict')
+        res = self.compute_totals(['cost'], wrt=[topfarm.x_key, topfarm.y_key], return_format='dict')
         self.driver._rec_mgr._recorders.remove(rec)
-        print("Gradients evaluated in\t%.3fs" % (time.time() - t))
+        if disp:
+            print("Gradients evaluated in\t%.3fs" % (time.time() - t))
         return res
 
-    def optimize(self, state={}):
+    def optimize(self, state={}, disp=False):
         """Run the optimization problem."""
         self.load_recorder()
         self.update_state(state)
         if self.recorder.num_cases > 0:
             try:
-                self.update_state({k: self.recorder.get(k)[-1] for k in self.state.keys() if k not in state})
-            except ValueError:
-                pass  # loaded state does not fit into dimension of current state
+                self.update_state({k: self.recorder[k][-1] for k in self.state.keys() if k not in state})
+            except (ValueError, KeyError):
+                # Restart optimize with n
+                self.record_id = split_record_id(self.record_id)[0] + ":0"
+                return self.optimize(state, disp)
 
         self.driver.add_recorder(self.recorder)
+        self.setup()
+        t = time.time()
         self.run_driver()
         self.cleanup()
+        if disp:
+            print("Optimized in\t%.3fs" % (time.time() - t))
         if self.driver._rec_mgr._recorders != []:  # in openmdao<2.4 cleanup does not delete recorders
             self.driver._rec_mgr._recorders.remove(self.recorder)
         if isinstance(self.driver, DOEDriver):
@@ -164,10 +253,12 @@ class TopFarmProblem(Problem):
             best_case_index = int(np.argmin(costs))
             best_case = cases.get_case(best_case_index)
             self.update_state({k: best_case.outputs[k] for k in best_case.outputs})
-        return self.cost, self.state, self.recorder
+        return self.cost, copy.deepcopy(self.state), self.recorder
 
-    def check_gradients(self, all=False, tol=1e-3):  # check gradient computations
-        if all:
+    def check_gradients(self, check_all=False, tol=1e-3):
+        """Check gradient computations"""
+        self.setup()
+        if check_all:
             comp_name_lst = [comp.pathname for comp in self.model.system_iter()
                              if comp._has_compute_partials]
         else:
@@ -186,6 +277,7 @@ class TopFarmProblem(Problem):
         return ProblemComponent(self)
 
     def get_DOE_list(self):
+        self.setup()
         assert isinstance(self.driver, DOEDriver), 'get_DOE_list only applies to DOEDrivers, and the current driver is: %s' % type(self.driver)
         case_gen = self.driver.options['generator']
         return [c for c in case_gen(self.model.get_design_vars(recurse=True), self.model)]
@@ -193,221 +285,20 @@ class TopFarmProblem(Problem):
     def get_DOE_array(self):
         return np.array([[v for _, v in c] for c in self.get_DOE_list()])
 
-
-class TurbineTypeOptimizationProblem(TopFarmProblem):
-    def __init__(self, cost_comp, turbineTypes, lower, upper, driver, plot_comp=None, record_id=None, expected_cost=1):
-        TopFarmProblem.__init__(self, cost_comp, driver, plot_comp, record_id, expected_cost)
-        self.initialize(turbineTypes, lower, upper)
-        self.setup(check=True, mode=self.mode)
-
-    def initialize(self, turbineTypes, lower, upper,):
-        self.turbineTypes = turbineTypes
-        self.lower = lower
-        self.upper = upper
-
-        n_wt = len(turbineTypes)
-
-        lim = np.zeros((n_wt, 2))
-        lim[:, 0] += lower
-        lim[:, 1] += upper
-        assert np.all(lim[:, 0] < lim[:, 1])
-
-        self.indeps.add_output('turbineType', np.array(turbineTypes).astype(np.int))
-
-        self.model.add_design_var('turbineType', lower=lim[:, 0], upper=lim[:, 1])
-        if self.plot_comp:
-            self.plot_comp.n_wt = n_wt
-
-    @property
-    def state(self):
-        state = {'turbineType': np.round(self['turbineType']).astype(np.int)}
-        state.update(TopFarmProblem.state.fget(self))
-        return state
-
-
-class TurbineXYZOptimizationProblem(TopFarmProblem):
-    """Optimize the turbine locations in a wind farm.
-
-    Parameters
-    ----------
-    cost_comp : OpenMDAO-style cost component.
-        A cost component in the style of an OpenMDAO v2 ExplicitComponent.
-        For an example, see the ``CostModelComponent`` class in
-        ``topfarm.cost_models.cost_model_wrappers``.
-    turbineXYZ : np.ndarray.
-        Array of the initial locations of the wind turbines, with dimensions
-        [n_wt x n_d].
-    boundary_comp : TOPFARM boundary component.
-        OpenMDAO for defining the boundary of the wind farm.
-    min_spacing : float, optional.
-        Minimum allowable distance between turbines in meters.
-    driver : OpenMDAO-style optimization driver, optional.
-        Driver used to solve the optimization driver. For an example, see the
-        ``EasyScipyOptimizeDriver`` class in ``topfarm.easy_drivers``. Default
-        is the ScipyOptimizeDriver.
-    plot_comp : Plotting component, optional.
-        OpenMDAO ExplicitComponent to specify which type of plotting you want.
-        For no plotting, pass in the ``topfarm.plotting.NoPlot`` class. Default
-        is none.
-    record_id : str, optional.
-        Identifier for the optimization. Allows a user to restart an
-        optimization where it left off. Default is none.
-    expected_cost : float, optional.
-        Approximate expected value of the final cost. Used for scaling the cost
-        to condition it for optimization. Default is 1.
-    """
-    def __init__(self, cost_comp, turbineXYZ, boundary_comp, min_spacing=None,
-                 driver=ScipyOptimizeDriver(), plot_comp=None, record_id=None, expected_cost=1):
-        if plot_comp:
-            if plot_comp == "default":
-                plot_comp = PlotComp()
-
-        TopFarmProblem.__init__(self, cost_comp, driver, plot_comp, record_id, expected_cost)
-        self.initialize(turbineXYZ, boundary_comp, min_spacing)
-        self.setup(check=True, mode=self.mode)
-
-    def initialize(self, turbineXYZ, boundary_comp, min_spacing=None):
-        turbineXYZ = np.array(turbineXYZ)
-        self.turbineXYZ = turbineXYZ
-        self.n_wt = n_wt = turbineXYZ.shape[0]
-
-        turbineXYZ = np.hstack((turbineXYZ, np.zeros((n_wt, 4 - turbineXYZ.shape[1]))))
-        self.min_spacing = min_spacing
-
-        spacing_comp = SpacingComp(n_wt, min_spacing)
-        self.boundary_comp = boundary_comp
-        if self.driver.supports['inequality_constraints']:
-            spacing_comp.setup_as_constraints(self)
-            boundary_comp.setup_as_constraints(self)
-        else:
-            spacing_comp.setup_as_penalty(self)
-            boundary_comp.setup_as_penalty(self)
-
-        do = self.driver.options
-        dont_scale = (('optimizer' in do and do['optimizer'] == 'SLSQP') or  # scaling disturbs SLSQP
-                      isinstance(self.driver, DOEDriver) or
-                      isinstance(self.driver, SimpleGADriver) or
-                      isinstance(self.driver, RandomSearchDriver))
-        if len(boundary_comp.xy_boundary) > 0:
-
-            ref0_x, ref0_y = self.boundary_comp.xy_boundary.min(0)
-            ref_x, ref_y = self.boundary_comp.xy_boundary.max(0)
-            if (dont_scale):
-                ref0_x, ref0_y, ref_x, ref_y = 0, 0, 1, 1
-
-            vertices = self.boundary_comp.xy_boundary
-            self.indeps.add_output('boundary', vertices, units='m')
-
-            if 'optimizer' in do and do['optimizer'] == 'SLSQP':
-                # Default +/- sys.float_info.max does not work for SLSQP
-                self.model.add_design_var('turbineX', lower=np.nan, upper=np.nan)
-                self.model.add_design_var('turbineY', lower=np.nan, upper=np.nan)
-            else:
-                l, u = [f(vertices[:, 0]) * (ref_x - ref0_x) + ref0_x for f in [np.min, np.max]]
-                self.model.add_design_var('turbineX', lower=l, upper=u, ref0=ref0_x, ref=ref_x)
-                l, u = [f(vertices[:, 1]) * (ref_y - ref0_y) + ref0_y for f in [np.min, np.max]]
-                self.model.add_design_var('turbineY', lower=l, upper=u, ref0=ref0_y, ref=ref_y)
-
-        if len(boundary_comp.z_boundary) > 0:
-            ref0_z, ref_z = np.min(self.boundary_comp.z_boundary), np.max(self.boundary_comp.z_boundary)
-            if (dont_scale):
-                ref0_z, ref_z = 0, 1
-            l, u = [self.boundary_comp.z_boundary[:, i] * (ref_z - ref0_z) + ref0_z for i in range(2)]
-            if 'optimizer' in do and do['optimizer'] == 'SLSQP':
-                self.model.add_design_var('turbineZ', lower=np.nan, upper=np.nan)
-            else:
-                self.model.add_design_var('turbineZ', lower=l, upper=u, ref0=ref0_z, ref=ref_z)
-
-        self.indeps.add_output('turbineX', turbineXYZ[:, 0], units='m')
-        self.indeps.add_output('turbineY', turbineXYZ[:, 1], units='m')
-        self.indeps.add_output('turbineZ', turbineXYZ[:, 2], units='m')
-
-        if self.plot_comp:
-            self.plot_comp.n_wt = n_wt
-            if self.boundary_comp:
-                self.plot_comp.n_vertices = len(self.boundary_comp.xy_boundary)
-            else:
-                self.plot_comp.n_vertices = 0
-
     @property
     def turbine_positions(self):
-        return self.state_array(['turbineX', 'turbineY', 'turbineZ'])
+        return np.array([self[k] for k in [topfarm.x_key, topfarm.y_key]]).T
 
-    @property
-    def state(self):
-        state = {'turbine%s' % xyz: self['turbine%s' % xyz] for xyz in 'XYZ'}
-        state.update(TopFarmProblem.state.fget(self))
-        return state
-
-    @property
-    def xy_boundary(self):
-        xy_b = self.boundary_comp.xy_boundary
-        if len(xy_b) > 0:
-            return np.r_[xy_b, xy_b[:1]]
-        else:
-            return xy_b
-
-    @property
-    def z_boundary(self):
-        return self.boundary_comp.z_boundary
-
-    def smart_start(self, x, y, val):
-        x, y = smart_start(x, y, val, self.n_wt, self.min_spacing)
-        self.update_state({'turbineX': x, 'turbineY': y})
+    def smart_start(self, XX, YY, ZZ):
+        min_spacing = [c for c in self.model.constraint_components if isinstance(c, SpacingComp)][0].min_spacing
+        X, Y, Z = XX.flatten(), YY.flatten(), ZZ.flatten()
+        for comp in self.model.constraint_components:
+            if isinstance(comp, BoundaryBaseComp):
+                mask = (comp.distances(X, Y).min(1) >= 0)
+                X, Y, Z = X[mask], Y[mask], Z[mask]
+        x, y = smart_start(X, Y, Z, self.n_wt, min_spacing)
+        self.update_state({topfarm.x_key: x, topfarm.y_key: y})
         return x, y
-
-
-class TurbineTypeXYZOptimizationProblem(TurbineTypeOptimizationProblem, TurbineXYZOptimizationProblem):
-    def __init__(self, cost_comp, turbineTypes, lower, upper, turbineXYZ, boundary_comp, min_spacing=None,
-                 driver=EasyRandomSearchDriver(random_search_driver.RandomizeTurbineTypeAndPosition()), plot_comp=None, record_id=None, expected_cost=1):
-
-        TopFarmProblem.__init__(self, cost_comp, driver, plot_comp, record_id, expected_cost)
-        TurbineTypeOptimizationProblem.initialize(self, turbineTypes, lower, upper)
-        TurbineXYZOptimizationProblem.initialize(self, turbineXYZ, boundary_comp, min_spacing)
-        self.setup(check=True, mode=self.mode)
-
-    @property
-    def state(self):
-        state = {k: self[k] for k in ['turbineX', 'turbineY', 'turbineZ']}
-        state['turbineType'] = self['turbineType'].astype(np.int)
-        state.update(TopFarmProblem.state.fget(self))
-        return state
-
-
-class InitialXYZOptimizationProblem(TurbineXYZOptimizationProblem):
-    def __init__(self, cost_comp, turbineXYZ, boundary_comp=None, min_spacing=None,
-                 driver=None, plot_comp=None):
-        #          if driver is None:
-        #              driver = DOEDriver(shuffle_generator(self, 10))
-        TurbineXYZOptimizationProblem.__init__(self, cost_comp, turbineXYZ,
-                                               boundary_comp, min_spacing,
-                                               driver=driver, plot_comp=plot_comp)
-
-#     def shuffle_positions(self, shuffle_type='rel', n_iter=1000,
-#                           step_size=0.1, pad=1.1, offset=5, plot=False,
-#                           verbose=False):
-#         if shuffle_type is not None:
-#             turbines = spos(self.boundary, self.n_wt, self.min_spacing,
-#                             self.turbine_positions, shuffle_type, n_iter,
-#                             step_size, pad, offset, plot, verbose)
-#             self.problem['turbineX'] = turbines.T[0]
-#             self.problem['turbineY'] = turbines.T[1]
-
-
-class TopFarm(TurbineXYZOptimizationProblem):
-    """Wrapper of TurbineXYZOPtimizationProblem for backward compatibility
-    """
-
-    def __init__(self, turbines, cost_comp, min_spacing, boundary,
-                 boundary_type='convex_hull', plot_comp=None,
-                 driver=ScipyOptimizeDriver(),
-                 record_id="Opt_%s" % time.strftime("%Y%m%d_%H%M%S"),
-                 expected_cost=1):
-
-        TurbineXYZOptimizationProblem.__init__(self, cost_comp, turbines,
-                                               boundary_comp=BoundaryComp(len(turbines), boundary, None, boundary_type),
-                                               min_spacing=min_spacing, driver=driver, plot_comp=plot_comp,
-                                               record_id=record_id, expected_cost=expected_cost)
 
 
 class ProblemComponent(ExplicitComponent):
@@ -425,7 +316,8 @@ class ProblemComponent(ExplicitComponent):
             self.add_input(name, val=val, **{k: kwargs[k] for k in ['units']})
             if name in missing_in_problem:
                 self.problem.indeps.add_output(name, val, **kwargs)
-        self.problem.setup(check=True, mode='fwd')
+        self.problem._setup_status = 0  # redo initial setup
+        self.problem.setup()
 
         self.add_output('cost', val=0.0)
 
@@ -440,43 +332,28 @@ class ProblemComponent(ExplicitComponent):
         outputs['cost'] = self.cost_function(**inputs)
 
 
-def try_me():
+def main():
     if __name__ == '__main__':
-        from openmdao.drivers.doe_generators import FullFactorialGenerator
         from topfarm.cost_models.dummy import DummyCost, DummyCostPlotComp
-        from topfarm.easy_drivers import EasyScipyOptimizeDriver
+        from topfarm.constraint_components.spacing import SpacingConstraint
+        from topfarm.constraint_components.boundary import XYBoundaryConstraint
 
-        optimal = [(0, 2, 4, 1), (4, 2, 1, 0)]
+        initial = np.array([[6, 0], [6, -8], [1, 1]])  # initial turbine layouts
+        optimal = np.array([[2.5, -3], [6, -7], [4.5, -3]])  # optimal turbine layouts
+        boundary = np.array([(0, 0), (6, 0), (6, -10), (0, -10)])  # turbine boundaries
+        desired = np.array([[3, -3], [7, -7], [4, -3]])  # desired turbine layouts
 
         plot_comp = DummyCostPlotComp(optimal)
-
-        cost_comp = DummyCost(
-            optimal_state=optimal,
-            inputs=['turbineX', 'turbineY', 'turbineZ', 'turbineType'])
-        xyz_opt_problem = TurbineXYZOptimizationProblem(
-            cost_comp,
-            turbineXYZ=[(0, 0, 0), (1, 1, 1)],
-            min_spacing=2,
-            boundary_comp=BoundaryComp(n_wt=2,
-                                       xy_boundary=[(0, 0), (4, 4)],
-                                       z_boundary=(0, 4),
-                                       xy_boundary_type='square'),
-            plot_comp=plot_comp,
-            driver=EasyScipyOptimizeDriver(disp=False),
-            record_id='test:latest')
-
-        cost, state, recorder = xyz_opt_problem.optimize()
-        print(cost)
-        recorder.save()
-
-        tf = TurbineTypeOptimizationProblem(
-            cost_comp=xyz_opt_problem,
-            turbineTypes=[0, 0], lower=0, upper=1,
-            driver=DOEDriver(FullFactorialGenerator(2)))
-        cost, state, recorder = tf.optimize()
-        print(state)
+        tf = TopFarmProblem(
+            design_vars=dict(zip('xy', initial.T)),
+            cost_comp=DummyCost(optimal_state=desired, inputs=['x', 'y']),
+            constraints=[XYBoundaryConstraint(boundary),
+                         SpacingConstraint(2)],
+            driver=EasyScipyOptimizeDriver(),
+            plot_comp=plot_comp
+        )
+        tf.optimize()
         plot_comp.show()
-        print("Done")
 
 
-try_me()
+main()

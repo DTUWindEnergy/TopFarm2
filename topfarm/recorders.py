@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib
 import os
 import pickle
+import topfarm
 
 
 class ListRecorder(BaseRecorder):
@@ -160,7 +161,7 @@ class ListRecorder(BaseRecorder):
 
         self.iteration_coordinate_lst.append(self._iteration_coordinate)
         for k, v in meta_fields:
-            lst = self.driver_iteration_dict[k].append(v)
+            self.driver_iteration_dict[k].append(v)
         N = len(self.iteration_coordinate_lst)
         for k, v in data_fields:
             lst = self.driver_iteration_dict[k]
@@ -244,6 +245,29 @@ class DriverCases(BaseCases):
         return case
 
 
+def split_record_id(record_id):
+    if record_id is None:
+        return "", ""
+    folder, record_id = os.path.split(record_id)
+    filename, load_case, *_ = (record_id + ":latest").split(":")
+    if load_case == "":
+        load_case = 'latest'
+    return os.path.join(folder, filename).replace("\\", "/"), load_case
+
+
+def recordid2filename(record_id):
+    if record_id is None:
+        return "", ""
+    filename, load_case = split_record_id(record_id)
+
+    if not filename.lower().endswith(".pkl"):
+        filename += ".pkl"
+    folder, filename = os.path.split(filename)
+    if folder == "":
+        folder = "recordings"
+    return os.path.join(folder, filename).replace("\\", "/"), load_case.lower()
+
+
 class TopFarmListRecorder(ListRecorder):
 
     def __init__(self, record_id=None):
@@ -252,9 +276,9 @@ class TopFarmListRecorder(ListRecorder):
 
     def animate_turbineXY(self, duration=10, tail=5, plot_initial=True, filename=None):
         import matplotlib.pyplot as plt
-        x, y = self.get('turbineX'), self.get('turbineY')
+        x, y = self[topfarm.x_key], self[topfarm.y_key]
         cost = self.get('cost')
-        boundary = self.get('boundary')[0]
+        boundary = self['xy_boundary'][-1]
         boundary = np.r_[boundary, boundary[:1]]
         n_wt = x.shape[1]
         from matplotlib import animation
@@ -302,18 +326,11 @@ class TopFarmListRecorder(ListRecorder):
         else:
             plt.show()
 
+    def split_record_id(self, record_id):
+        return split_record_id(record_id)
+
     def recordid2filename(self, record_id):
-        if record_id is None:
-            return "", ""
-        folder, record_id = os.path.split(record_id)
-        filename, load_case, *_ = (record_id + ":latest").split(":")
-        if load_case == "":
-            load_case = 'latest'
-        if not filename.lower().endswith(".pkl"):
-            filename += ".pkl"
-        if folder == "":
-            folder = "recordings"
-        return os.path.join(folder, filename).replace("\\", "/"), load_case.lower()
+        return recordid2filename(record_id)
 
     def save(self, record_id=None):
         record_id = record_id or self.filename
@@ -321,21 +338,24 @@ class TopFarmListRecorder(ListRecorder):
         ListRecorder.save(self, filename)
 
     def load_if_exists(self, record_id):
-        self.filename, _ = self.recordid2filename(record_id)
+        self.filename = self.recordid2filename(record_id)[0]
         if self.filename and os.path.isfile(self.filename):
             self.load(record_id)
         return self
 
     def load(self, record_id):
         filename, load_case = self.recordid2filename(record_id)
+        if not filename or os.path.isfile(filename) is False:
+            raise FileNotFoundError("No such file '%s'" % filename)
+
+        if load_case == 'none' or load_case == '0':
+            return self
 
         ListRecorder.load(self, filename)
         if load_case == 'latest':
             load_case = None
         elif load_case == 'best':
             load_case = np.argmin(self.get('cost')) + 1
-        elif load_case == 'none':
-            load_case = 0
         else:
             load_case = int(load_case)
         self.driver_iteration_dict = {k: v[:load_case] for k, v in self.driver_iteration_dict.items()}

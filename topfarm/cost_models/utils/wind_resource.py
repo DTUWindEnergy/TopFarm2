@@ -29,7 +29,7 @@ class WindResource(object):
         return WD, WS, self.ti[WD], weight
 
 
-def try_me():
+def main():
     if __name__ == '__main__':
         f = [0.035972, 0.039487, 0.051674, 0.070002, 0.083645, 0.064348, 0.086432, 0.117705, 0.151576, 0.147379, 0.10012, 0.05166]
         A = [9.176929, 9.782334, 9.531809, 9.909545, 10.04269, 9.593921, 9.584007, 10.51499, 11.39895, 11.68746, 11.63732, 10.08803]
@@ -37,7 +37,7 @@ def try_me():
         ti = np.zeros_like(f) + .1
         wr = WindResource(f, A, k, ti)
 
-        print(wr((0, 0), [0, 30, 60], [4, 5]))
+        print(wr(turbine_positions=(0, 0), wdir=[0, 30, 60], wsp=[4, 5]))
 
 
-try_me()
+main()

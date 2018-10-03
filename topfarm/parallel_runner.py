@@ -1,10 +1,12 @@
 import os
 import numpy as np
 import multiprocessing
-from topfarm._topfarm import InitialXYZOptimizationProblem
 from topfarm.constraint_components.boundary_component import BoundaryComp
 from topfarm.cost_models.dummy import DummyCost
 from openmdao.drivers.doe_generators import UniformGenerator
+from topfarm.constraint_components.boundary import XYBoundaryConstraint
+from topfarm._topfarm import TopFarmProblem
+import threading
 
 
 class ParallelRunner():
@@ -39,7 +41,7 @@ class ParallelRunner():
             all results
         """
 
-        indexes = np.round(np.linspace(0, len(state_lst), self.pool._processes)).astype(np.int)
+        indexes = np.round(np.linspace(0, len(state_lst), self.pool._processes + 1)).astype(np.int)
         seq_lst = [state_lst[i1:i2] for i1, i2 in zip(indexes[:-1], indexes[1:])]
 
         results = self.pool.map(seq_runner, seq_lst)
@@ -47,36 +49,42 @@ class ParallelRunner():
         return best, results
 
 
+# ===============================================================================
+# Example functions
+# ===============================================================================
 def get_InitialXYZOptimizationProblem(driver):
-    return InitialXYZOptimizationProblem(
-        cost_comp=DummyCost([(1, 0, 4),
-                             (0, 1, 3)]),
-        min_spacing=None,
-        turbineXYZ=[[0, 0, 0],
-                    [2, 2, 2]],
-        boundary_comp=BoundaryComp(n_wt=2,
-                                   xy_boundary=[(10, 6), (11, 8)],
-                                   xy_boundary_type='rectangle',
-                                   z_boundary=[3, 4]),
+    optimal = [(1, 0, 4),
+               (0, 1, 3)]
+    return TopFarmProblem(
+        design_vars={'x': [0, 2], 'y': [0, 2], 'z': ([0, 2], 3, 4)},
+        cost_comp=DummyCost(optimal, ['x', 'y', 'z']),
+        constraints=[XYBoundaryConstraint([(10, 6), (11, 8)], 'rectangle')],
         driver=driver)
 
 
 def seq_runner_example(lst):
+    print("%d cases executed by thread: %s" % (len(lst), threading.get_ident()))
     return get_InitialXYZOptimizationProblem(lst).optimize()
+# ===============================================================================
+#
+# ===============================================================================
 
 
-def try_me():
+def main():
     if __name__ == '__main__':
+
         lst = get_InitialXYZOptimizationProblem(driver=UniformGenerator(200)).get_DOE_list()
-
+        print("Current thread: %s" % threading.get_ident())
+        print("\nRun on two processors")
         # run in parallel
-        par_runner = ParallelRunner()
+        par_runner = ParallelRunner(2)
         (cost, state, recorder), results = par_runner(lst, seq_runner_example)
-        print(cost)
+        print("Minimum cost: %.2f" % cost)
 
+        print("\nRun on one processor")
         # run sequential
         cost, state, recorder = seq_runner_example(lst)
-        print(cost)
+        print("Minimum cost: %.2f" % cost)
 
 
-try_me()
+main()

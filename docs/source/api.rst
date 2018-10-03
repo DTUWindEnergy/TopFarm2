@@ -15,6 +15,3 @@ Defining Problems in TOPFARM
 .. autoclass:: topfarm.TopFarmProblem
     :members:
 
-.. # pull the TurbineXYZOptimizationProblem class and autopopulate methods
-.. autoclass:: topfarm.TurbineXYZOptimizationProblem
-    :members:

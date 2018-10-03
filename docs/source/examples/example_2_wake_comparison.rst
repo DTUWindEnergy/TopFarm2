@@ -48,9 +48,9 @@ Important observations:
 - The N. O. Jensen wake model has an AEP that is approximately 0.6% lower than
   the AEP with the G. C. Larsen wake model for this farm.  
 
-.. figure:: /../../examples/example_2_wake_comparison.png
+.. figure:: /../../examples/docs/figures/example_2_wake_comparison.png
 
 Code
 ----
 
-.. literalinclude:: /../../examples/example_2_wake_comparison.py
+.. literalinclude:: /../../examples/docs/example_2_wake_comparison.py

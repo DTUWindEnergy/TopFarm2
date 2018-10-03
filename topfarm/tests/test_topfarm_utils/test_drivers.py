@@ -1,17 +1,17 @@
-from topfarm import TopFarm
-import numpy as np
 import pytest
+
+import numpy as np
+
 from topfarm.cost_models.dummy import DummyCost
-from topfarm.plotting import NoPlot, TurbineTypePlotComponent
+from topfarm.drivers.random_search_driver import RandomizeTurbinePosition_Circle, RandomizeTurbinePosition_Square,\
+    RandomizeTurbineTypeAndPosition, RandomizeTurbinePosition_Normal
 from topfarm.easy_drivers import EasyScipyOptimizeDriver, EasyPyOptSparseIPOPT,\
     EasySimpleGADriver, EasyRandomSearchDriver
+from topfarm.plotting import NoPlot
 from topfarm.tests import uta
-from topfarm.drivers.random_search_driver import RandomizeTurbinePosition,\
-    RandomizeTurbinePosition_Circle, RandomizeTurbinePosition_Square,\
-    RandomizeTurbineTypeAndPosition, RandomizeTurbinePosition_Normal
-from topfarm.drivers import random_search_driver
-from topfarm._topfarm import TurbineTypeXYZOptimizationProblem
-from topfarm.constraint_components.boundary_component import BoundaryComp
+from topfarm.constraint_components.spacing import SpacingConstraint
+from topfarm.constraint_components.boundary import XYBoundaryConstraint
+from topfarm._topfarm import TopFarmProblem
 
 
 initial = np.array([[6, 0, 0], [6, -8, 0], [1, 1, 0]])  # initial turbine layouts
@@ -37,22 +37,32 @@ def topfarm_generator_scalable():
                 opt = self.optimal_state
                 return [(2 * cost_scale * (kwargs[n] - opt[:, i])) for i, n in enumerate(self.input_keys)]
 
-        return TopFarm(initial[:, :2] * xy_scale, DummyCostScaled(desired[:, :2] * xy_scale, ['turbineX', 'turbineY']),
-                       spacing * xy_scale[0], plot_comp=plot_comp, boundary=boundary * xy_scale, driver=driver,
-                       expected_cost=1.5 * cost_scale)
+        return TopFarmProblem(
+            dict(zip('xy', (initial[:, :2] * xy_scale).T)),
+            DummyCostScaled(desired[:, :2] * xy_scale),
+            constraints=[SpacingConstraint(spacing * xy_scale[0]),
+                         XYBoundaryConstraint(boundary * xy_scale)],
+            driver=driver,
+            plot_comp=plot_comp,
+            expected_cost=1.5 * cost_scale)
     return _topfarm_obj
 
 
 @pytest.fixture
 def topfarm_generator():
-    def _topfarm_obj(driver, spacing=2, keys=['turbineX', 'turbineY']):
+    def _topfarm_obj(driver, spacing=2, keys='xy'):
         # from topfarm.cost_models.dummy import DummyCostPlotComp
         # plot_comp = DummyCostPlotComp(desired[:,:len(keys)], plot_improvements_only=True)
         plot_comp = NoPlot()
 
-        return TopFarm(initial[:, :len(keys)], DummyCost(desired[:, :len(keys)], keys),
-                       spacing, plot_comp=plot_comp, boundary=boundary, driver=driver,
-                       expected_cost=1.5)
+        return TopFarmProblem(
+            dict(zip(keys, initial.T[:len(keys)])),
+            DummyCost(desired[:, :len(keys)], keys),
+            constraints=[SpacingConstraint(spacing),
+                         XYBoundaryConstraint(boundary)],
+            plot_comp=plot_comp,
+            driver=driver,
+            expected_cost=1.5)
     return _topfarm_obj
 
 
@@ -61,7 +71,7 @@ def topfarm_generator():
     (EasyScipyOptimizeDriver(tol=1e-3, disp=False), 1e-2),
     (EasyScipyOptimizeDriver(maxiter=14, disp=False), 1e-1),
     (EasyScipyOptimizeDriver(optimizer='COBYLA', tol=1e-3, disp=False), 1e-2),
-    (EasySimpleGADriver(max_gen=10, pop_size=100, bits={'turbineX': [12] * 3, 'turbineY':[12] * 3}, random_state=1), 1e-1),
+    (EasySimpleGADriver(max_gen=10, pop_size=100, bits={'x': [12] * 3, 'y':[12] * 3}, random_state=1), 1e-1),
     (EasyPyOptSparseIPOPT(), 1e-4),
 ][:])
 def test_optimizers(driver, tol, topfarm_generator_scalable):
@@ -70,7 +80,7 @@ def test_optimizers(driver, tol, topfarm_generator_scalable):
     tf = topfarm_generator_scalable(driver)
     tf.evaluate()
     cost, _, recorder = tf.optimize()
-    print(recorder.driver_cases.num_cases)
+
     tb_pos = tf.turbine_positions[:, :2]
     assert sum((tb_pos[2] - tb_pos[0])**2) > 2**2 - tol  # check min spacing
     assert tb_pos[1][0] < 6 + tol  # check within border
@@ -148,12 +158,11 @@ def test_random_search_driver_position(topfarm_generator, randomize_func):
 def test_random_search_driver_type_and_position(topfarm_generator):
     np.random.seed(1)
 
-    tf = TurbineTypeXYZOptimizationProblem(
-        cost_comp=DummyCost(desired, ['turbineX', 'turbineY', 'turbineType']),
-        turbineTypes=[0, 0, 0], lower=0, upper=3,
-        turbineXYZ=np.array([[1, 1], [6, 0], [6, -8]]),
-        boundary_comp=BoundaryComp(3, boundary),
-        min_spacing=1,
+    tf = TopFarmProblem(
+        {'x': [1, 6, 6], 'y': [1, 0, -8], 'type': ([0, 0, 0], 0, 3)},
+        cost_comp=DummyCost(desired, ['x', 'y', 'type']),
+        constraints=[SpacingConstraint(1),
+                     XYBoundaryConstraint(boundary)],
         driver=EasyRandomSearchDriver(randomize_func=RandomizeTurbineTypeAndPosition(1), max_iter=2000),
     )
     _, state, _ = tf.optimize()
@@ -162,4 +171,4 @@ def test_random_search_driver_type_and_position(topfarm_generator):
     assert tb_pos[1][0] < 6 + tol  # check within border
 
     np.testing.assert_array_almost_equal(tb_pos, [[3, -3], [6, -7], [4, -3]], -int(np.log10(tol)))
-    np.testing.assert_array_equal(state['turbineType'], [1, 2, 3])
+    np.testing.assert_array_equal(state['type'], [1, 2, 3])

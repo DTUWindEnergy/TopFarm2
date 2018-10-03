@@ -21,13 +21,10 @@ class FusedWakeModel(object):
             A WindIO `yml` file containing the description of the farm
         """
         self.windFarm = WindFarm(yml=yml)
-        if version:
-            self.version = version
+        self.version = version or self.version
         self.wake_model = self.wake_model_cls(WF=self.windFarm, version=self.version, **kwargs)
 
     def __call__(self, turbine_positions, no_wake_wdir, no_wake_wsp, no_wake_ti):
-        if not hasattr(self.wake_model, 'update_position'):
-            pytest.xfail("Method update_position missing in wakemodel")
         self.wake_model.update_position(turbine_positions)
         WD, WS, TI = (np.atleast_2d(v) for v in [no_wake_wdir, no_wake_wsp, no_wake_ti])
         assert WD.shape == WS.shape == TI.shape, "Shape of no_wake_wdir, no_wake_wsp and no_wake_ti must equal: %s != %s != %s" % (
@@ -53,13 +50,13 @@ class FusedWakeNOJWakeModel(FusedWakeModel):
     version = 'fort_noj'
 
 
-def try_me():
+def main():
     if __name__ == '__main__':
         import fusedwake
         import os
         import matplotlib.pyplot as plt
         hornsrev_yml = os.path.dirname(fusedwake.__file__) + "/../examples/hornsrev.yml"
-        noj, gcl = wake_models = [FusedWakeNOJWakeModel(hornsrev_yml, K=.1), FusedWakeGCLWakeModel(hornsrev_yml)]
+        noj, _ = wake_models = [FusedWakeNOJWakeModel(hornsrev_yml, K=.1), FusedWakeGCLWakeModel(hornsrev_yml)]
         tb_pos = noj.windFarm.pos
         print(noj(tb_pos.T, no_wake_wdir=270, no_wake_wsp=8, no_wake_ti=0.1))
 
@@ -76,4 +73,4 @@ def try_me():
         plt.show()
 
 
-try_me()
+main()

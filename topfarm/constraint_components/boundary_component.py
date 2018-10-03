@@ -1,6 +1,11 @@
 import numpy as np
-from openmdao.api import Group, IndepVarComp, ExecComp, ExplicitComponent, Problem
+from openmdao.api import ExplicitComponent
 from scipy.spatial import ConvexHull
+import sys
+
+# ==============================================================================
+# This module is deprecated use topfarm.constraint_components.boundary instead
+# ==============================================================================
 
 
 def BoundaryComp(n_wt, xy_boundary, z_boundary=None, xy_boundary_type='convex_hull'):
@@ -12,6 +17,8 @@ def BoundaryComp(n_wt, xy_boundary, z_boundary=None, xy_boundary_type='convex_hu
 
 class BoundaryBaseComp(ExplicitComponent):
     def __init__(self, n_wt, xy_boundary=None, z_boundary=None, **kwargs):
+        sys.stderr.write("%s is deprecated. Use BoundaryConstraint from topfarm.constraint_components.boundary instead\n" % self.__class__.__name__)
+
         ExplicitComponent.__init__(self, **kwargs)
         self.n_wt = n_wt
         if xy_boundary is None:
@@ -29,55 +36,55 @@ class BoundaryBaseComp(ExplicitComponent):
             assert np.all(z_boundary[:, 0] < z_boundary[:, 1])
         self.z_boundary = z_boundary
 
-    def setup_as_constraints(self, problem):
-        if len(self.xy_boundary) > 0:
-            problem.model.add_subsystem('xy_bound_comp', self, promotes=['*'])
-            problem.model.add_constraint('boundaryDistances', lower=np.zeros(self.nVertices * self.n_wt))
-        if len(self.z_boundary):
-            problem.model.add_constraint('turbineZ', lower=self.z_boundary[:, 0], upper=self.z_boundary[:, 1])
-
-    def setup_as_penalty(self, problem, penalty=1e10):
-        if len(self.xy_boundary) == 0 and len(self.z_boundary) == 0:
-            return  # no boundary or hub-height constraints
-
-        if len(self.xy_boundary) > 0:
-            subsystem_order = [ss.name for ss in problem.model._static_subsystems_allprocs]
-            problem.model.add_subsystem('xy_bound_comp', self, promotes=['*'])
-            subsystem_order.insert(subsystem_order.index('cost_comp'), 'xy_bound_comp')
-            problem.model.set_order(subsystem_order)
-
-            def xy_boundary_penalty(inputs):
-                return -np.minimum(inputs['boundaryDistances'], 0).sum()
-        else:
-            def xy_boundary_penalty(inputs):
-                return 0
-
-        if len(self.z_boundary):
-            def z_boundary_penalty(inputs):
-                return -np.minimum(inputs['turbineZ'] - self.z_boundary[:, 0], 0).sum() + np.maximum(inputs['turbineZ'] - self.z_boundary[:, 1], 0).sum()
-        else:
-            def z_boundary_penalty(inputs):
-                return 0
-
-        self._cost_comp = problem.cost_comp
-        self._org_setup = self._cost_comp.setup
-        self._org_compute = self._cost_comp.compute
-
-        def new_setup():
-            self._org_setup()
-            if len(self.xy_boundary) > 0:
-                self._cost_comp.add_input('boundaryDistances', val=self.zeros)
-
-        self._cost_comp.setup = new_setup
-
-        def new_compute(inputs, outputs):
-            p = xy_boundary_penalty(inputs) + z_boundary_penalty(inputs)
-            if p == 0:
-                self._org_compute(inputs, outputs)
-            else:
-                outputs['cost'] = penalty + p
-        self._cost_comp.compute = new_compute
-        problem._mode = 'rev'
+#     def setup_as_constraints(self, problem):
+#         if len(self.xy_boundary) > 0:
+#             problem.model.add_subsystem('xy_bound_comp', self, promotes=['*'])
+#             problem.model.add_constraint('boundaryDistances', lower=np.zeros(self.nVertices * self.n_wt))
+#         if len(self.z_boundary):
+#             problem.model.add_constraint(topfarm.z_key, lower=self.z_boundary[:, 0], upper=self.z_boundary[:, 1])
+#
+#     def setup_as_penalty(self, problem, penalty=1e10):
+#         if len(self.xy_boundary) == 0 and len(self.z_boundary) == 0:
+#             return  # no boundary or hub-height constraints
+#
+#         if len(self.xy_boundary) > 0:
+#             subsystem_order = [ss.name for ss in problem.model._static_subsystems_allprocs]
+#             problem.model.add_subsystem('xy_bound_comp', self, promotes=['*'])
+#             subsystem_order.insert(subsystem_order.index('cost_comp'), 'xy_bound_comp')
+#             problem.model.set_order(subsystem_order)
+#
+#             def xy_boundary_penalty(inputs):
+#                 return -np.minimum(inputs['boundaryDistances'], 0).sum()
+#         else:
+#             def xy_boundary_penalty(inputs):
+#                 return 0
+#
+#         if len(self.z_boundary):
+#             def z_boundary_penalty(inputs):
+#                 return -np.minimum(inputs[topfarm.z_key] - self.z_boundary[:, 0], 0).sum() + np.maximum(inputs[topfarm.z_key] - self.z_boundary[:, 1], 0).sum()
+#         else:
+#             def z_boundary_penalty(inputs):
+#                 return 0
+#
+#         self._cost_comp = problem.cost_comp
+#         self._org_setup = self._cost_comp.setup
+#         self._org_compute = self._cost_comp.compute
+#
+#         def new_setup():
+#             self._org_setup()
+#             if len(self.xy_boundary) > 0:
+#                 self._cost_comp.add_input('boundaryDistances', val=self.zeros)
+#
+#         self._cost_comp.setup = new_setup
+#
+#         def new_compute(inputs, outputs):
+#             p = xy_boundary_penalty(inputs) + z_boundary_penalty(inputs)
+#             if p == 0:
+#                 self._org_compute(inputs, outputs)
+#             else:
+#                 outputs['cost'] = penalty + p
+#         self._cost_comp.compute = new_compute
+#         problem._mode = 'rev'
 
 
 class ConvexBoundaryComp(BoundaryBaseComp):
@@ -193,21 +200,21 @@ class ConvexBoundaryComp(BoundaryBaseComp):
         # print (face_distance)
         return face_distance
 
-    def setup(self):
-
-        # Explicitly size input arrays
-        self.add_input('turbineX', np.zeros(self.n_wt), units='m',
-                       desc='x coordinates of turbines in global ref. frame')
-        self.add_input('turbineY', np.zeros(self.n_wt), units='m',
-                       desc='y coordinates of turbines in global ref. frame')
-
-        # Explicitly size output array
-        # (vector with positive elements if turbines outside of hull)
-        self.add_output('boundaryDistances', self.zeros,
-                        desc="signed perpendicular distances from each turbine to each face CCW; + is inside")
-
-        self.declare_partials('boundaryDistances', ['turbineX', 'turbineY'])
-        # self.declare_partials('boundaryDistances', ['boundaryVertices', 'boundaryNormals'], method='fd')
+#     def setup(self):
+#
+#         # Explicitly size input arrays
+#         self.add_input(topfarm.x_key, np.zeros(self.n_wt), units='m',
+#                        desc='x coordinates of turbines in global ref. frame')
+#         self.add_input(topfarm.y_key, np.zeros(self.n_wt), units='m',
+#                        desc='y coordinates of turbines in global ref. frame')
+#
+#         # Explicitly size output array
+#         # (vector with positive elements if turbines outside of hull)
+#         self.add_output('boundaryDistances', self.zeros,
+#                         desc="signed perpendicular distances from each turbine to each face CCW; + is inside")
+#
+#         self.declare_partials('boundaryDistances', [topfarm.x_key, topfarm.y_key])
+#         # self.declare_partials('boundaryDistances', ['boundaryVertices', 'boundaryNormals'], method='fd')
 
     def distances(self, turbineX, turbineY):
         return self.calculate_distance_to_boundary(np.array([turbineX, turbineY]).T)
@@ -215,16 +222,16 @@ class ConvexBoundaryComp(BoundaryBaseComp):
     def gradients(self, turbineX, turbineY):
         return self.dfaceDistance_dx, self.dfaceDistance_dy
 
-    def compute(self, inputs, outputs):
-        # calculate distances from each point to each face
-        outputs['boundaryDistances'] = self.distances(**inputs)
-
-    def compute_partials(self, inputs, partials):
-        # return Jacobian dict
-        dx, dy = self.gradients(**inputs)
-
-        partials['boundaryDistances', 'turbineX'] = dx
-        partials['boundaryDistances', 'turbineY'] = dy
+#     def compute(self, inputs, outputs):
+#         # calculate distances from each point to each face
+#         outputs['boundaryDistances'] = self.distances(**inputs)
+#
+#     def compute_partials(self, inputs, partials):
+#         # return Jacobian dict
+#         dx, dy = self.gradients(**inputs)
+#
+#         partials['boundaryDistances', topfarm.x_key] = dx
+#         partials['boundaryDistances', topfarm.y_key] = dy
 
     def move_inside(self, turbineX, turbineY, turbineZ, pad=1.1):
         x, y, z = [np.asarray(xyz, dtype=np.float) for xyz in [turbineX, turbineY, turbineZ]]
@@ -286,21 +293,21 @@ class PolygonBoundaryComp(BoundaryBaseComp):
         self._cache_input = None
         self._cache_output = None
 
-    def setup(self):
-
-        # Explicitly size input arrays
-        self.add_input('turbineX', np.zeros(self.nTurbines), units='m',
-                       desc='x coordinates of turbines in global ref. frame')
-        self.add_input('turbineY', np.zeros(self.nTurbines), units='m',
-                       desc='y coordinates of turbines in global ref. frame')
-
-        # Explicitly size output array
-        # (vector with positive elements if turbines outside of hull)
-        self.add_output('boundaryDistances', self.zeros,
-                        desc="signed perpendicular distances from each turbine to each face CCW; + is inside")
-
-        self.declare_partials('boundaryDistances', ['turbineX', 'turbineY'])
-        # self.declare_partials('boundaryDistances', ['boundaryVertices', 'boundaryNormals'], method='fd')
+#     def setup(self):
+#
+#         # Explicitly size input arrays
+#         self.add_input(topfarm.x_key, np.zeros(self.nTurbines), units='m',
+#                        desc='x coordinates of turbines in global ref. frame')
+#         self.add_input(topfarm.y_key, np.zeros(self.nTurbines), units='m',
+#                        desc='y coordinates of turbines in global ref. frame')
+#
+#         # Explicitly size output array
+#         # (vector with positive elements if turbines outside of hull)
+#         self.add_output('boundaryDistances', self.zeros,
+#                         desc="signed perpendicular distances from each turbine to each face CCW; + is inside")
+#
+#         self.declare_partials('boundaryDistances', [topfarm.x_key, topfarm.y_key])
+#         # self.declare_partials('boundaryDistances', ['boundaryVertices', 'boundaryNormals'], method='fd')
 
     def calc_distance_and_gradients(self, x, y):
         """

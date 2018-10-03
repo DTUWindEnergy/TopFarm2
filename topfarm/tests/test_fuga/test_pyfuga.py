@@ -8,9 +8,12 @@ import numpy as np
 from topfarm import TopFarm
 from topfarm.cost_models import fuga
 from topfarm.tests import uta
-from topfarm.plotting import NoPlot, PlotComp
+from topfarm.plotting import NoPlot
 from topfarm.cost_models.cost_model_wrappers import AEPCostModelComponent
 from topfarm.easy_drivers import EasyScipyOptimizeDriver
+from topfarm.constraint_components.spacing import SpacingConstraint
+from topfarm.constraint_components.boundary import XYBoundaryConstraint
+from topfarm._topfarm import TopFarmProblem
 
 
 def check_lib_exists():
@@ -104,10 +107,19 @@ def testLargeOffset(pyFuga):
                                                                       [3.099291e-02, -1.459773e-02]])
 
 
+def get_tf(init_pos, pyFuga, boundary, boundary_type='convex_hull'):
+    return TopFarmProblem(
+        dict(zip('xy', init_pos.T)),
+        pyFuga.get_TopFarm_cost_component(),
+        constraints=[SpacingConstraint(160),
+                     XYBoundaryConstraint(boundary, boundary_type)],
+        driver=EasyScipyOptimizeDriver(disp=False))
+
+
 def testAEP_topfarm(get_fuga):
     pyFuga = get_fuga()
-    init_pos = [[0, 0], [1000, 0]]
-    tf = TopFarm(init_pos, pyFuga.get_TopFarm_cost_component(), 160, init_pos, boundary_type='square')
+    init_pos = np.array([[0, 0], [1000, 0]])
+    tf = get_tf(init_pos, pyFuga, init_pos, 'square')
     cost, _ = tf.evaluate()
     np.testing.assert_array_almost_equal(cost, -16.579337831174865)
 
@@ -134,9 +146,7 @@ def testAEP_topfarm_optimization_4tb(get_fuga):
 
     plot_comp = NoPlot()
     # plot_comp= PlotComp()
-
-    cost_comp = pyFuga.get_TopFarm_cost_component()
-    tf = TopFarm(init_pos, cost_comp, 2 * D, boundary=boundary, plot_comp=plot_comp)
+    tf = get_tf(init_pos, pyFuga, boundary)
     cost, _, rec = tf.optimize()
     uta.assertAlmostEqual(-cost, AEP_pr_tb * 4, delta=.2)
 
@@ -165,13 +175,18 @@ def testAEP_topfarm_optimization_2tb_scale(get_fuga, scale):
     plot_comp = NoPlot()
     # plot_comp = PlotComp()
 
-    cost_comp = AEPCostModelComponent(['turbineX', 'turbineY'], init_pos.shape[0],
-                                      lambda turbineX, turbineY: scale * pyFuga.get_aep(np.array([turbineX, turbineY]).T)[0],  # only aep
-                                      lambda turbineX, turbineY: scale * pyFuga.get_aep_gradients(np.array([turbineX, turbineY]).T)[:2])  # only dAEPdx and dAEPdy
+    cost_comp = AEPCostModelComponent('xy', init_pos.shape[0],
+                                      lambda x, y: scale * pyFuga.get_aep(np.array([x, y]).T)[0],  # only aep
+                                      lambda x, y: scale * pyFuga.get_aep_gradients(np.array([x, y]).T)[:2])  # only dAEPdx and dAEPdy
 
-    tf = TopFarm(init_pos, cost_comp, 2 * D, boundary=boundary,
-                 plot_comp=plot_comp, driver=EasyScipyOptimizeDriver(tol=1e-8, disp=False),
-                 expected_cost=AEP_pr_tb * 2 * scale)
+    tf = TopFarmProblem(
+        dict(zip('xy', init_pos.T)),
+        cost_comp,
+        constraints=[SpacingConstraint(2 * D),
+                     XYBoundaryConstraint(boundary)],
+        plot_comp=plot_comp,
+        driver=EasyScipyOptimizeDriver(tol=1e-8, disp=False),
+        expected_cost=AEP_pr_tb * 2 * scale)
     cost, _, rec = tf.optimize()
     tf.plot_comp.show()
     uta.assertAlmostEqual(-cost / scale, AEP_pr_tb * 2, delta=.02)

@@ -239,7 +239,7 @@ class MyGeneticAlgorithm(GeneticAlgorithm):
             new_gen = self.tournament(old_gen, fitness)
             new_gen = self.crossover(new_gen, Pc)
             new_gen = self.mutate(new_gen, Pm)
-            print(generation)
+            print("Generation ", generation)
 
         return xopt, fopt, nfit
 

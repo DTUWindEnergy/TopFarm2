@@ -1,12 +1,10 @@
-from openmdao.drivers.doe_driver import DOEDriver
 from openmdao.drivers.doe_generators import UniformGenerator
 import pytest
-from topfarm._topfarm import InitialXYZOptimizationProblem
-import numpy as np
 from topfarm.cost_models.dummy import DummyCost
 from topfarm.tests import npt
-from topfarm.constraint_components.boundary_component import BoundaryComp
 from topfarm.parallel_runner import ParallelRunner
+from topfarm.constraint_components.boundary import XYBoundaryConstraint
+from topfarm import TopFarmProblem
 
 
 @pytest.fixture("module")
@@ -15,16 +13,11 @@ def parallelRunner():
 
 
 def get_InitialXYZOptimizationProblem(driver):
-    return InitialXYZOptimizationProblem(
+    return TopFarmProblem(
+        {'x': [0, 2], 'y': [0, 2], 'z': ([0, 2], 3, 4)},
         cost_comp=DummyCost([(1, 0, 4),
-                             (0, 1, 3)]),
-        min_spacing=None,
-        turbineXYZ=[[0, 0, 0],
-                    [2, 2, 2]],
-        boundary_comp=BoundaryComp(n_wt=2,
-                                   xy_boundary=[(10, 6), (11, 8)],
-                                   xy_boundary_type='rectangle',
-                                   z_boundary=[3, 4]),
+                             (0, 1, 3)], 'xyz'),
+        constraints=[XYBoundaryConstraint([(10, 6), (11, 8)], 'rectangle')],
         driver=driver)
 
 

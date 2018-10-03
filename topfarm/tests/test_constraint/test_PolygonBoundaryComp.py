@@ -1,7 +1,7 @@
 import numpy as np
-from topfarm.constraint_components.boundary_component import PolygonBoundaryComp
 import pytest
 from topfarm.tests import npt
+from topfarm.constraint_components.boundary import PolygonBoundaryComp
 
 
 @pytest.mark.parametrize('boundary', [
@@ -16,7 +16,8 @@ def testPolygon(boundary):
                                                     [1, 1],
                                                     [2, 0],
                                                     [2, 2],
-                                                    [0, 2]])
+                                                    [0, 2],
+                                                    [0, 0]])
 
 
 def check(boundary, points, distances):
@@ -84,7 +85,8 @@ def test_calc_distance_V_shape():
     check(boundary, points, [v1, v2, .2, v2, v1, -v1, -v2, -.2, -v2, -v1])
 
 
-def test_move_inside():
+def test_satisfy():
     pbc = PolygonBoundaryComp(1, [(0, 0), (10, 0), (10, 10)])
-    x, y, z = pbc.move_inside([3, 3, 3], [0, 5, 10], [])
+    state = pbc.satisfy({'x': [3, 3, 3], 'y': [0, 5, 10]})
+    x, y = state['x'], state['y']
     npt.assert_array_less(y, x)

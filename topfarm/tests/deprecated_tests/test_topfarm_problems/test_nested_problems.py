@@ -1,4 +1,4 @@
-from topfarm._topfarm import TurbineTypeOptimizationProblem,\
+from topfarm import TurbineTypeOptimizationProblem,\
     TurbineXYZOptimizationProblem, InitialXYZOptimizationProblem
 from openmdao.drivers.doe_generators import FullFactorialGenerator,\
     ListGenerator
@@ -9,11 +9,14 @@ import numpy as np
 from topfarm.easy_drivers import EasyScipyOptimizeDriver
 from topfarm.constraint_components.boundary_component import BoundaryComp
 from topfarm.tests import npt
+
 optimal = [(0, 2, 4, 1), (4, 2, 1, 0)]
 
-boundary_comp = BoundaryComp(2, xy_boundary=[(0, 0), (4, 4)],
-                             z_boundary=(0, 4),
-                             xy_boundary_type='square')
+
+def get_boundary_comp():
+    return BoundaryComp(2, xy_boundary=[(0, 0), (4, 4)],
+                        z_boundary=(0, 4),
+                        xy_boundary_type='square')
 
 
 def test_turbineType_and_XYZ_optimization():
@@ -21,19 +24,20 @@ def test_turbineType_and_XYZ_optimization():
     plot_comp = NoPlot()
     cost_comp = DummyCost(
         optimal_state=optimal,
-        inputs=['turbineX', 'turbineY', 'turbineZ', 'turbineType'])
+        inputs=['x', 'y', 'z', 'type'])
     xyz_opt_problem = TurbineXYZOptimizationProblem(
         cost_comp,
         turbineXYZ=[(0, 0, 0), (1, 1, 1)],
         min_spacing=2,
-        boundary_comp=boundary_comp,
+        boundary_comp=get_boundary_comp(),
         plot_comp=plot_comp,
         driver=EasyScipyOptimizeDriver(disp=False))
     tf = TurbineTypeOptimizationProblem(
         cost_comp=xyz_opt_problem,
         turbineTypes=[0, 0], lower=0, upper=1,
         driver=DOEDriver(FullFactorialGenerator(2)))
-    print(tf.optimize())
+    cost = tf.optimize()[0]
+    npt.assert_almost_equal(cost, 0)
 
 
 def test_turbine_Type_multistart_XYZ_optimization():
@@ -42,20 +46,20 @@ def test_turbine_Type_multistart_XYZ_optimization():
     xyz = [(0, 0, 0), (1, 1, 1)]
 
     p1 = DummyCost(optimal_state=optimal,
-                   inputs=['turbineX', 'turbineY', 'turbineZ', 'turbineType'])
+                   inputs=['x', 'y', 'z', 'type'])
 
     p2 = TurbineXYZOptimizationProblem(
         cost_comp=p1,
         turbineXYZ=xyz,
         min_spacing=2,
-        boundary_comp=boundary_comp,
+        boundary_comp=get_boundary_comp(),
         plot_comp=plot_comp,
         driver=EasyScipyOptimizeDriver(disp=True, optimizer='COBYLA', maxiter=10))
     p3 = InitialXYZOptimizationProblem(
         cost_comp=p2,
         turbineXYZ=xyz, min_spacing=2,
-        boundary_comp=boundary_comp,
-        driver=DOEDriver(ListGenerator([[('turbineX', [0, 4]), ('turbineY', [2, 2]), ('turbineZ', [4, 1])]])))
+        boundary_comp=get_boundary_comp(),
+        driver=DOEDriver(ListGenerator([[('x', [0, 4]), ('y', [2, 2]), ('z', [4, 1])]])))
     tf = TurbineTypeOptimizationProblem(
         cost_comp=p3,
         turbineTypes=[0, 0], lower=0, upper=1,
@@ -65,7 +69,7 @@ def test_turbine_Type_multistart_XYZ_optimization():
     cost, state, recorder = tf.optimize()
     print(cost)
     # print (state)
-    print(recorder.get('turbineType'))
+    print(recorder.get('type'))
     print(recorder.get('cost'))
     best_index = np.argmin(recorder.get('cost'))
     initial_xyz_recorder = recorder['recorder'][best_index]

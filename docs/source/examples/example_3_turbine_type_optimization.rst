@@ -3,9 +3,7 @@
 Example 3: Turbine Type Optimization
 ===================================================
 
-This example uses a dummy cost function to optimize a simple wind turbine
-layout that is subject to constraints. The optimization pushes the wind turbine
-locations to specified locations in the farm.
+This example uses a dummy cost function to optimize turbine types. 
 
 Specifications
 --------------
@@ -16,9 +14,9 @@ Results
 
 The optimization results are visualized in the below GIF.  
 
-.. figure:: /../../examples/example_3_turbine_type_optimization.gif
+.. figure:: /../../examples/docs/figures/example_3_turbine_type_optimization.gif
 
 Code
 ----
 
-.. literalinclude:: /../../examples/example_3_turbine_type_optimization.py
+.. literalinclude:: /../../examples/docs/example_3_turbine_type_optimization.py

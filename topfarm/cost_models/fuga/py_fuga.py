@@ -15,12 +15,12 @@ class PyFuga(PyColonel):
 
     def get_TopFarm_cost_component(self):
         n_wt = self.get_no_turbines()
-        return AEPCostModelComponent(['turbineX', 'turbineY'], n_wt,
-                                     lambda turbineX, turbineY, **kwargs: self.get_aep(np.array([turbineX, turbineY]).T)[0],  # only aep
-                                     lambda turbineX, turbineY, **kwargs: self.get_aep_gradients(np.array([turbineX, turbineY]).T)[:2])  # only dAEPdx and dAEPdy
+        return AEPCostModelComponent(['x', 'y'], n_wt,
+                                     lambda x, y, **kwargs: self.get_aep(np.array([x, y]).T)[0],  # only aep
+                                     lambda x, y, **kwargs: self.get_aep_gradients(np.array([x, y]).T)[:2])  # only dAEPdx and dAEPdy
 
 
-def try_me():
+def main():
     if __name__ == '__main__':
         from topfarm.cost_models import fuga
         if not os.path.isdir(os.path.dirname(fuga.__file__) + "/Colonel/py_colonel"):
@@ -38,4 +38,4 @@ def try_me():
         print(pyFuga.get_aep_gradients(np.array([[0, 0], [0, 100]])))
 
 
-try_me()
+main()

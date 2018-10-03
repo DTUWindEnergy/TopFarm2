@@ -1,19 +1,20 @@
 import pytest
 from topfarm.cost_models.dummy import DummyCostPlotComp, DummyCost
-from topfarm._topfarm import TurbineXYZOptimizationProblem
+from topfarm import TurbineXYZOptimizationProblem
 import numpy as np
 from topfarm.plotting import NoPlot
 from topfarm.easy_drivers import EasyScipyOptimizeDriver
 from topfarm.constraint_components.boundary_component import BoundaryComp
 
-optimal = [(5, 4, 3),
-           (3, 2, 1)]
+
+optimal = np.array([(5, 4, 3),
+                    (3, 2, 1)])
 
 
 @pytest.fixture
 def tf():
     def get_TurbineXYZOptimizationProblem(
-            cost_comp=DummyCost(optimal),
+            cost_comp=DummyCost(optimal, ['x', 'y', 'z']),
             turbineXYZ=[[0, 0, 0],
                         [2, 2, 2]],
             xy_boundary=[(0, 0), (5, 5)],
@@ -32,7 +33,7 @@ def tf():
 def test_evaluate(tf):
     cost, state = tf().evaluate()
     assert cost == 52
-    np.testing.assert_array_equal(state['turbineX'], [0, 2])
+    np.testing.assert_array_equal(state['x'], [0, 2])
 
 
 def test_optimize(tf):
@@ -42,4 +43,4 @@ def test_optimize(tf):
     cost = tf.optimize()[0]
     plot_comp.show()
     assert cost < 1e6
-    np.testing.assert_array_almost_equal(tf.turbine_positions, optimal, 3)
+    np.testing.assert_array_almost_equal(tf.turbine_positions, optimal[:, :2], 3)
