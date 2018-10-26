@@ -37,16 +37,20 @@ import copy
 class TopFarmProblem(Problem):
 
     def __init__(self, design_vars, cost_comp, driver=EasyScipyOptimizeDriver(),
-                 constraints=[], plot_comp=NoPlot(), record_id=None, expected_cost=1):
+                 constraints=[], plot_comp=NoPlot(), record_id=None,
+                 expected_cost=1, ext_vars={}):
         """
         Parameters
         ----------
-        design_vars : dict
+        design_vars : dict or list of key-initial_value-tuples
             Design variables for the problem.
-            Ex. {'x': [1,2,3], 'y':([3,2,1],0,1), 'z':([4,5,6],[4,5,4], [6,7,6])}
-            The keys ('x', 'y') is the names of the design variable and the values
-            are either the initial value or a tuple of
-            (initial value, lower bound, upper bound)
+            Ex: {'x': [1,2,3], 'y':([3,2,1],0,1), 'z':([4,5,6],[4,5,4], [6,7,6])}
+            Ex: [('x', [1,2,3]), ('y',([3,2,1],0,1)), ('z',([4,5,6],[4,5,4], [6,7,6]))]
+            Ex: zip('xy', pos.T)
+            The keys (x, y, z) are the names of the design variable.
+            The values are either
+            - the initial value or
+            - a tuple of (initial value, lower bound, upper bound)
         cost_comp : ExplicitComponent or TopFarmProblem
             A cost component in the style of an OpenMDAO v2 ExplicitComponent.
             Pure python cost functions can be wrapped using ``CostModelComponent``
@@ -70,9 +74,13 @@ class TopFarmProblem(Problem):
             - "best": Continue from best case (minimum cost)
             - "0": Start from scratch (initial position)
             - "4": Start from case number 4
-        Expected_cost : int or float
+        expected_cost : int or float
             Used to scale the cost. This has influence on some drivers, e.g.
             SLSQP where it affects the step size
+        ext_vars : dict or list of key-initial_value tuple
+            Used for nested problems to propagate variables from parent problem
+            Ex. {'type': [1,2,3]}
+            Ex. [('type', [1,2,3])]
 
         Examples
         --------
@@ -95,6 +103,8 @@ class TopFarmProblem(Problem):
         self.record_id = record_id
         self.load_recorder()
 
+        if not isinstance(design_vars, dict):
+            design_vars = dict(design_vars)
         self.design_vars = design_vars
         self.indeps = self.model.add_subsystem('indeps', IndepVarComp(), promotes=['*'])
         for k in [topfarm.x_key, topfarm.y_key, topfarm.type_key]:
@@ -136,6 +146,9 @@ class TopFarmProblem(Problem):
                 self.model.add_constraint(k, kwargs.get('lower', None), kwargs.get('upper', None))
                 kwargs = {'lower': np.nan, 'upper': np.nan}  # Default +/- sys.float_info.max does not work for SLSQP
             self.model.add_design_var(k, **kwargs)
+
+        for k, v in ext_vars.items():
+            self.indeps.add_output(k, v)
 
         self.model.add_subsystem('cost_comp', cost_comp, promotes=['*'])
         self.model.add_objective('cost', scaler=1 / abs(expected_cost))
@@ -252,7 +265,7 @@ class TopFarmProblem(Problem):
             costs = [cases.get_case(i).outputs['cost'] for i in range(cases.num_cases)]
             best_case_index = int(np.argmin(costs))
             best_case = cases.get_case(best_case_index)
-            self.update_state({k: best_case.outputs[k] for k in best_case.outputs})
+            self.evaluate({k: best_case.outputs[k] for k in best_case.outputs})
         return self.cost, copy.deepcopy(self.state), self.recorder
 
     def check_gradients(self, check_all=False, tol=1e-3):
@@ -320,6 +333,8 @@ class ProblemComponent(ExplicitComponent):
         self.problem.setup()
 
         self.add_output('cost', val=0.0)
+        if hasattr(self.problem.cost_comp, "output_key"):
+            self.add_output(self.problem.cost_comp.output_key, val=0.0)
 
     @property
     def state(self):
@@ -330,6 +345,9 @@ class ProblemComponent(ExplicitComponent):
 
     def compute(self, inputs, outputs):
         outputs['cost'] = self.cost_function(**inputs)
+        if hasattr(self.problem.cost_comp, "output_key"):
+            output_key = self.problem.cost_comp.output_key
+            outputs[output_key] = self.problem[output_key]
 
 
 def main():

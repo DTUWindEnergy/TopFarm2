@@ -37,6 +37,21 @@ def turbineTypeOptimizationProblem():
         driver=DOEDriver(FullFactorialGenerator(3)))
 
 
+@pytest.mark.parametrize('design_vars', [{'type': ([0, 0, 0], 0, 2)},
+                                         [('type', ([0, 0, 0], 0, 2))],
+                                         (('type', ([0, 0, 0], 0, 2)),),
+                                         zip(['type'], [([0, 0, 0], 0, 2)]),
+                                         ])
+def test_design_var_list(turbineTypeOptimizationProblem, design_vars):
+    tf = TopFarmProblem(
+        design_vars=design_vars,
+        cost_comp=DummyCost(np.array([[2, 0, 1]]).T, ['type']),
+        driver=DOEDriver(FullFactorialGenerator(3)))
+    cost, _, = tf.evaluate()
+    npt.assert_equal(tf.cost, cost)
+    assert tf.cost == 5
+
+
 def test_cost(turbineTypeOptimizationProblem):
     tf = turbineTypeOptimizationProblem
     cost, _, = tf.evaluate()
