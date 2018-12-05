@@ -5,6 +5,7 @@ from topfarm.constraint_components.spacing import SpacingConstraint
 from topfarm.constraint_components.boundary import XYBoundaryConstraint
 from topfarm import TopFarmProblem
 from topfarm.easy_drivers import EasyScipyOptimizeDriver
+from topfarm.tests import npt
 
 boundary = [(0, 0), (6, 0), (6, -10), (0, -10)]  # turbine boundaries
 initial = np.array([[6, 0], [6, -8], [1, 1], [-1, -8]])  # initial turbine layouts
@@ -55,3 +56,29 @@ def testAEPCostModelComponent():
     tf = get_tf(AEPCostModelComponent(['x', 'y'], 4, aep_cost, aep_gradients))
     tf.optimize()
     np.testing.assert_array_almost_equal(tf.turbine_positions[:, :2], optimal_with_constraints, 5)
+
+
+def testCostModelComponentDiffShapeInput():
+    def aep_cost(x, y, h):
+        opt_x, opt_y = optimal.T
+        return -np.sum((x - opt_x)**2 + (y - opt_y)**2) + h, {'add_out': sum(x)}
+    cost_comp = AEPCostModelComponent(['x', 'y', ('h', 0)], 4, aep_cost, additional_output=[('add_out', 0)])
+    tf = TopFarmProblem(
+        dict(zip('xy', initial.T)),
+        cost_comp=cost_comp,
+        constraints=[SpacingConstraint(min_spacing), XYBoundaryConstraint(boundary)],
+        driver=EasyScipyOptimizeDriver(disp=False),
+        ext_vars={'h': 0})
+    cost0, _, _ = tf.optimize(state={'h': 0})
+    cost10, _, _ = tf.optimize(state={'h': 10})
+    npt.assert_almost_equal(cost10, cost0 - 10)
+
+
+def testCostModelComponentAdditionalOutput():
+    def aep_cost(x, y):
+        opt_x, opt_y = optimal.T
+        return -np.sum((x - opt_x)**2 + (y - opt_y)**2), {'add_out': sum(x)}
+    tf = get_tf(AEPCostModelComponent(['x', 'y'], 4, aep_cost, aep_gradients, additional_output=[('add_out', 0)]))
+    _, state, _ = tf.optimize()
+    npt.assert_array_almost_equal(tf.turbine_positions[:, :2], optimal_with_constraints, 5)
+    npt.assert_equal(sum(state['x']), state['add_out'])

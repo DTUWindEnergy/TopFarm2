@@ -149,6 +149,7 @@ class TopFarmProblem(Problem):
 
         for k, v in ext_vars.items():
             self.indeps.add_output(k, v)
+        self.ext_vars = ext_vars
 
         self.model.add_subsystem('cost_comp', cost_comp, promotes=['*'])
         self.model.add_objective('cost', scaler=1 / abs(expected_cost))
@@ -168,8 +169,11 @@ class TopFarmProblem(Problem):
     def state(self):
         self.setup()
         state = {k: self[k] for k in self.design_vars}
+        state.update({k: self[k] for k in self.ext_vars})
         if hasattr(self.cost_comp, 'state'):
             state.update(self.cost_comp.state)
+        if hasattr(self.cost_comp, 'additional_output'):
+            state.update({k: self[k] for k, _ in self.cost_comp.additional_output})
         return state
 
     def state_array(self, keys):
@@ -291,7 +295,8 @@ class TopFarmProblem(Problem):
 
     def get_DOE_list(self):
         self.setup()
-        assert isinstance(self.driver, DOEDriver), 'get_DOE_list only applies to DOEDrivers, and the current driver is: %s' % type(self.driver)
+        assert isinstance(
+            self.driver, DOEDriver), 'get_DOE_list only applies to DOEDrivers, and the current driver is: %s' % type(self.driver)
         case_gen = self.driver.options['generator']
         return [c for c in case_gen(self.model.get_design_vars(recurse=True), self.model)]
 
