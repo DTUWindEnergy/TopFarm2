@@ -55,6 +55,22 @@ pages:  # "pages" is a job specifically for GitLab pages [1]
   tags:  # only runners with this tag can do the job [3]
   - python
 
+# ===== BUILD WHEELS AND UPLOAD TO PYPI =====
+pypi:
+  stage:  
+    deploy
+  only:
+    - tags
+#    - master
+  script:
+    - python3 -m pip install -U setuptools wheel
+    - python3 setup.py sdist bdist_wheel
+    - python3 -m pip install -U twine
+    # - twine upload --repository-url https://test.pypi.org/legacy/ dist/* -u $TWINE_USERNAME -p $TWINE_PASSWORD # for testing purposes
+    - twine upload dist/* -u $TWINE_USERNAME -p $TWINE_PASSWORD
+  tags:  
+    - python
+
 
 # [1] GitLab page: https://docs.gitlab.com/ee/ci/yaml/#pages
 # [2] CI stages: https://docs.gitlab.com/ee/ci/yaml/#stages
