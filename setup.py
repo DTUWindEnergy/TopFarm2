@@ -10,7 +10,7 @@ def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 setup(name='topfarm', 
-      version='2.0.0',  
+      version='2.0.1',  
       description='Topfarm - Wind farm optimization using OpenMDAO',
 	  long_description=read('README.md'),
       url='https://gitlab.windenergy.dtu.dk/TOPFARM/topfarm2',
