@@ -59,7 +59,7 @@ pages:  # "pages" is a job specifically for GitLab pages [1]
 pypi:
   stage:  
     deploy
-   only:
+  only:
     - tags
 #    - master
   script:
