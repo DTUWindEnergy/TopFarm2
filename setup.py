@@ -4,17 +4,21 @@ Setup file for Topfarm2
 """
 
 
-from setuptools import setup
+import os
+from setuptools import setup, find_packages
+
+def read(fname):
+    return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 setup(name='topfarm', 
-      version='2.0',  
+      version='2.0.2',  
       description='Topfarm - Wind farm optimization using OpenMDAO',
+	  long_description=read('README'),
       url='https://gitlab.windenergy.dtu.dk/TOPFARM/topfarm2',
       author='DTU Wind Energy',  
       author_email='dave@dtu.dk',
       license='MIT',
-      packages=['topfarm'
-                ],
+      packages=find_packages(exclude=["*.examples", "*.examples.*", "examples.*", "examples"]),
       install_requires=[
         'matplotlib',  # for plotting
         'numpy',  # for numerical calculations
