@@ -137,7 +137,8 @@ class RandomSearchDriver(Driver):
         x1 = x0.copy()
         n_iter = 0
 
-        desvar_info = [(abs2prom[name], *self._desvar_idx[name], lower_bound, upper_bound) for name, meta in iteritems(desvars)]
+        desvar_info = [(abs2prom[name], *self._desvar_idx[name], lower_bound, upper_bound)
+                       for name, meta in iteritems(desvars)]
         desvar_dict = {name: (x0[i:j].copy(), lbound[i:j], ubound[i:j]) for (name, i, j, lbound, ubound) in desvar_info}
         start = time.time()
         while n_iter < max_iter and time.time() - start < max_time:
@@ -292,4 +293,44 @@ class RandomizeTurbineTypeAndPosition(RandomizeTurbinePosition):
         i_wt = i_wt or np.random.randint(len(desvar_dict[topfarm.x_key][0]))
         desvar_dict = randomize_turbine_type(desvar_dict, i_wt=i_wt)
         desvar_dict = RandomizeTurbinePosition.__call__(self, desvar_dict, i_wt=i_wt)
+        return desvar_dict
+
+
+class RandomizeAllUniform():
+    def __init__(self, int_design_vars_lst=[]):
+        """Initialize RandomizeAllUniform
+
+        Parameters
+        ----------
+        int_design_vars_lst : list
+            names of all integer design variables
+        """
+        self.int_design_vars_lst = int_design_vars_lst
+
+    def __call__(self, desvar_dict):
+        for name, (values, lbound, ubound) in desvar_dict.items():
+            if name in self.int_design_vars_lst:
+                if np.all(lbound == lbound[0]) and np.all(ubound == ubound[0]):
+                    values[:] = np.random.randint(lbound[0], ubound[0] + 1, values.shape)
+                else:
+                    lbound_arr = np.zeros_like(values) + lbound
+                    ubound_arr = np.zeros_like(values) + ubound
+                    for i, (l, u) in enumerate(zip(lbound_arr, ubound_arr)):
+                        values[i] = np.random.randint(l, u + 1)
+            else:
+                values[:] = np.random.uniform(lbound, ubound, values.shape)
+        return desvar_dict
+
+
+class RandomizeAllRelativeMaxStep():
+    def __init__(self, rel_max_step=.1):
+        self.rel_max_step = rel_max_step
+
+    def __call__(self, desvar_dict):
+        for _, (values, lbound, ubound) in desvar_dict.items():
+            if values.dtype.kind == 'i':
+                raise NotImplementedError()
+            else:
+                step = (np.random.random(values.shape) * 2 - 1) * (ubound - lbound) * self.rel_max_step
+                values[:] = np.maximum(np.minimum(values + step, ubound), lbound)
         return desvar_dict

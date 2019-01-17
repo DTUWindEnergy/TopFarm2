@@ -4,14 +4,16 @@ import numpy as np
 
 from topfarm.cost_models.dummy import DummyCost
 from topfarm.drivers.random_search_driver import RandomizeTurbinePosition_Circle, RandomizeTurbinePosition_Square,\
-    RandomizeTurbineTypeAndPosition, RandomizeTurbinePosition_Normal
+    RandomizeTurbineTypeAndPosition, RandomizeTurbinePosition_Normal,\
+    RandomizeAllUniform, RandomizeAllRelativeMaxStep
 from topfarm.easy_drivers import EasyScipyOptimizeDriver, EasyPyOptSparseIPOPT,\
     EasySimpleGADriver, EasyRandomSearchDriver
 from topfarm.plotting import NoPlot
-from topfarm.tests import uta
+from topfarm.tests import uta, npt
 from topfarm.constraint_components.spacing import SpacingConstraint
 from topfarm.constraint_components.boundary import XYBoundaryConstraint
 from topfarm._topfarm import TopFarmProblem
+from topfarm.cost_models.cost_model_wrappers import IncomeModelComponent
 
 
 initial = np.array([[6, 0, 0], [6, -8, 0], [1, 1, 0]])  # initial turbine layouts
@@ -172,3 +174,57 @@ def test_random_search_driver_type_and_position(topfarm_generator):
 
     np.testing.assert_array_almost_equal(tb_pos, [[3, -3], [6, -7], [4, -3]], -int(np.log10(tol)))
     np.testing.assert_array_equal(state['type'], [1, 2, 3])
+
+
+def test_random_search_driver_randomize_all_uniform():
+    np.random.seed(1)
+
+    class Cost():
+        i = 0
+
+        def __call__(self, *args, **kwargs):
+            self.i += 1
+            return self.i
+
+    cost_comp = IncomeModelComponent(
+        input_keys=['x', 'y', 'type'],
+        n_wt=2,
+        cost_function=Cost())
+
+    tf = TopFarmProblem(
+        {'x': ([1, 6], [0, 1], [5, 6]), 'y': ([-1., 0], -6, 0), 'type': ([3, 3], 3, 8)},
+        cost_comp=cost_comp,
+        constraints=[],
+        driver=EasyRandomSearchDriver(randomize_func=RandomizeAllUniform(['x', 'type']), max_iter=600, disp=False),
+    )
+    _, state, recorder = tf.optimize()
+
+    # check that integer design variables are somewhat evenly distributed
+    x, y, t = recorder['x'], recorder['y'], recorder['type']
+    for arr, l, u in [(x[:, 0], 0, 5), (x[:, 1], 1, 6), (t[:, 0], 3, 8)]:
+        count = [(arr == i).sum() for i in range(l, u + 1)]
+        npt.assert_equal(601, sum(count))
+        npt.assert_array_less(600 / len(count) * .70, count)
+
+    count, _ = np.histogram(y[:, 0], np.arange(-6, 1))
+    npt.assert_equal(y.shape[0], sum(count))
+    npt.assert_array_less(600 / len(count) * .70, count)
+
+
+def test_random_search_driver_RandomizeAllRelativeMaxStep(topfarm_generator):
+    np.random.seed(1)
+
+    tf = TopFarmProblem(
+        {'x': [1, 6, 6], 'y': [1, 0, -8], 'type': ([0, 0, 0], 0, 3)},
+        cost_comp=DummyCost(desired, ['x', 'y', 'type']),
+        constraints=[SpacingConstraint(1),
+                     XYBoundaryConstraint(boundary)],
+        driver=EasyRandomSearchDriver(randomize_func=RandomizeAllRelativeMaxStep(.01), max_iter=2000),
+    )
+    _, state, _ = tf.optimize()
+    tb_pos = tf.turbine_positions[:, :2]
+    tol = 1e-1
+    assert tb_pos[1][0] < 6 + tol  # check within border
+
+    np.testing.assert_array_almost_equal(tb_pos, [[3, -3], [6, -7], [4, -3]], -int(np.log10(tol)))
+    np.testing.assert_array_equal(np.round(state['type']), [1, 2, 3])
