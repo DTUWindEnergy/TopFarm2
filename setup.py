@@ -28,6 +28,7 @@ setup(name='topfarm',
         'pytest-cov',  # for calculating coverage
         'scipy',  # constraints
         'sphinx',  # generating documentation
-        'sphinx_rtd_theme'  # docs theme
+        'sphinx_rtd_theme',  # docs theme
+		'py_wake'
       ],
       zip_safe=True)
