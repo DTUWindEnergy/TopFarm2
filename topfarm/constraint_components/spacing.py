@@ -5,6 +5,13 @@ import topfarm
 
 class SpacingConstraint(Constraint):
     def __init__(self, min_spacing):
+        """Initialize SpacingConstraint
+
+        Parameters
+        ----------
+        min_spacing : int or float
+            Minimum spacing between turbines
+        """
         self.min_spacing = min_spacing
 
     @property
@@ -17,6 +24,8 @@ class SpacingConstraint(Constraint):
         problem.model.add_subsystem('spacing_comp', self.spacing_comp, promotes=['*'])
         zero = np.zeros(int(((n_wt - 1.) * n_wt / 2.)))
         problem.model.add_constraint('wtSeparationSquared', lower=zero + (self.min_spacing)**2)
+        self.spacing_comp.x = problem.design_vars[topfarm.x_key]
+        self.spacing_comp.y = problem.design_vars[topfarm.y_key]
 
     def setup_as_penalty(self, problem, penalty=1e10):
         n_wt = problem.n_wt

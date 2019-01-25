@@ -7,33 +7,8 @@ import time
 
 
 class RandomSearchDriver(Driver):
-    """
-    Driver for a simple genetic algorithm.
-
-    Attributes
-    ----------
-    _concurrent_pop_size : int
-        Number of points to run concurrently when model is a parallel one.
-    _concurrent_color : int
-        Color of current rank when running a parallel model.
-    _desvar_idx : dict
-        Keeps track of the indices for each desvar, since GeneticAlgorithm seess an array of
-        design variables.
-    _ga : <GeneticAlgorithm>
-        Main genetic algorithm lies here.
-    _randomstate : np.random.RandomState, int
-         Random state (or seed-number) which controls the seed and random draws.
-    """
 
     def __init__(self, randomize_func, **kwargs):
-        """
-        Initialize the SimpleGADriver driver.
-
-        Parameters
-        ----------
-        **kwargs : dict of keyword arguments
-            Keyword arguments that will be mapped into the Driver options.
-        """
         self.randomize_func = randomize_func
         super().__init__(**kwargs)
 

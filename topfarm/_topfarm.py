@@ -39,23 +39,24 @@ class TopFarmProblem(Problem):
     def __init__(self, design_vars, cost_comp, driver=EasyScipyOptimizeDriver(),
                  constraints=[], plot_comp=NoPlot(), record_id=None,
                  expected_cost=1, ext_vars={}):
-        """
+        """Initialize TopFarmProblem
+
         Parameters
         ----------
         design_vars : dict or list of key-initial_value-tuples
-            Design variables for the problem.
-            Ex: {'x': [1,2,3], 'y':([3,2,1],0,1), 'z':([4,5,6],[4,5,4], [6,7,6])}
-            Ex: [('x', [1,2,3]), ('y',([3,2,1],0,1)), ('z',([4,5,6],[4,5,4], [6,7,6]))]
-            Ex: zip('xy', pos.T)
-            The keys (x, y, z) are the names of the design variable.
-            The values are either
-            - the initial value or
+            Design variables for the problem.\n
+            Ex: {'x': [1,2,3], 'y':([3,2,1],0,1), 'z':([4,5,6],[4,5,4], [6,7,6])}\n
+            Ex: [('x', [1,2,3]), ('y',([3,2,1],0,1)), ('z',([4,5,6],[4,5,4], [6,7,6]))]\n
+            Ex: zip('xy', pos.T)\n
+            The keys (x, y, z) are the names of the design variable.\n
+            The values are either\n
+            - the initial value or\n
             - a tuple of (initial value, lower bound, upper bound)
         cost_comp : ExplicitComponent or TopFarmProblem
             A cost component in the style of an OpenMDAO v2 ExplicitComponent.
             Pure python cost functions can be wrapped using ``CostModelComponent``
-            class in ``topfarm.cost_models.cost_model_wrappers``.
-            For nested problems, this is typically a TopFarmProblem
+            class in ``topfarm.cost_models.cost_model_wrappers``.\n
+            For nested problems, the cost comp_comp is typically a TopFarmProblem
         driver : openmdao Driver, optinal
             Driver used to solve the optimization driver. For an example, see the
             ``EasyScipyOptimizeDriver`` class in ``topfarm.easy_drivers``.
@@ -67,20 +68,20 @@ class TopFarmProblem(Problem):
             For no plotting, pass in the ``topfarm.plotting.NoPlot`` class.
         record_id : string "<record_id>:<case>", optional
             Identifier for the optimization. Allows a user to restart an
-            optimization where it left off.
+            optimization where it left off.\n
             record_id can be name (saves as recordings/<name>.pkl), abs or relative path
-            Case can be:
-            - "", "latest", "-1": Continue from latest
-            - "best": Continue from best case (minimum cost)
-            - "0": Start from scratch (initial position)
-            - "4": Start from case number 4
+            Case can be:\n
+            - "", "latest", "-1": Continue from latest\n
+            - "best": Continue from best case (minimum cost)\n
+            - "0": Start from scratch (initial position)\n
+            - "4": Start from case number 4\n
         expected_cost : int or float
             Used to scale the cost. This has influence on some drivers, e.g.
             SLSQP where it affects the step size
         ext_vars : dict or list of key-initial_value tuple
-            Used for nested problems to propagate variables from parent problem
-            Ex. {'type': [1,2,3]}
-            Ex. [('type', [1,2,3])]
+            Used for nested problems to propagate variables from parent problem\n
+            Ex. {'type': [1,2,3]}\n
+            Ex. [('type', [1,2,3])]\n
 
         Examples
         --------
@@ -167,6 +168,7 @@ class TopFarmProblem(Problem):
 
     @property
     def state(self):
+        """Return current state"""
         self.setup()
         state = {k: self[k] for k in self.design_vars}
         state.update({k: self[k] for k in self.ext_vars})
@@ -218,7 +220,22 @@ class TopFarmProblem(Problem):
                         raise w
 
     def evaluate(self, state={}, disp=False):
-        """Evaluate the cost model."""
+        """Evaluate the cost model.
+
+        Parameters
+        ----------
+        state : dict, optional
+            Initial state\n
+            Ex: {'x': [1,2,3], 'y':[3,2,1]}\n
+            The current state is used for unspecified variables
+        disp : bool, optional
+            if True, the time used for the optimization is printed
+
+        Returns
+        -------
+        Current cost : float
+        Current state : dict
+        """
         tmp_recorder = ListRecorder()
         self.driver.add_recorder(tmp_recorder)
         self.setup()
@@ -243,7 +260,23 @@ class TopFarmProblem(Problem):
         return res
 
     def optimize(self, state={}, disp=False):
-        """Run the optimization problem."""
+        """Run the optimization problem
+
+        Parameters
+        ----------
+        state : dict, optional
+            Initial state\n
+            Ex: {'x': [1,2,3], 'y':[3,2,1]}\n
+            The current state is used to unspecified variables
+        disp : bool, optional
+            if True, the time used for the optimization is printed
+
+        Returns
+        -------
+        Optimized cost : float
+        state : dict
+        recorder : TopFarmListRecorder or NestedTopFarmListRecorder
+        """
         self.load_recorder()
         self.update_state(state)
         if self.recorder.num_cases > 0:

@@ -6,6 +6,19 @@ import topfarm
 
 class XYBoundaryConstraint(Constraint):
     def __init__(self, boundary, boundary_type='convex_hull'):
+        """Initialize XYBoundaryConstraint
+
+        Parameters
+        ----------
+        boundary : array_like (n,2)
+            boundary coordinates
+        boundary_type : 'convex_hull', 'polygon', 'rectangle','square'
+            - 'convex_hull' (default): Convex hul around boundary points\n
+            - 'polygon': Polygon boundary (may be non convex). Less suitable for gradient-based optimization\n
+            - 'rectangle': Smallest axis-aligned rectangle covering the boundary points\n
+            - 'square': Smallest axis-aligned square covering the boundary points
+
+        """
         self.boundary = np.array(boundary)
         self.boundary_type = boundary_type
 
@@ -89,7 +102,9 @@ class BoundaryBaseComp(ConstraintComponent):
         partials['boundaryDistances', topfarm.y_key] = dy
 
     def plot(self, ax):
-        ax.plot(self.xy_boundary[:, 0].tolist() + [self.xy_boundary[0, 0]], self.xy_boundary[:, 1].tolist() + [self.xy_boundary[0, 1]], 'k')
+        """Plot boundary"""
+        ax.plot(self.xy_boundary[:, 0].tolist() + [self.xy_boundary[0, 0]],
+                self.xy_boundary[:, 1].tolist() + [self.xy_boundary[0, 1]], 'k')
 
 
 class ConvexBoundaryComp(BoundaryBaseComp):
@@ -114,14 +129,16 @@ class ConvexBoundaryComp(BoundaryBaseComp):
             range_ = (max_ - min_)
             x_c, y_c = min_ + range_ / 2
             r = range_.max() / 2
-            self.xy_boundary = np.array([(x_c - r, y_c - r), (x_c + r, y_c - r), (x_c + r, y_c + r), (x_c - r, y_c + r)])
+            self.xy_boundary = np.array([(x_c - r, y_c - r), (x_c + r, y_c - r),
+                                         (x_c + r, y_c + r), (x_c - r, y_c + r)])
         elif self.boundary_type == 'rectangle':
             min_ = xy_boundary.min(0)
             max_ = xy_boundary.max(0)
             range_ = (max_ - min_)
             x_c, y_c = min_ + range_ / 2
             r = range_ / 2
-            self.xy_boundary = np.array([(x_c - r[0], y_c - r[1]), (x_c + r[0], y_c - r[1]), (x_c + r[0], y_c + r[1]), (x_c - r[0], y_c + r[1])])
+            self.xy_boundary = np.array([(x_c - r[0], y_c - r[1]), (x_c + r[0], y_c - r[1]),
+                                         (x_c + r[0], y_c + r[1]), (x_c - r[0], y_c + r[1])])
         else:
             raise NotImplementedError("Boundary type '%s' is not implemented" % self.boundary_type)
 
@@ -320,9 +337,11 @@ class PolygonBoundaryComp(BoundaryBaseComp):
         py[use_xy2] = Y2[use_xy2]
 
         distance = d12.copy()
-        v = (px[use_xy1] - X[use_xy1]) * self.xy1_vec[0, np.where(use_xy1)[1]] + (py[use_xy1] - Y[use_xy1]) * self.xy1_vec[1, np.where(use_xy1)[1]]
+        v = (px[use_xy1] - X[use_xy1]) * self.xy1_vec[0, np.where(use_xy1)[1]] + \
+            (py[use_xy1] - Y[use_xy1]) * self.xy1_vec[1, np.where(use_xy1)[1]]
         sign_use_xy1 = np.choose(v >= 0, [-1, 1])
-        v = (px[use_xy2] - X[use_xy2]) * self.xy2_vec[0, np.where(use_xy2)[1]] + (py[use_xy2] - Y[use_xy2]) * self.xy2_vec[1, np.where(use_xy2)[1]]
+        v = (px[use_xy2] - X[use_xy2]) * self.xy2_vec[0, np.where(use_xy2)[1]] + \
+            (py[use_xy2] - Y[use_xy2]) * self.xy2_vec[1, np.where(use_xy2)[1]]
         sign_use_xy2 = np.choose(v >= 0, [-1, 1])
 
         d12[use_xy2]
@@ -366,6 +385,16 @@ class PolygonBoundaryComp(BoundaryBaseComp):
 
 class CircleBoundaryConstraint(Constraint):
     def __init__(self, center, radius):
+        """Initialize CircleBoundaryConstraint
+
+        Parameters
+        ----------
+        center : (float, float)
+            center position (x,y)
+        radius : int or float
+            circle radius
+        """
+
         self.center = np.array(center)
         self.radius = radius
 

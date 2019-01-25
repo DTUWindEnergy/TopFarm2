@@ -89,4 +89,17 @@ class EasySimpleGADriver(MySimpleGADriver):
 
 class EasyRandomSearchDriver(RandomSearchDriver):
     def __init__(self, randomize_func, max_iter=100, max_time=600, disp=False):
-        RandomSearchDriver.__init__(self, randomize_func=randomize_func, max_iter=max_iter, max_time=max_time, disp=disp)
+        """Easy initialization of RandomSearchDriver
+
+        Parameters
+        ----------
+        randomize_func : f(desvar_dict)
+            Function to randomize desired variables of desvar_dict
+        max_iter : int, optional
+            Maximum iterations
+        max_time : int, optional
+            Maximum time in seconds
+        disp : bool
+        """
+        RandomSearchDriver.__init__(self, randomize_func=randomize_func,
+                                    max_iter=max_iter, max_time=max_time, disp=disp)
