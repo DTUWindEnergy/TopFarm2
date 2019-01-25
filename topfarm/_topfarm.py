@@ -210,7 +210,6 @@ class TopFarmProblem(Problem):
                         tmp_recorder = ListRecorder()
                         self.driver.add_recorder(tmp_recorder)
                         Problem.final_setup(self)
-                        self.driver._rec_mgr._recorders.remove(tmp_recorder)
                     else:
                         Problem.final_setup(self)
                 except Warning as w:
@@ -218,6 +217,11 @@ class TopFarmProblem(Problem):
                         Problem.setup(self, check=True, mode='fwd')
                     else:
                         raise w
+                finally:
+                    try:
+                        self.driver._rec_mgr._recorders.remove(tmp_recorder)
+                    except Exception:
+                        pass
 
     def evaluate(self, state={}, disp=False):
         """Evaluate the cost model.
@@ -316,7 +320,7 @@ class TopFarmProblem(Problem):
         print("checking %s" % ", ".join(comp_name_lst))
         res = self.check_partials(includes=comp_name_lst, compact_print=True)
         for comp in comp_name_lst:
-            var_pair = list(res[comp].keys())
+            var_pair = [(x, dx) for x, dx in res[comp].keys() if x not in ['cost_comp_eval']]
             worst = var_pair[np.argmax([res[comp][k]['rel error'].forward for k in var_pair])]
             err = res[comp][worst]['rel error'].forward
             if err > tol:
@@ -340,14 +344,31 @@ class TopFarmProblem(Problem):
     def turbine_positions(self):
         return np.array([self[k] for k in [topfarm.x_key, topfarm.y_key]]).T
 
-    def smart_start(self, XX, YY, ZZ):
-        min_spacing = [c for c in self.model.constraint_components if isinstance(c, SpacingComp)][0].min_spacing
-        X, Y, Z = XX.flatten(), YY.flatten(), ZZ.flatten()
+    def smart_start(self, XX, YY, ZZ, radius=None):
+        assert XX.shape == YY.shape
+        if len(XX.shape) == 1:
+            XX, YY = np.meshgrid(XX, YY)
+        ZZ_is_func = hasattr(ZZ, '__call__')
+        spacing_comp_lst = [c for c in self.model.constraint_components if isinstance(c, SpacingComp)]
+        if len(spacing_comp_lst) == 1:
+            min_spacing = spacing_comp_lst[0].min_spacing
+        else:
+            min_spacing = 0
+        X, Y = XX.flatten(), YY.flatten()
+        if not ZZ_is_func:
+            Z = ZZ.flatten()
+        else:
+            Z = ZZ
         for comp in self.model.constraint_components:
             if isinstance(comp, BoundaryBaseComp):
-                mask = (comp.distances(X, Y).min(1) >= 0)
-                X, Y, Z = X[mask], Y[mask], Z[mask]
-        x, y = smart_start(X, Y, Z, self.n_wt, min_spacing)
+                dist = comp.distances(X, Y)
+                if len(dist.shape) == 2:
+                    dist = dist.min(1)
+                mask = dist >= 0
+                X, Y = X[mask], Y[mask]
+                if not ZZ_is_func:
+                    Z = Z[mask]
+        x, y = smart_start(X, Y, Z, self.n_wt, min_spacing, radius)
         self.update_state({topfarm.x_key: x, topfarm.y_key: y})
         return x, y
 

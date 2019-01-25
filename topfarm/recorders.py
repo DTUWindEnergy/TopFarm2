@@ -283,8 +283,10 @@ class TopFarmListRecorder(ListRecorder):
         n_wt = x.shape[1]
         from matplotlib import animation
 
-        color_cycle = iter(matplotlib.rcParams['axes.prop_cycle'])
-        colors = [next(color_cycle)['color'] for _ in range(n_wt)]
+        # color_cycle = iter(matplotlib.rcParams['axes.prop_cycle'])
+        colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
+                  '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+        colors = colors * (n_wt // 10 + 1)
 
         fig, ax = plt.subplots()
         ln = [plt.plot([], [], '.-', color=c, animated=True)[0] for c in colors]

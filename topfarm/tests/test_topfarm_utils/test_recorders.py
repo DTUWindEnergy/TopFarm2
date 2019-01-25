@@ -19,6 +19,7 @@ from topfarm.plotting import PlotComp, NoPlot, XYPlotComp
 from topfarm.constraint_components.boundary import XYBoundaryConstraint
 from topfarm.constraint_components.spacing import SpacingConstraint
 from topfarm._topfarm import TopFarmProblem
+from topfarm.tests.test_fuga.test_pyfuga import get_fuga
 
 
 @pytest.fixture
@@ -206,14 +207,14 @@ def test_TopFarmListRecorderLoad_Nothing(fn):
 @pytest.mark.parametrize('load_case,n_rec,n_fev', [('', 53, 1),
                                                    ('none', 52, 52),
                                                    (40, 73, 33)])
-def test_TopFarmListRecorder_continue(tf_generator, load_case, n_rec, n_fev):
+def test_TopFarmListRecorder_continue(tf_generator, load_case, n_rec, n_fev, get_fuga):
 
     D = 80.0
     D2 = 2 * D + 10
     init_pos = np.array([(0, 2 * D), (0, 0), (0, -2 * D)])
     init_pos[:, 0] += [-40, 0, 40]
 
-    pyFuga = test_pyfuga.get_fuga()(init_pos[:, 0], init_pos[:, 1], wind_atlas='MyFarm/north_pm45_only.lib')
+    pyFuga = get_fuga(init_pos[:, 0], init_pos[:, 1], wind_atlas='MyFarm/north_pm45_only.lib')
     boundary = [(-D2, -D2), (D2, D2)]
     plot_comp = XYPlotComp()
     plot_comp = NoPlot()
@@ -231,7 +232,7 @@ def test_TopFarmListRecorder_continue(tf_generator, load_case, n_rec, n_fev):
     # Create test file:
     # 1) delete file "test_files/recordings/test_TopFarmListRecorder_continue"
     # 2) Uncomment line below, run and recomment
-    # if load_case=="": recorder.save() # create test file
+    # if load_case == "": recorder.save()  # create test file
     npt.assert_equal(recorder.driver_cases.num_cases, n_rec)
     npt.assert_equal(tf.driver.result['nfev'], n_fev)
 

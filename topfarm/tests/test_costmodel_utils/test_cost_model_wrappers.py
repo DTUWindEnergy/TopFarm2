@@ -5,6 +5,7 @@ from topfarm.constraint_components.spacing import SpacingConstraint
 from topfarm.constraint_components.boundary import XYBoundaryConstraint
 from topfarm import TopFarmProblem
 from topfarm.easy_drivers import EasyScipyOptimizeDriver
+from topfarm.plotting import NoPlot, XYPlotComp
 from topfarm.tests import npt
 
 boundary = [(0, 0), (6, 0), (6, -10), (0, -10)]  # turbine boundaries
@@ -14,10 +15,11 @@ min_spacing = 2  # min distance between turbines
 optimal = np.array([[3, -3], [7, -7], [4, -3], [3, -7]])  # desired turbine layouts
 
 
-def get_tf(cost_comp):
+def get_tf(cost_comp, plot_comp=NoPlot()):
     return TopFarmProblem(
         dict(zip('xy', initial.T)),
         cost_comp=cost_comp,
+        plot_comp=plot_comp,
         constraints=[SpacingConstraint(min_spacing), XYBoundaryConstraint(boundary)],
         driver=EasyScipyOptimizeDriver(disp=False))
 
@@ -56,6 +58,13 @@ def testAEPCostModelComponent():
     tf = get_tf(AEPCostModelComponent(['x', 'y'], 4, aep_cost, aep_gradients))
     tf.optimize()
     np.testing.assert_array_almost_equal(tf.turbine_positions[:, :2], optimal_with_constraints, 5)
+
+
+def test_maxiter_CostModelComponent():
+    tf = get_tf(AEPCostModelComponent(['x', 'y'], 4, aep_cost, aep_gradients, max_eval=10))
+    cost, state, recorder = tf.optimize()
+    assert 10 <= tf.cost_comp.counter <= 11, tf.cost_comp.counter
+    npt.assert_array_equal(recorder['AEP'][tf.cost_comp.n_func_eval], recorder['AEP'][tf.cost_comp.n_func_eval:])
 
 
 def testCostModelComponentDiffShapeInput():

@@ -450,8 +450,10 @@ class CircleBoundaryComp(PolygonBoundaryComp):
         BoundaryBaseComp.__init__(self, n_wt, xy_boundary)
         self.zeros = np.zeros(self.n_wt)
 
-    def plot(self, ax):
+    def plot(self, ax=None):
         from matplotlib.pyplot import Circle
+        import matplotlib.pyplot as plt
+        ax = ax or plt.gca()
         circle = Circle(self.center, self.radius, color='k', fill=False)
         ax.add_artist(circle)
 

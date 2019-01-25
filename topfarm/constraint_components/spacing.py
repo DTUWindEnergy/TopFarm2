@@ -117,8 +117,10 @@ class SpacingComp(ConstraintComponent):
                 k += 1
         return dSdx, dSdy
 
-    def plot(self, ax):
+    def plot(self, ax=None):
         from matplotlib.pyplot import Circle
+        import matplotlib.pyplot as plt
+        ax = ax or plt.gca()
         for x, y in zip(self.x, self.y):
             circle = Circle((x, y), self.min_spacing / 2, color='k', ls='--', fill=False)
             ax.add_artist(circle)

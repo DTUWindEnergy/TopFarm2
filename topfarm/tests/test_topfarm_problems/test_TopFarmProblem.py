@@ -221,6 +221,7 @@ def test_smart_start():
     ZZ = np.sin(XX) + np.sin(YY)
     min_spacing = 2.1
     tf = xy3tb.get_tf(constraints=[SpacingConstraint(min_spacing)])
+    np.random.seed(0)
     tf.smart_start(XX, YY, ZZ)
     npt.assert_array_almost_equal(tf.turbine_positions, np.array([xs_ref, ys_ref]).T)
     if 0:
@@ -243,7 +244,34 @@ def test_smart_start_boundary():
     YY, XX = np.meshgrid(y, x)
     ZZ = np.sin(XX) + np.sin(YY)
     min_spacing = 2.1
-    tf = xy3tb.get_tf(constraints=[SpacingConstraint(min_spacing), XYBoundaryConstraint([(0, 0), (5, 3), (5, 5), (0, 5)])])
+    tf = xy3tb.get_tf(constraints=[SpacingConstraint(min_spacing),
+                                   XYBoundaryConstraint([(0, 0), (5, 3), (5, 5), (0, 5)])])
+    tf.smart_start(XX, YY, ZZ)
+    if 0:
+        import matplotlib.pyplot as plt
+        plt.contourf(XX, YY, ZZ, 100)
+        plt.plot(tf.xy_boundary[:, 0], tf.xy_boundary[:, 1], 'k')
+        for x, y in tf.turbine_positions:
+            circle = plt.Circle((x, y), min_spacing / 2, color='b', fill=False)
+            plt.gcf().gca().add_artist(circle)
+            plt.plot(x, y, 'rx')
+
+        plt.axis('equal')
+        plt.show()
+    npt.assert_array_almost_equal(tf.turbine_positions, np.array([xs_ref, ys_ref]).T)
+
+
+def test_smart_start_polygon_boundary():
+    xs_ref = [1.6, 1.6, 3.6]
+    ys_ref = [1.6, 3.7, 2.3]
+
+    x = np.arange(0, 5.1, 0.1)
+    y = np.arange(0, 5.1, 0.1)
+    YY, XX = np.meshgrid(y, x)
+    ZZ = np.sin(XX) + np.sin(YY)
+    min_spacing = 2.1
+    tf = xy3tb.get_tf(constraints=[SpacingConstraint(min_spacing),
+                                   XYBoundaryConstraint([(0, 0), (5, 3), (5, 5), (0, 5)], 'polygon')])
     tf.smart_start(XX, YY, ZZ)
     if 0:
         import matplotlib.pyplot as plt
