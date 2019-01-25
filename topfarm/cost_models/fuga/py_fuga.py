@@ -3,8 +3,8 @@ import pytest
 import numpy as np
 from topfarm.cost_models.cost_model_wrappers import AEPCostModelComponent
 try:
-    from topfarm.cost_models.fuga.Colonel.py_colonel import PyColonel
-    from topfarm.cost_models.fuga.Colonel.py_colonel.py_colonel_exe import colonel_path
+    from py_colonel import PyColonel
+    from py_colonel.py_colonel_exe import colonel_path
     fuga_path = colonel_path
 except ImportError:
     PyColonel = object

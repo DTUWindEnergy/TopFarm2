@@ -11,37 +11,38 @@ from topfarm.constraint_components.spacing import SpacingConstraint
 from topfarm._topfarm import TopFarmProblem
 
 
+def get_InitialXYZOptimizationProblem(driver,
+                                      min_spacing=None,
+                                      turbineXYZ=[[0, 0, 0],
+                                                  [2, 2, 2]],
+                                      xy_boundary=[(10, 6), (11, 8)],
+                                      xy_boundary_type='rectangle',
+                                      z_boundary=[3, 4]):
+    cost_comp = DummyCost([(1, 0, 4),
+                           (0, 1, 3)], ['x', 'y', 'z'])
+    turbineXYZ = np.array(turbineXYZ)
+    desvar = dict(zip('xy', turbineXYZ.T))
+    desvar['z'] = (turbineXYZ[:, 2], z_boundary[0], z_boundary[1])
+    constraints = [XYBoundaryConstraint(xy_boundary, xy_boundary_type)]
+    if min_spacing:
+        constraints.append(SpacingConstraint(min_spacing))
+
+    return TopFarmProblem(
+        desvar,
+        cost_comp,
+        constraints=constraints,
+        driver=driver)
+
+
 @pytest.fixture
 def get_tf():
-    def get_InitialXYZOptimizationProblem(driver,
-                                          min_spacing=None,
-                                          turbineXYZ=[[0, 0, 0],
-                                                      [2, 2, 2]],
-                                          xy_boundary=[(10, 6), (11, 8)],
-                                          xy_boundary_type='rectangle',
-                                          z_boundary=[3, 4]):
-        cost_comp = DummyCost([(1, 0, 4),
-                               (0, 1, 3)], ['x', 'y', 'z'])
-        turbineXYZ = np.array(turbineXYZ)
-        desvar = dict(zip('xy', turbineXYZ.T))
-        desvar['z'] = (turbineXYZ[:, 2], z_boundary[0], z_boundary[1])
-        constraints = [XYBoundaryConstraint(xy_boundary, xy_boundary_type)]
-        if min_spacing:
-            constraints.append(SpacingConstraint(min_spacing))
-
-        return TopFarmProblem(
-            desvar,
-            cost_comp,
-            constraints=constraints,
-            driver=driver)
-
     return get_InitialXYZOptimizationProblem
 
 
 def DOE_lst():
-    return get_tf()(xy_boundary=[(0, 0), (10, 0), (10, 10)],
-                    xy_boundary_type='convex_hull',
-                    driver=UniformGenerator(10, seed=0)).get_DOE_list()
+    return get_InitialXYZOptimizationProblem(xy_boundary=[(0, 0), (10, 0), (10, 10)],
+                                             xy_boundary_type='convex_hull',
+                                             driver=UniformGenerator(10, seed=0)).get_DOE_list()
 
 
 @pytest.mark.parametrize('driver', [ConstrainedGenerator(UniformGenerator(10, seed=0)),

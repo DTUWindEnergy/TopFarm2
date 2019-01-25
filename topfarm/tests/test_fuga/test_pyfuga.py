@@ -17,31 +17,35 @@ from topfarm._topfarm import TopFarmProblem
 
 
 def check_lib_exists():
-    if not os.path.isdir(os.path.dirname(fuga.__file__) + "/Colonel/py_colonel/"):
+    try:
+        import py_colonel
+    except ModuleNotFoundError:
         pytest.xfail("Colonel submodule not found\n")
-    from topfarm.cost_models.fuga.Colonel.py_colonel.py_colonel_lib import fugalib_path
+    from py_colonel.py_colonel_lib import fugalib_path
     if os.path.isfile(fugalib_path) is False:
         pytest.xfail("Fugalib '%s' not found\n" % fugalib_path)
 
 
+def _fuga(tb_x=[423974, 424033], tb_y=[6151447, 6150889], wind_atlas='MyFarm/north_pm15_only.lib'):
+    check_lib_exists()
+    from topfarm.cost_models.fuga.py_fuga import PyFuga, fuga_path
+    pyFuga = PyFuga()
+    pyFuga.setup(farm_name='Horns Rev 1',
+                 turbine_model_path=fuga_path + 'LUTs-T/', turbine_model_name='Vestas_V80_(2_MW_offshore)[h=70.00]',
+                 tb_x=tb_x, tb_y=tb_y,
+                 mast_position=(0, 0, 70), z0=0.03, zi=400, zeta0=0,
+                 farms_dir=fuga_path + 'LUTs-T/Farms/', wind_atlas_path=wind_atlas, climate_interpolation=False)
+    return pyFuga
+
+
 @pytest.fixture
 def get_fuga():
-    def _fuga(tb_x=[423974, 424033], tb_y=[6151447, 6150889], wind_atlas='MyFarm/north_pm15_only.lib'):
-        check_lib_exists()
-        from topfarm.cost_models.fuga.py_fuga import PyFuga, fuga_path
-        pyFuga = PyFuga()
-        pyFuga.setup(farm_name='Horns Rev 1',
-                     turbine_model_path=fuga_path + 'LUTs-T/', turbine_model_name='Vestas_V80_(2_MW_offshore)[h=70.00]',
-                     tb_x=tb_x, tb_y=tb_y,
-                     mast_position=(0, 0, 70), z0=0.03, zi=400, zeta0=0,
-                     farms_dir=fuga_path + 'LUTs-T/Farms/', wind_atlas_path=wind_atlas, climate_interpolation=False)
-        return pyFuga
     return _fuga
 
 
 @pytest.fixture
 def pyFuga():
-    return get_fuga()()
+    return _fuga()
 
 
 def _test_parallel(i):
@@ -49,13 +53,14 @@ def _test_parallel(i):
     print(pyFuga.stdout_filename, i)
     for _ in range(1):
         print(threading.current_thread(), i)
-        np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0, 0], [0, 200]]).T), [12.124883, 14.900544, 0.3458, 0.813721])
+        np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0, 0], [0, 200]]).T), [
+                                             12.124883, 14.900544, 0.3458, 0.813721])
         time.sleep(1)
 
 
 def testCheckVersion(get_fuga):
     check_lib_exists()
-    from topfarm.cost_models.fuga.Colonel.py_colonel.py_colonel_lib import fugalib_path, PascalDLL
+    from py_colonel.py_colonel_lib import fugalib_path, PascalDLL
     from topfarm.cost_models.fuga.py_fuga import fuga_path
     lib = PascalDLL(fuga_path + "FugaLib/FugaLib.%s" % ('so', 'dll')[os.name == 'nt'])
     with pytest.raises(Exception, match="This version of FugaLib supports interface version "):
@@ -77,7 +82,8 @@ def testSetup(get_fuga):
 
 def testAEP_one_tb(get_fuga):
     pyFuga = get_fuga([0], [0])
-    np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0], [0]]).T), [8.2896689155874324, 8.2896689155874324, 0.472841, 1.])
+    np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0], [0]]).T), [
+                                         8.2896689155874324, 8.2896689155874324, 0.472841, 1.])
     pyFuga.cleanup()
 
 
@@ -87,13 +93,17 @@ def testAEP(pyFuga):
     np.testing.assert_array_almost_equal(pyFuga.get_aep_gradients(np.array([[0, 1000], [0, 0]]).T), [[0, 0],
                                                                                                      [0, 0],
                                                                                                      [1.047718e-002, 9.801237e-003]])
-    np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0, 0], [0, 200]]).T), [14.472994, 16.579338, 0.412768, 0.872954])
+    np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0, 0], [0, 200]]).T), [
+                                         14.472994, 16.579338, 0.412768, 0.872954])
     np.testing.assert_array_almost_equal(pyFuga.get_aep_gradients(np.array([[0, 0], [0, 200]]).T), [[0, 0],
-                                                                                                    [-7.02042144e-03, 7.02042144e-03],
+                                                                                                    [-7.02042144e-03,
+                                                                                                        7.02042144e-03],
                                                                                                     [3.099291e-02, -1.459773e-02]])
-    np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0, 200], [0, 200]]).T), [16.543667, 16.579338, 0.471824, 0.997848])
+    np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0, 200], [0, 200]]).T), [
+                                         16.543667, 16.579338, 0.471824, 0.997848])
     np.testing.assert_array_almost_equal(pyFuga.get_aep_gradients(np.array([[0, 200], [0, 200]]).T), [[-1.679974e-05, 1.679974e-05],
-                                                                                                      [7.255895e-06, -7.255895e-06],
+                                                                                                      [7.255895e-06, -
+                                                                                                          7.255895e-06],
                                                                                                       [2.002942e-02, 3.759327e-06]])
     pyFuga.cleanup()
 

@@ -4,10 +4,9 @@ Created on 20. apr. 2018
 @author: mmpe
 '''
 import pytest
-from fusedwake.WindFarm import WindFarm
-from fusedwake.gcl.interface import GCL
+
+
 import numpy as np
-from fusedwake.noj.interface import NOJ
 
 
 class FusedWakeModel(object):
@@ -20,6 +19,7 @@ class FusedWakeModel(object):
         yml: str, optional
             A WindIO `yml` file containing the description of the farm
         """
+        from fusedwake.WindFarm import WindFarm
         self.windFarm = WindFarm(yml=yml)
         self.version = version or self.version
         self.wake_model = self.wake_model_cls(WF=self.windFarm, version=self.version, **kwargs)
@@ -41,18 +41,23 @@ class FusedWakeModel(object):
 
 
 class FusedWakeGCLWakeModel(FusedWakeModel):
+    from fusedwake.gcl.interface import GCL
     wake_model_cls = GCL
     version = 'fort_gcl'
 
 
 class FusedWakeNOJWakeModel(FusedWakeModel):
+    from fusedwake.noj.interface import NOJ
     wake_model_cls = NOJ
     version = 'fort_noj'
 
 
 def main():
     if __name__ == '__main__':
-        import fusedwake
+        try:
+            import fusedwake
+        except ModuleNotFoundError:
+            return
         import os
         import matplotlib.pyplot as plt
         hornsrev_yml = os.path.dirname(fusedwake.__file__) + "/../examples/hornsrev.yml"
