@@ -60,11 +60,11 @@ def make_doc_notebooks(notebooks):
         t = '[Try this yourself](https://colab.research.google.com/github/DTUWindEnergy/TopFarm2/blob/master/docs/notebooks/%s.ipynb) (requires google account)'
         nb.insert_markdown_cell(1, t % name)
         code = """%%capture
-# Install PyWake if needed
+# Install Topfarm if needed
 try:
-    import py_wake
+    import topfarm
 except ModuleNotFoundError:
-    !pip install py_wake"""
+    !pip install topfarm"""
         nb.insert_code_cell(2, code)
         nb.save(dst_path + name + ".ipynb")
 
