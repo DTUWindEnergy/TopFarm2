@@ -5,13 +5,17 @@ Setup file for Topfarm2
 
 
 import os
+from git_utils import write_vers
 from setuptools import setup, find_packages
+
+repo = os.path.dirname(__file__)
+version = write_vers(vers_file='topfarm/__init__.py', repo=repo, skip_chars=1)
 
 def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 setup(name='topfarm', 
-      version='2.0.3',  
+      version=version,  
       description='Topfarm - Wind farm optimization using OpenMDAO',
 	  long_description=read('README'),
       url='https://gitlab.windenergy.dtu.dk/TOPFARM/topfarm2',

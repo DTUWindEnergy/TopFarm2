@@ -1,8 +1,8 @@
 from ._topfarm import *
 from .deprectated_topfarm_problems import *
 
-__version__ = '2.0.3'
-__release__ = '2.0.3'
+__version__ = 'filled by setup.py'
+__release__ = 'filled by setup.py'
 
 
 x_key = 'x'
