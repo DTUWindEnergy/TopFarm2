@@ -26,7 +26,7 @@ setup(name='topfarm',
       install_requires=[
         'matplotlib',  # for plotting
         'numpy',  # for numerical calculations
-        'openmdao==2.3.1',  # for optimization
+        'openmdao==2.5.0',  # for optimization
         'networkx==2.1', # for avoiding a warning/bug
         'pytest',  # for testing
         'pytest-cov',  # for calculating coverage

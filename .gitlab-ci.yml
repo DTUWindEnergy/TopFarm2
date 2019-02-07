@@ -33,8 +33,8 @@ test_topfarm_windows:  # name the job what we like
   stage:  # build, test, deploy defined by default [2]
     test
   script:  # runs on windows machine due to tag below
-  - c:/Anaconda3/envs/pyTopfarm/scripts/pip install -e .
-  - c:/Anaconda3/envs/pyTopfarm/python.exe -m pytest --cov-report term-missing:skip-covered --cov=topfarm --cov-config .coveragerc --ignore=topfarm/cost_models/fuga/Colonel
+  - c:/Anaconda3/envs/pyTopfarm_openmdao_2_5/scripts/pip install -e .
+  - c:/Anaconda3/envs/pyTopfarm_openmdao_2_5/python.exe -m pytest --cov-report term-missing:skip-covered --cov=topfarm --cov-config .coveragerc --ignore=topfarm/cost_models/fuga/Colonel
   tags:  # tag for shared runner on windows machine
   - CPAV_old_PC
 

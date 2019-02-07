@@ -4,7 +4,7 @@ Created on 17. jul. 2018
 @author: mmpe
 '''
 from topfarm.recorders import ListRecorder, TopFarmListRecorder, split_record_id,\
-    recordid2filename
+    recordid2filename, _get_source_system, CaseTable
 import numpy as np
 from openmdao.drivers.doe_generators import ListGenerator
 import pytest
@@ -66,7 +66,25 @@ def test_ListRecorder():
            [-1.25, 7.84, 145.4481]]
     prob.driver = DOEDriver(ListGenerator([[('x', xy[0]), ('y', xy[1])] for xy in xyf]))
     recorder = ListRecorder()
+    recorder._initialize_database()
+    recorder._cleanup_abs2meta()
+    recorder.record_metadata_driver(None)
+    recorder.record_iteration_problem(None, None, None)
+    recorder.record_iteration_system(None, None, None)
+    recorder.record_iteration_solver(None, None, None)
+    recorder.record_viewer_data(None)
+    recorder.record_metadata_solver(None)
+    recorder.record_derivatives_driver(None, None, None)
+    recorder.shutdown()
+    _get_source_system('')
+    ct = CaseTable(None, None, None, None, None, None, None, None, None)
+    ct.count()
+    ct.list_cases()
+
     prob.driver.add_recorder(recorder)
+    prob.driver.recording_options['record_desvars'] = True
+    prob.driver.recording_options['includes'] = ['*']
+    prob.driver.recording_options['record_inputs'] = True
 
     prob.setup()
     prob.run_driver()
@@ -74,6 +92,16 @@ def test_ListRecorder():
 
     cases = recorder.driver_cases
     assert cases.num_cases == 4
+
+    recorder._driver_cases.get_cases()
+    recorder._driver_cases.get_case(0)
+    recorder._driver_cases._get_iteration_coordinate(None)
+    recorder._driver_cases._load_cases()
+    recorder._driver_cases.list_sources()
+    recorder._driver_cases._get_source('')
+    recorder._driver_cases._get_row_source(None)
+    recorder._driver_cases._get_first(None)
+
     npt.assert_array_equal(recorder.get('counter'), range(1, 5))
     npt.assert_array_equal(recorder['counter'], range(1, 5))
 
@@ -204,9 +232,9 @@ def test_TopFarmListRecorderLoad_Nothing(fn):
     assert rec.num_cases == 0
 
 
-@pytest.mark.parametrize('load_case,n_rec,n_fev', [('', 53, 1),
-                                                   ('none', 52, 52),
-                                                   (40, 73, 33)])
+@pytest.mark.parametrize('load_case,n_rec,n_fev', [('', 54, 1),
+                                                   ('none', 53, 52),
+                                                   (40, 74, 33)])
 def test_TopFarmListRecorder_continue(tf_generator, load_case, n_rec, n_fev, get_fuga):
 
     D = 80.0

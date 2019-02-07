@@ -16,8 +16,9 @@ def test_spacing():
 
 
 def test_spacing_as_penalty():
+    driver = SimpleGADriver()
     tf = xy3tb.get_tf(constraints=[SpacingConstraint(2)],
-                      driver=SimpleGADriver())
+                      driver=driver)
 
     # check normal result if spacing constraint is satisfied
     assert tf.evaluate()[0] == 45

@@ -210,7 +210,7 @@ class RandomSearchDriver(Driver):
 def randomize_turbine_type(desvar_dict, i_wt=None):
     types, lbound, ubound = desvar_dict[topfarm.type_key]
     i_wt = i_wt or np.random.randint(len(types))
-    types[i_wt] = np.random.random_integers(lbound[i_wt], ubound[i_wt])
+    types[i_wt] = np.random.randint(lbound[i_wt], ubound[i_wt] + 1)
     return desvar_dict
 
 

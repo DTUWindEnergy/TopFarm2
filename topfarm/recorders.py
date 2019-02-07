@@ -1,19 +1,49 @@
-from openmdao.recorders.base_recorder import BaseRecorder
-from openmdao.recorders.cases import BaseCases
-from openmdao.recorders.case import DriverCase
+from openmdao.recorders.case_recorder import CaseRecorder
 from openmdao.core.driver import Driver
 from openmdao.core.system import System
 from openmdao.utils.record_util import values_to_array
+from openmdao.recorders.case import Case
 import numpy as np
-import matplotlib
 import os
 import pickle
 import topfarm
+from collections import OrderedDict
+import re
+from copy import deepcopy
 
 
-class ListRecorder(BaseRecorder):
-    def __init__(self):
-        BaseRecorder.__init__(self)
+def convert_to_list(vals):
+    """
+    Recursively convert arrays, tuples, and sets to lists.
+
+    Parameters
+    ----------
+    vals : numpy.array or list or tuple
+        the object to be converted to a list
+
+    Returns
+    -------
+    list :
+        The converted list.
+    """
+    if isinstance(vals, np.ndarray):
+        return convert_to_list(vals.tolist())
+    elif isinstance(vals, (list, tuple, set)):
+        return [convert_to_list(item) for item in vals]
+    else:
+        return vals
+
+
+class ListRecorder(CaseRecorder):
+    def __init__(self, filepath=None, append=False, pickle_version=2, record_viewer_data=True):
+        self.connection = None
+        self._record_viewer_data = record_viewer_data
+        self.format_version = 0
+        self._record_on_proc = True
+        self._database_initialized = False
+        self._pickle_version = pickle_version
+        self.filename = filepath
+        self._filepath = filepath
         self.driver_iteration_dict = {}
         self.iteration_coordinate_lst = []
         self._abs2prom = {'input': {}, 'output': {}}
@@ -23,6 +53,47 @@ class ListRecorder(BaseRecorder):
         self.scaling_vecs = None
         self.user_options = None
         self.dtypes = []
+        self.global_iterations = []
+        self.problem_metadata = {'abs2prom': self._abs2prom,
+                                 'connections_list': [],
+                                 'tree': [],
+                                 'variables': []}
+        super(ListRecorder, self).__init__(record_viewer_data)
+
+    def _initialize_database(self):
+        pass
+
+    def _cleanup_abs2meta(self):
+        pass
+
+    def _cleanup_var_settings(self, var_settings):
+        """
+        Convert all var_settings variable properties to a form that can be dumped as JSON.
+
+        Parameters
+        ----------
+        var_settings : dict
+            Dictionary mapping absolute variable names to variable settings.
+
+        Returns
+        -------
+        var_settings : dict
+            Dictionary mapping absolute variable names to var settings that are JSON compatible.
+        """
+        # otherwise we trample on values that are used elsewhere
+        var_settings = deepcopy(var_settings)
+        for name in var_settings:
+            for prop in var_settings[name]:
+                val = var_settings[name][prop]
+                if isinstance(val, np.int8) or isinstance(val, np.int16) or\
+                   isinstance(val, np.int32) or isinstance(val, np.int64):
+                    var_settings[name][prop] = val.item()
+                elif isinstance(val, tuple):
+                    var_settings[name][prop] = [int(v) for v in val]
+                elif isinstance(val, np.ndarray):
+                    var_settings[name][prop] = convert_to_list(var_settings[name][prop])
+
+        return var_settings
 
     def startup(self, recording_requester):
         """
@@ -86,17 +157,28 @@ class ListRecorder(BaseRecorder):
             if name in states:
                 self._abs2meta[name]['explicit'] = False
 
+        var_settings = {}
+        var_settings.update(desvars)
+        var_settings.update(objectives)
+        var_settings.update(constraints)
+        var_settings = self._cleanup_var_settings(var_settings)
+
     @property
     def num_cases(self):
         return len(self.iteration_coordinate_lst)
 
     @property
     def driver_cases(self):
-        self._driver_cases = DriverCases(self.driver_iteration_dict, self.dtypes, self._abs2prom,
-                                         self._abs2meta, self._prom2abs)
+        voi_meta = self.problem_metadata['variables']
+
+        self._driver_cases = DriverCases(self._filepath, self.format_version,
+                                         self.global_iterations,
+                                         self._prom2abs, self._abs2prom,
+                                         self._abs2meta, voi_meta,
+                                         self.driver_iteration_dict,
+                                         self.dtypes)
         self._driver_cases._case_keys = self.iteration_coordinate_lst
         self._driver_cases.num_cases = len(self._driver_cases._case_keys)
-        self._driver_metadata = self.model_viewer_data
         return self._driver_cases
 
     def get(self, key):
@@ -115,8 +197,7 @@ class ListRecorder(BaseRecorder):
                               list(self._prom2abs['input']) + list(self._prom2abs['output'])))
 
     def record_metadata_driver(self, recording_requester):
-        self.driver_class = type(recording_requester).__name__
-        self.model_viewer_data = recording_requester._model_viewer_data
+        pass
 
     def record_metadata_system(self, recording_requester):
         """
@@ -143,6 +224,7 @@ class ListRecorder(BaseRecorder):
             Dictionary containing execution metadata.
         """
         input_, output = [values_to_array(data[n]) for n in ['in', 'out']]
+        self.global_iterations.append(('driver', len(output), str(recording_requester)))
         meta_fields = [('counter', self._counter),
                        ('iteration_coordinate', self._iteration_coordinate),
                        ('timestamp', metadata['timestamp']),
@@ -173,6 +255,27 @@ class ListRecorder(BaseRecorder):
                 #  assert np.all(lst[-1] == v)
                 pass
 
+    def record_iteration_problem(self, recording_requester, data, metadata):
+        pass
+
+    def record_iteration_system(self, recording_requester, data, metadata):
+        pass
+
+    def record_iteration_solver(self, recording_requester, data, metadata):
+        pass
+
+    def record_viewer_data(self, model_viewer_data, key='Driver'):
+        pass
+
+    def record_metadata_solver(self, recording_requester):
+        pass
+
+    def record_derivatives_driver(self, recording_requester, data, metadata):
+        pass
+
+    def shutdown(self):
+        pass
+
     def save(self, filename):
         d = {'driver_iteration_dict': self.driver_iteration_dict,
              'iteration_coordinate_lst': self.iteration_coordinate_lst,
@@ -180,8 +283,6 @@ class ListRecorder(BaseRecorder):
              '_prom2abs': self._prom2abs,
              '_abs2meta': self._abs2meta,
              'dtypes': self.dtypes,
-             'driver_class': self.driver_class,
-             'model_viewer_data': self.model_viewer_data,
              'scaling_vecs': self.scaling_vecs,
              'user_options': self.user_options
              }
@@ -206,17 +307,291 @@ class ListRecorder(BaseRecorder):
         return self
 
 
-class DriverCases(BaseCases):
+# regular expression used to determine if a node in an iteration coordinate represents a system
+_coord_system_re = re.compile('(_solve_nonlinear|_apply_nonlinear)$')
+
+# Regular expression used for splitting iteration coordinates, removes separator and iter counts
+_coord_split_re = re.compile('\|\\d+\|*')
+
+
+def _get_source_system(iteration_coordinate):
+    """
+    Get pathname of system that is the source of the iteration.
+
+    Parameters
+    ----------
+    iteration_coordinate : str
+        The full unique identifier for this iteration.
+
+    Returns
+    -------
+    str
+        The pathname of the system that is the source of the iteration.
+    """
+    path = []
+    parts = _coord_split_re.split(iteration_coordinate)
+    for part in parts:
+        if (_coord_system_re.search(part) is not None):
+            if ':' in part:
+                # get rid of 'rank#:'
+                part = part.split(':')[1]
+            path.append(part.split('.')[0])
+
+    # return pathname of the system
+    return '.'.join(path)
+
+
+class CaseTable(object):
+    """
+    Base class for wrapping case tables in a recording database.
+
+    Attributes
+    ----------
+    _filename : str
+        The name of the recording file from which to instantiate the case reader.
+    _format_version : int
+        The version of the format assumed when loading the file.
+    _table_name : str
+        The name of the table in the database.
+    _index_name : str
+        The name of the case index column in the table.
+    _global_iterations : list
+        List of iteration cases and the table and row in which they are found.
+    _abs2prom : {'input': dict, 'output': dict}
+        Dictionary mapping absolute names to promoted names.
+    _abs2meta : dict
+        Dictionary mapping absolute variable names to variable metadata.
+    _prom2abs : {'input': dict, 'output': dict}
+        Dictionary mapping promoted names to absolute names.
+    _voi_meta : dict
+        Dictionary mapping absolute variable names to variable settings.
+    _sources : list
+        List of sources of cases in the table.
+    _keys : list
+        List of keys of cases in the table.
+    _cases : dict
+        Dictionary mapping keys to cases that have already been loaded.
+    _global_iterations : list
+        List of iteration cases and the table and row in which they are found.
+    """
+
+    def __init__(self, fname, ver, table, index, giter, prom2abs, abs2prom, abs2meta, voi_meta):
+        """
+        Initialize.
+
+        Parameters
+        ----------
+        fname : str
+            The name of the recording file from which to instantiate the case reader.
+        ver : int
+            The version of the format assumed when loading the file.
+        table : str
+            The name of the table in the database.
+        index : str
+            The name of the case index column in the table.
+        giter : list of tuple
+            The global iterations table.
+        abs2prom : {'input': dict, 'output': dict}
+            Dictionary mapping absolute names to promoted names.
+        abs2meta : dict
+            Dictionary mapping absolute variable names to variable metadata.
+        prom2abs : {'input': dict, 'output': dict}
+            Dictionary mapping promoted names to absolute names.
+        voi_meta : dict
+            Dictionary mapping absolute variable names to variable settings.
+        """
+        self._filename = fname
+        self._format_version = ver
+        self._table_name = table
+        self._index_name = index
+        self._global_iterations = giter
+        self._prom2abs = prom2abs
+        self._abs2prom = abs2prom
+        self._abs2meta = abs2meta
+        self._voi_meta = voi_meta
+
+        # cached keys/cases
+        self._sources = None
+        self._keys = None
+        self._cases = {}
+
+    def count(self):
+        """
+        Get the number of cases recorded in the table.
+
+        Returns
+        -------
+        int
+            The number of cases recorded in the table.
+        """
+        pass
+
+    def list_cases(self, source=None):
+        """
+        Get list of case IDs for cases in the table.
+
+        Parameters
+        ----------
+        source : str, optional
+            A source of cases or the iteration coordinate of a case.
+            If not None, only cases originating from the specified source or case are returned.
+
+        Returns
+        -------
+        list
+            The cases from the table from the specified source or parent case.
+        """
+        pass
+
+    def get_cases(self, source=None, recurse=False, flat=False):
+        """
+        Get list of case names for cases in the table.
+
+        Parameters
+        ----------
+        source : str, optional
+            If not None, only cases that have the specified source will be returned
+        recurse : bool, optional
+            If True, will enable iterating over all successors in case hierarchy
+        flat : bool, optional
+            If False and there are child cases, then a nested ordered dictionary
+            is returned rather than an iterator.
+
+        Returns
+        -------
+        list or dict
+            The cases from the table that have the specified source.
+        """
+        pass
+
+    def get_case(self, case_id, cache=False):
+        """
+        Get a case from the database.
+
+        Parameters
+        ----------
+        case_id : str or int
+            The string-identifier of the case to be retrieved or the index of the case.
+        cache : bool
+            If True, case will be cached for faster access by key.
+
+        Returns
+        -------
+        Case
+            The specified case from the table.
+        """
+        pass
+
+    def _get_iteration_coordinate(self, case_idx):
+        """
+        Return the iteration coordinate for the indexed case (handles negative indices, etc.).
+
+        Parameters
+        ----------
+        case_idx : int
+            The case number that we want the iteration coordinate for.
+
+        Returns
+        -------
+        iteration_coordinate : str
+            The iteration coordinate.
+        """
+        pass
+
+    def cases(self, cache=False):
+        """
+        Iterate over all cases, optionally caching them into memory.
+
+        Parameters
+        ----------
+        cache : bool
+            If True, cases will be cached for faster access by key.
+        """
+        pass
+
+    def _load_cases(self):
+        """
+        Load all cases into memory.
+        """
+        pass
+
+    def list_sources(self):
+        """
+        Get the list of sources that recorded data in this table.
+
+        Returns
+        -------
+        list
+            List of sources.
+        """
+        pass
+
+    def _get_source(self, iteration_coordinate):
+        """
+        Get the source of the iteration.
+
+        Parameters
+        ----------
+        iteration_coordinate : str
+            The full unique identifier for this iteration.
+
+        Returns
+        -------
+        str
+            The source of the iteration.
+        """
+        return _get_source_system(iteration_coordinate)
+
+    def _get_row_source(self, row_id):
+        """
+        Get the source of the case at the specified row of this table.
+
+        Parameters
+        ----------
+        row_id : int
+            The row_id of the case in the table.
+
+        Returns
+        -------
+        str
+            The source of the case.
+        """
+        pass
+
+    def _get_first(self, source):
+        """
+        Get the first case from the specified source.
+
+        Parameters
+        ----------
+        source : str
+            The source.
+
+        Returns
+        -------
+        Case
+            The first case from the specified source.
+        """
+        pass
+
+
+class DriverCases(CaseTable):
     """
     Case specific to the entries that might be recorded in a Driver iteration.
     """
 
-    def __init__(self, driver_iteration_dict, dtypes, abs2prom, abs2meta, prom2abs):
+    def __init__(self, filename, format_version, giter, prom2abs, abs2prom, abs2meta, voi_meta, driver_iteration_dict, dtypes):
         self.dtypes = dtypes
-        BaseCases.__init__(self, "None", abs2prom, abs2meta, prom2abs)
+        super(DriverCases, self).__init__(filename, format_version,
+                                          'driver_iterations', 'iteration_coordinate', giter,
+                                          prom2abs, abs2prom, abs2meta, voi_meta)
+        self._voi_meta = voi_meta
         self.driver_iteration_dict = driver_iteration_dict
         self.meta_field_names = ['counter', 'iteration_coordinate', 'timestamp', 'success', 'msg']
         self.abs2proms = [self._abs2prom[io] for io in ['input', 'output']]
+
+    def cases(self, cache=False):
+        pass
 
     def get_case(self, case_id):
         """
@@ -233,14 +608,17 @@ class DriverCases(BaseCases):
             specified case/iteration.
         """
         did = self.driver_iteration_dict
-        meta_fields = [did[k][case_id] for k in self.meta_field_names]
-
-        inputs, outputs = [np.array(tuple([did[abs2prom[k]][case_id] for k in dtype.names]), dtype=dtype)
+        data = {}
+        for key in did:
+            data[key] = did[key][case_id]
+#
+        inputs, outputs = [np.array([tuple([did[abs2prom[k]][case_id] for k in dtype.names])], dtype=dtype)
                            for abs2prom, dtype in zip(self.abs2proms, self.dtypes)]
-
-        case = DriverCase(self.filename, *meta_fields,
-                          np.array([inputs]), np.array([outputs]),
-                          self._prom2abs, self._abs2prom, self._abs2meta)
+        data['inputs'] = inputs
+        data['outputs'] = outputs
+        case = Case('driver', data,
+                    self._prom2abs, self._abs2prom, self._abs2meta, self._voi_meta,
+                    self._format_version)
 
         return case
 
@@ -271,7 +649,8 @@ def recordid2filename(record_id):
 class TopFarmListRecorder(ListRecorder):
 
     def __init__(self, record_id=None):
-        ListRecorder.__init__(self)
+        filepath, _ = recordid2filename(record_id)
+        ListRecorder.__init__(self, filepath)
         self.load_if_exists(record_id)
 
     def animate_turbineXY(self, duration=10, tail=5, plot_initial=True, filename=None):

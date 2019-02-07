@@ -1,6 +1,5 @@
 from openmdao.drivers.scipy_optimizer import ScipyOptimizeDriver
-
-from topfarm.drivers.my_simple_ga_driver import MySimpleGADriver
+from openmdao.drivers.genetic_algorithm_driver import SimpleGADriver
 from topfarm.drivers.random_search_driver import RandomSearchDriver
 
 
@@ -53,7 +52,7 @@ except ModuleNotFoundError:
     EasyPyOptSparseIPOPT = PyOptSparseMissingDriver
 
 
-class EasySimpleGADriver(MySimpleGADriver):
+class EasySimpleGADriver(SimpleGADriver):
     def __init__(self, max_gen=100, pop_size=25, Pm=None, Pc=.5, elitism=True, bits={}, debug_print=[], run_parallel=False, random_state=None):
         """SimpleGA driver with optional arguments
 
@@ -81,8 +80,10 @@ class EasySimpleGADriver(MySimpleGADriver):
         run_parallel : bool
             Set to True to execute the points in a generation in parallel.
         """
-        MySimpleGADriver.__init__(self, max_gen=max_gen, pop_size=pop_size, Pm=Pm, Pc=Pc, elitism=elitism,
-                                  bits=bits, debug_print=debug_print, run_parallel=run_parallel)
+        SimpleGADriver.__init__(self, max_gen=max_gen, pop_size=pop_size, Pm=Pm, Pc=Pc, elitism=elitism,
+                                bits=bits, debug_print=debug_print, run_parallel=run_parallel)
+        self.supports['inequality_constraints'] = False
+        self.supports['equality_constraints'] = False
         if random_state is not None:
             self._randomstate = random_state
 

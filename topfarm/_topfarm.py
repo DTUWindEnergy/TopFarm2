@@ -19,6 +19,7 @@ import time
 import numpy as np
 from openmdao.drivers.doe_generators import DOEGenerator, ListGenerator
 from openmdao.drivers.doe_driver import DOEDriver
+from openmdao.drivers.genetic_algorithm_driver import SimpleGADriver
 
 from topfarm.recorders import ListRecorder, NestedTopFarmListRecorder,\
     TopFarmListRecorder, split_record_id
@@ -27,7 +28,7 @@ from topfarm.plotting import NoPlot
 import warnings
 import topfarm
 from openmdao.core.explicitcomponent import ExplicitComponent
-from topfarm.easy_drivers import EasyScipyOptimizeDriver
+from topfarm.easy_drivers import EasyScipyOptimizeDriver, EasySimpleGADriver
 from topfarm.utils import smart_start
 from topfarm.constraint_components.spacing import SpacingComp
 from topfarm.constraint_components.boundary import BoundaryBaseComp
@@ -120,7 +121,10 @@ class TopFarmProblem(Problem):
 
         for constr in constraints:
             if self.driver.supports['inequality_constraints']:
-                constr.setup_as_constraint(self)
+                if isinstance(self.driver, SimpleGADriver):
+                    constr.setup_as_penalty(self)
+                else:
+                    constr.setup_as_constraint(self)
             else:
                 constr.setup_as_penalty(self)
         self.model.constraint_components = [constr.constraintComponent for constr in constraints]
@@ -292,6 +296,9 @@ class TopFarmProblem(Problem):
                 return self.optimize(state, disp)
 
         self.driver.add_recorder(self.recorder)
+        self.driver.recording_options['record_desvars'] = True
+        self.driver.recording_options['includes'] = ['*']
+        self.driver.recording_options['record_inputs'] = True
         self.setup()
         t = time.time()
         self.run_driver()
@@ -300,7 +307,7 @@ class TopFarmProblem(Problem):
             print("Optimized in\t%.3fs" % (time.time() - t))
         if self.driver._rec_mgr._recorders != []:  # in openmdao<2.4 cleanup does not delete recorders
             self.driver._rec_mgr._recorders.remove(self.recorder)
-        if isinstance(self.driver, DOEDriver):
+        if isinstance(self.driver, DOEDriver) or isinstance(self.driver, SimpleGADriver):
             costs = self.recorder.get('cost')
             cases = self.recorder.driver_cases
             costs = [cases.get_case(i).outputs['cost'] for i in range(cases.num_cases)]
@@ -419,17 +426,18 @@ def main():
         optimal = np.array([[2.5, -3], [6, -7], [4.5, -3]])  # optimal turbine layouts
         boundary = np.array([(0, 0), (6, 0), (6, -10), (0, -10)])  # turbine boundaries
         desired = np.array([[3, -3], [7, -7], [4, -3]])  # desired turbine layouts
-
+        drivers = [EasySimpleGADriver(max_gen=10, pop_size=100, bits={'x': [12] * 3, 'y':[12] * 3}, random_state=1),
+                   EasyScipyOptimizeDriver()]
         plot_comp = DummyCostPlotComp(optimal)
         tf = TopFarmProblem(
             design_vars=dict(zip('xy', initial.T)),
             cost_comp=DummyCost(optimal_state=desired, inputs=['x', 'y']),
             constraints=[XYBoundaryConstraint(boundary),
                          SpacingConstraint(2)],
-            driver=EasyScipyOptimizeDriver(),
+            driver=drivers[1],
             plot_comp=plot_comp
         )
-        tf.optimize()
+        cost, _, recorder = tf.optimize()
         plot_comp.show()
 
 

@@ -21,11 +21,12 @@ def test_TopFarmProblem_with_cirleboundary_penalty():
     optimal = np.array([(0, 0)])
     desvar = dict(zip('xy', optimal.T))
     b = CircleBoundaryConstraint([1, 2], 3)
+    driver = SimpleGADriver()
     tf = TopFarmProblem(
         desvar,
         DummyCost(optimal, 'xy'),
         constraints=[b],
-        driver=SimpleGADriver())
+        driver=driver)
     tf.evaluate()
     tf.plot_comp.show()
     np.testing.assert_array_almost_equal(
