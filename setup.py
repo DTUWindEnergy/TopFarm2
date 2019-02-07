@@ -30,9 +30,9 @@ setup(name='topfarm',
         'networkx==2.1', # for avoiding a warning/bug
         'pytest',  # for testing
         'pytest-cov',  # for calculating coverage
+		'py_wake',  # for calculating AEP
         'scipy',  # constraints
         'sphinx',  # generating documentation
-        'sphinx_rtd_theme',  # docs theme
-		'py_wake'
+        'sphinx_rtd_theme'  # docs theme
       ],
       zip_safe=True)
