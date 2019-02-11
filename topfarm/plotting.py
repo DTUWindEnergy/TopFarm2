@@ -189,7 +189,8 @@ class XYPlotComp(NoPlot):
 
 class PlotComp(XYPlotComp):
     def __init__(self, memory=10, delay=0.001, plot_initial=True, plot_improvements_only=False, ax=None):
-        XYPlotComp.__init__(self, memory=memory, delay=delay, plot_initial=plot_initial, plot_improvements_only=plot_improvements_only, ax=ax)
+        XYPlotComp.__init__(self, memory=memory, delay=delay, plot_initial=plot_initial,
+                            plot_improvements_only=plot_improvements_only, ax=ax)
         sys.stderr.write("%s is deprecated. Use XYPlotComp instead\n" % self.__class__.__name__)
 
 

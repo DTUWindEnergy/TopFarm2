@@ -14,6 +14,10 @@ positions, these require OpenMDAO problems that are constructed differently.
 
 To get around this, TOPFARM has a base optimization problem,
 ``TopFarmProblem`` that inherits from the ``Problem`` class in OpenMDAO.
+
+To disable MPI for topfarm add this before importing topfarm
+```from openmdao.utils import mpi
+mpi.MPI = None```
 """
 import time
 import numpy as np
@@ -33,6 +37,7 @@ from topfarm.utils import smart_start
 from topfarm.constraint_components.spacing import SpacingComp
 from topfarm.constraint_components.boundary import BoundaryBaseComp
 import copy
+from openmdao.utils import mpi
 
 
 class TopFarmProblem(Problem):
@@ -88,7 +93,14 @@ class TopFarmProblem(Problem):
         --------
         See main() in the bottom of this file
         """
-        Problem.__init__(self)
+
+        if mpi.MPI:
+            comm = None
+        else:
+            from openmdao.utils.mpi import FakeComm
+            comm = FakeComm()
+
+        Problem.__init__(self, comm=comm)
         if isinstance(cost_comp, TopFarmProblem):
             cost_comp = cost_comp.as_component()
         cost_comp.parent = self

@@ -31,6 +31,8 @@ class Constraint(ABC):
         def new_compute(inputs, outputs):
             p = penalty_func(inputs)
             if p == 0:
+                # ensure cost <1e10 if compute return without updating cost due to counter>max_eval
+                outputs['cost'] = 1e10 - 1
                 self._org_compute(inputs, outputs)
             else:
                 outputs['cost'] = 1e10 + p
