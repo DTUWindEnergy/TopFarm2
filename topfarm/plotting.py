@@ -20,7 +20,17 @@ def mypause(interval):
 
 
 class NoPlot(ExplicitComponent):
+    """Plotting component for no plotting"""
     def __init__(self, *args, **kwargs):
+        """Initialize no-plot component
+
+        Parameters
+        ----------
+        *args : arguments, optional
+            Arguments to be passed to ExplicitComponent (OpenMDAO)
+        **kwargs : keyword arguments, optional
+            Keyword arguments to be passed to ExplicitComponent (OpenMDAO)
+        """
         ExplicitComponent.__init__(self)
 
     def show(self):
@@ -34,10 +44,28 @@ class NoPlot(ExplicitComponent):
 
 
 class XYPlotComp(NoPlot):
+    """Plotting component for turbine locations"""
     # colors = ['b', 'r', 'm', 'c', 'g', 'y', 'orange', 'indigo', 'grey'] * 100
     colors = [c['color'] for c in iter(matplotlib.rcParams['axes.prop_cycle'])] * 100
 
     def __init__(self, memory=10, delay=0.001, plot_initial=True, plot_improvements_only=False, ax=None, legendloc=1):
+        """Initialize component for plotting turbine locations
+
+        Parameters
+        ----------
+        memory : int, optional
+            Number of previous iterations to remember
+        delay : float, optional
+            Time delay in seconds between plotting updates
+        plot_initial : bool, optional
+            Flag to plot the initial turbine locations
+        plot_improvements_only : bool, optional
+            Flag to plot only improvements in cost
+        ax : matplotlib axes, optional
+            Axes into which to make the plot
+        legendloc : int
+            Location of the legend in the plot
+        """
         ExplicitComponent.__init__(self)
         self.delay = delay
         self.plot_improvements_only = plot_improvements_only
@@ -195,10 +223,20 @@ class PlotComp(XYPlotComp):
 
 
 class TurbineTypePlotComponent(XYPlotComp):
+    """Plotting component for turbine types"""
     colors = ['b', 'r', 'm', 'c', 'g', 'y', 'orange', 'indigo', 'grey'] * 100
     markers = np.array(list("123v^<>.o48spP*hH+xXDd|_"))
 
     def __init__(self, turbine_type_names, **kwargs):
+        """Initialize component for plotting turbine types
+
+        Parameters
+        ----------
+        turbine_type_names : list of str
+            Names of turbine types for legend
+        **kwargs : keyword arguments, optional
+            Keyword arguments that can be passed into XYPlotComp
+        """
         self.turbine_type_names = turbine_type_names
         XYPlotComp.__init__(self, **kwargs)
 

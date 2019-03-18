@@ -1,17 +1,16 @@
 .. _api:
 
-===========================
-API
-===========================
+API Reference
+==================
 
 
-Defining Problems in TOPFARM
------------------------------
+.. toctree::
+    :caption: Reference guide
+    :maxdepth: 2
 
-.. # pull the docstring from the module
-.. automodule:: topfarm._topfarm
-
-.. # pull the TopFarmProblem class and autopopulate methods
-.. autoclass:: topfarm.TopFarmProblem
-    :members:
-
+    api_reference/topfarmproblem
+    api_reference/cost
+    api_reference/constraints
+    api_reference/drivers
+    api_reference/plotcomp
+    

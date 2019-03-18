@@ -392,7 +392,7 @@ class CircleBoundaryConstraint(Constraint):
         center : (float, float)
             center position (x,y)
         radius : int or float
-            circle radius
+            circle radius [m]
         """
 
         self.center = np.array(center)

@@ -4,8 +4,30 @@ import time
 
 
 class CostModelComponent(ExplicitComponent):
+    """Wrapper for pure-Python cost functions"""
     def __init__(self, input_keys, n_wt, cost_function, cost_gradient_function=None,
                  output_key="Cost", output_unit="", additional_output=[], max_eval=None):
+        """Initialize wrapper for pure-Python cost function
+
+        Parameters
+        ----------
+        input_keys : list of str
+            Inputs to the cost function
+        n_wt : int
+            Number of wind turbines
+        cost_function : function handle
+            Function to evaluate cost
+        cost_gradient_function : function handle, optional
+            Function to evaluate gradient of the cost function
+        output_key : str
+            Name of output key
+        output_unit : str
+            Units of output of cost function
+        additional_output : list of str
+            Other outputs to request
+        max_eval : int
+            Maximum number of function evaluations
+        """
         super().__init__()
         assert isinstance(n_wt, int), n_wt
         self.input_keys = list(input_keys)
@@ -53,6 +75,7 @@ class CostModelComponent(ExplicitComponent):
         return int(counter)
 
     def compute(self, inputs, outputs):
+        """Compute cost model"""
         if self.counter >= self.max_eval:
             return
         t = time.time()
@@ -69,6 +92,7 @@ class CostModelComponent(ExplicitComponent):
         outputs['cost_comp_eval'] = self.counter
 
     def compute_partials(self, inputs, J):
+        """Compute gradients"""
         if self.counter >= self.max_eval:
             return
 

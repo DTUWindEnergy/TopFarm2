@@ -1,5 +1,6 @@
 from openmdao.drivers.scipy_optimizer import ScipyOptimizeDriver
-from openmdao.drivers.genetic_algorithm_driver import SimpleGADriver
+# from openmdao.drivers.genetic_algorithm_driver import SimpleGADriver  # version 2.5.0 has bug see Issue #874
+from topfarm.drivers.genetic_algorithm_driver import SimpleGADriver
 from topfarm.drivers.random_search_driver import RandomSearchDriver
 
 

@@ -240,7 +240,7 @@ class TopFarmProblem(Problem):
                         pass
 
     def evaluate(self, state={}, disp=False):
-        """Evaluate the cost model.
+        """Evaluate the cost model
 
         Parameters
         ----------

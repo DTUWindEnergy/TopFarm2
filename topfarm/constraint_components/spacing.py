@@ -10,7 +10,7 @@ class SpacingConstraint(Constraint):
         Parameters
         ----------
         min_spacing : int or float
-            Minimum spacing between turbines
+            Minimum spacing between turbines [m]
         """
         self.min_spacing = min_spacing
 

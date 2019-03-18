@@ -43,6 +43,9 @@ pages:  # "pages" is a job specifically for GitLab pages [1]
   stage:  # build, test, deploy defined by default [2]
     deploy
   script:  # use sphinx to build docs, move to public page
+  - pip install --upgrade git+git://github.com/FUSED-Wind/FUSED-Wake@master
+  - pip install --upgrade git+https://gitlab.windenergy.dtu.dk/TOPFARM/PyWake.git
+  - pip install -e .
   - pip install sphinx --upgrade
   - pip install nbsphinx==0.3.5
   - pip install git+https://github.com/vidartf/nbsphinx-link.git

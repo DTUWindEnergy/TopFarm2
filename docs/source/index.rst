@@ -1,42 +1,57 @@
-.. TOPFARM documentation master file, created by
-   sphinx-quickstart on Tue May  1 18:31:31 2018.
-   Modified manually for non-auto-gen content.
+.. TOPFARM documentation master file.
 
 Welcome to TOPFARM
 ===========================================
-*- the wind-farm optimizer*
+*- DTU Wind Energy's wind-farm optimizer*
 
-**Quick Start**::
+What is TOPFARM? What problems can it solve?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+TOPFARM is a Python package developed by DTU Wind Energy to help with wind-farm
+optimizations. It uses the `OpenMDAO <http://openmdao.org/>`_
+package for optimization and also wraps the
+`PyWake <https://topfarm.pages.windenergy.dtu.dk/PyWake/>`_ package for easy
+computation of annual energy production (AEP) with different wake models.
+
+TOPFARM can solve many different types of problems: layout optimizations,
+turbine-type optimizations, etc. Many of the most common wake and cost models
+are built in, but users also have the option to couple their own wake or
+cost model for custom optimizations.
+
+How do I install it?
+^^^^^^^^^^^^^^^^^^^^^^
+
+The base code is open-source and freely available on `GitLab 
+<https://gitlab.windenergy.dtu.dk/TOPFARM/TopFarm2>`_ (MIT license).
+The quick-start command to install the open-source code is::
 
     pip install topfarm
 
-Source code repository (and issue tracker):
-    https://gitlab.windenergy.dtu.dk/TOPFARM/TopFarm2
-    
-License:
-    MIT_
+For more detailed installation instructions or options, please see the
+:ref:`Installation Guide <installation>`.
 
-.. _MIT: https://gitlab.windenergy.dtu.dk/TOPFARM/TopFarm2/blob/master/LICENSE
+Can I get a private/commercial version of TOPFARM?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-
-Contents:
-	.. toctree::
-		:caption: User Guide
-		:maxdepth: 2
-
-		installation
-		using_topfarm
-		.. api
-		reference_guide
-		
-
-	.. toctree::
-		:caption: Examples
-		:maxdepth: 2
-
-		examples/example_1_constrained_layout_optimization
-		examples/example_2_wake_comparison
-		examples/example_3_turbine_type_optimization
+For proprietary developers, we offer the option of having a short-term private
+repository for co-development of cutting-edge plugins. Please contact the
+`TOPFARM development team <mailto:dave@dtu.dk>`_ for further details.
 
 
+How can I contribute to TOPFARM?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+We encourage contributions from different developers. You can contribute by
+submitting an issue using TOPFARM's `Issue Tracker <https://gitlab.windenergy.dtu.dk/TOPFARM/TopFarm2/issues>`_
+or by volunteering to resolve an issue already in the queue.
+
+
+Package Documentation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    .. toctree::
+        :maxdepth: 2
+
+        installation
+        user_guide
+        api
+        examples
