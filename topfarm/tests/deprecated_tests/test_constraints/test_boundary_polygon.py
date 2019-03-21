@@ -28,7 +28,7 @@ def testPolygonTwoRegionsStartInWrong():
     initial = [(3.5, 1.5), (0.5, 1.5)]
     tf = TopFarm(initial, DummyCost(optimal, inputs=['x', 'y']), 0,
                  boundary=boundary, boundary_type='polygon', plot_comp=plot_comp,
-                 driver=EasyScipyOptimizeDriver(tol=1e-6, disp=False))
+                 driver=EasyScipyOptimizeDriver(tol=1e-8, disp=False))
     tf.optimize()
     plot_comp.show()
     np.testing.assert_array_almost_equal(tf.turbine_positions[:, :2], optimal, 4)

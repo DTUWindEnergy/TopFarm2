@@ -17,7 +17,7 @@ desvars = {topfarm.x_key: initial[:, 0], topfarm.y_key: initial[:, 1]}
 def get_tf(**kwargs):
     k = {'cost_comp': DummyCost(desired[:, :2], [topfarm.x_key, topfarm.y_key]),
          'design_vars': {topfarm.x_key: initial[:, 0], topfarm.y_key: initial[:, 1]},
-         'driver': EasyScipyOptimizeDriver(disp=False),
+         'driver': EasyScipyOptimizeDriver(disp=True, tol=1e-8),
          'plot_comp': NoPlot(),
          'constraints': [SpacingConstraint(2), XYBoundaryConstraint(boundary)]}
 

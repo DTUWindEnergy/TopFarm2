@@ -232,9 +232,9 @@ def test_TopFarmListRecorderLoad_Nothing(fn):
     assert rec.num_cases == 0
 
 
-@pytest.mark.parametrize('load_case,n_rec,n_fev', [('', 54, 1),
+@pytest.mark.parametrize('load_case,n_rec,n_fev', [('', 55, 1),
                                                    ('none', 53, 52),
-                                                   (40, 74, 33)])
+                                                   (40, 207, 166)])
 def test_TopFarmListRecorder_continue(tf_generator, load_case, n_rec, n_fev, get_fuga):
 
     D = 80.0
@@ -260,7 +260,7 @@ def test_TopFarmListRecorder_continue(tf_generator, load_case, n_rec, n_fev, get
     # Create test file:
     # 1) delete file "test_files/recordings/test_TopFarmListRecorder_continue"
     # 2) Uncomment line below, run and recomment
-    # if load_case == "": recorder.save()  # create test file
+#    if load_case == "": recorder.save()  # create test file
     npt.assert_equal(recorder.driver_cases.num_cases, n_rec)
     npt.assert_equal(tf.driver.result['nfev'], n_fev)
 

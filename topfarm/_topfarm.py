@@ -27,7 +27,7 @@ from openmdao.drivers.genetic_algorithm_driver import SimpleGADriver
 
 from topfarm.recorders import ListRecorder, NestedTopFarmListRecorder,\
     TopFarmListRecorder, split_record_id
-from openmdao.api import Problem, IndepVarComp
+from openmdao.api import Problem, IndepVarComp, Group
 from topfarm.plotting import NoPlot
 import warnings
 import topfarm
@@ -36,6 +36,7 @@ from topfarm.easy_drivers import EasyScipyOptimizeDriver, EasySimpleGADriver
 from topfarm.utils import smart_start
 from topfarm.constraint_components.spacing import SpacingComp
 from topfarm.constraint_components.boundary import BoundaryBaseComp
+from topfarm.constraint_components.penalty_component import PenaltyComponent
 import copy
 from openmdao.utils import mpi
 
@@ -121,6 +122,7 @@ class TopFarmProblem(Problem):
             design_vars = dict(design_vars)
         self.design_vars = design_vars
         self.indeps = self.model.add_subsystem('indeps', IndepVarComp(), promotes=['*'])
+#        self.indeps.add_output('penalty',val=0.0)
         for k in [topfarm.x_key, topfarm.y_key, topfarm.type_key]:
             if k in design_vars:
                 if isinstance(design_vars[k], tuple):
@@ -131,15 +133,18 @@ class TopFarmProblem(Problem):
         else:
             self.n_wt = 0
 
+        constraints_as_penalty = (not self.driver.supports['inequality_constraints'] or
+                                  isinstance(self.driver, SimpleGADriver))
+
         for constr in constraints:
-            if self.driver.supports['inequality_constraints']:
-                if isinstance(self.driver, SimpleGADriver):
-                    constr.setup_as_penalty(self)
-                else:
-                    constr.setup_as_constraint(self)
-            else:
+            if constraints_as_penalty:
                 constr.setup_as_penalty(self)
+            else:
+                constr.setup_as_constraint(self)
+
         self.model.constraint_components = [constr.constraintComponent for constr in constraints]
+        penalty_comp = PenaltyComponent(constraints, constraints_as_penalty)
+        self.model.add_subsystem('penalty_comp', penalty_comp, promotes=['*'])
 
         do = self.driver.options
         for k, v in design_vars.items():
@@ -339,7 +344,10 @@ class TopFarmProblem(Problem):
         print("checking %s" % ", ".join(comp_name_lst))
         res = self.check_partials(includes=comp_name_lst, compact_print=True)
         for comp in comp_name_lst:
-            var_pair = [(x, dx) for x, dx in res[comp].keys() if x not in ['cost_comp_eval']]
+            var_pair = [(x, dx) for x, dx in res[comp].keys()
+                        if (x not in ['cost_comp_eval'] and
+                            not x.startswith('penalty') and
+                            not dx.startswith('penalty'))]
             worst = var_pair[np.argmax([res[comp][k]['rel error'].forward for k in var_pair])]
             err = res[comp][worst]['rel error'].forward
             if err > tol:
@@ -428,11 +436,34 @@ class ProblemComponent(ExplicitComponent):
             outputs[output_key] = self.problem[output_key]
 
 
+class TopFarmGroup(Group):
+    def __init__(self, comps=[], output_key=None, output_unit=''):
+        super(TopFarmGroup, self).__init__()
+        self.comps = comps
+        for i, comp in enumerate(comps):
+            self.add_subsystem('comp_{}'.format(i), comp, promotes=['*'])
+            if comp.objective:
+                self.output_key = comp.output_key
+                self.output_unit = comp.output_unit
+                self.cost_factor = comp.cost_factor
+
+    def compute(self, inputs, outputs):
+        for comp in self.comps:
+            comp.compute(inputs, outputs)
+
+    def add_input(self, name, val=1.0, shape=None, src_indices=None, flat_src_indices=None, units=None, desc=''):
+        for comp in self.comps:
+            if comp.objective:
+                comp.add_input(name, val=val, shape=shape, src_indices=src_indices,
+                               flat_src_indices=flat_src_indices, units=units, desc=desc)
+
+
 def main():
     if __name__ == '__main__':
         from topfarm.cost_models.dummy import DummyCost, DummyCostPlotComp
         from topfarm.constraint_components.spacing import SpacingConstraint
         from topfarm.constraint_components.boundary import XYBoundaryConstraint
+        from openmdao.api import view_model
 
         initial = np.array([[6, 0], [6, -8], [1, 1]])  # initial turbine layouts
         optimal = np.array([[2.5, -3], [6, -7], [4.5, -3]])  # optimal turbine layouts
@@ -445,7 +476,8 @@ def main():
             design_vars=dict(zip('xy', initial.T)),
             cost_comp=DummyCost(optimal_state=desired, inputs=['x', 'y']),
             constraints=[XYBoundaryConstraint(boundary),
-                         SpacingConstraint(2)],
+                         SpacingConstraint(2)
+                         ],
             driver=drivers[1],
             plot_comp=plot_comp
         )

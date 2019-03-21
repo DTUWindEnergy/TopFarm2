@@ -21,13 +21,14 @@ class XYBoundaryConstraint(Constraint):
         """
         self.boundary = np.array(boundary)
         self.boundary_type = boundary_type
+        self.const_id = 'xyboundary_comp_{}_{}'.format(boundary_type, int(self.boundary.sum()))
 
     def get_comp(self, n_wt):
         if not hasattr(self, 'boundary_comp'):
             if self.boundary_type == 'polygon':
-                self.boundary_comp = PolygonBoundaryComp(n_wt, self.boundary)
+                self.boundary_comp = PolygonBoundaryComp(n_wt, self.boundary, self.const_id)
             else:
-                self.boundary_comp = ConvexBoundaryComp(n_wt, self.boundary, self.boundary_type)
+                self.boundary_comp = ConvexBoundaryComp(n_wt, self.boundary, self.boundary_type, self.const_id)
         return self.boundary_comp
 
     @property
@@ -49,29 +50,89 @@ class XYBoundaryConstraint(Constraint):
         self.set_design_var_limits(problem.design_vars)
         # problem.xy_boundary = np.r_[self.boundary_comp.xy_boundary, self.boundary_comp.xy_boundary[:1]]
         problem.indeps.add_output('xy_boundary', self.boundary_comp.xy_boundary)
+        problem.model.add_subsystem('xy_bound_comp', self.boundary_comp, promotes=['*'])
 
     def setup_as_constraint(self, problem):
         self._setup(problem)
-        problem.model.add_subsystem('xy_bound_comp', self.boundary_comp, promotes=['*'])
         problem.model.add_constraint('boundaryDistances', lower=self.boundary_comp.zeros)
 
     def setup_as_penalty(self, problem, penalty=1e10):
         self._setup(problem)
 
-        def setup():
-            self._cost_comp.add_input('boundaryDistances', val=self.boundary_comp.zeros)
+#        def setup():
+#            self._cost_comp.add_input('boundaryDistances', val=self.boundary_comp.zeros)
+#
+#        def penalty(inputs):
+#            return -np.minimum(inputs['boundaryDistances'], 0).sum()
+#
+#        self._setup_as_penalty(problem, 'xy_bound_comp', self.boundary_comp, setup, penalty)
 
-        def penalty(inputs):
-            return -np.minimum(inputs['boundaryDistances'], 0).sum()
 
-        self._setup_as_penalty(problem, 'xy_bound_comp', self.boundary_comp, setup, penalty)
+class CircleBoundaryConstraint(Constraint):
+    def __init__(self, center, radius):
+        """Initialize CircleBoundaryConstraint
+
+        Parameters
+        ----------
+        center : (float, float)
+            center position (x,y)
+        radius : int or float
+            circle radius
+        """
+
+        self.center = np.array(center)
+        self.radius = radius
+        self.const_id = 'circle_boundary_comp_{}_{}'.format('_'.join([str(int(c)) for c in center]), int(radius)).replace('.', '_')
+
+    def get_comp(self, n_wt):
+        if not hasattr(self, 'boundary_comp'):
+            self.boundary_comp = CircleBoundaryComp(n_wt, self.center, self.radius, self.const_id)
+        return self.boundary_comp
+
+    @property
+    def constraintComponent(self):
+        return self.boundary_comp
+
+    def set_design_var_limits(self, design_vars):
+        for k, l, u in zip([topfarm.x_key, topfarm.y_key],
+                           self.center - self.radius,
+                           self.center + self.radius):
+            if isinstance(design_vars[k], tuple):
+                design_vars[k] = (design_vars[k][0], np.maximum(design_vars[k][1], l), np.minimum(design_vars[k][2], u))
+            else:
+                design_vars[k] = (design_vars[k], l, u)
+
+    def _setup(self, problem):
+        n_wt = problem.n_wt
+        self.boundary_comp = self.get_comp(n_wt)
+        self.set_design_var_limits(problem.design_vars)
+        # t = np.linspace(0, 2 * np.pi, 100)
+        # problem.xy_boundary = self.center + np.array([np.cos(t), np.sin(t)]).T * self.radius
+        problem.indeps.add_output('xy_boundary', self.boundary_comp.xy_boundary)
+        problem.model.add_subsystem('xy_bound_comp', self.boundary_comp, promotes=['*'])
+
+    def setup_as_constraint(self, problem):
+        self._setup(problem)
+        problem.model.add_constraint('boundaryDistances', lower=self.boundary_comp.zeros)
+
+    def setup_as_penalty(self, problem, penalty=1e10):
+        self._setup(problem)
+
+#        def setup():
+#            self._cost_comp.add_input('boundaryDistances', val=self.boundary_comp.zeros)
+#
+#        def penalty(inputs):
+#            return -np.minimum(inputs['boundaryDistances'], 0).sum()
+#
+#        self._setup_as_penalty(problem, 'xy_bound_comp', self.boundary_comp, setup, penalty)
 
 
 class BoundaryBaseComp(ConstraintComponent):
-    def __init__(self, n_wt, xy_boundary=None, **kwargs):
+    def __init__(self, n_wt, xy_boundary=None, const_id=None, **kwargs):
         super().__init__(**kwargs)
         self.n_wt = n_wt
         self.xy_boundary = np.array(xy_boundary)
+        self.const_id = const_id
         if np.any(self.xy_boundary[0] != self.xy_boundary[-1]):
             self.xy_boundary = np.r_[self.xy_boundary, self.xy_boundary[:1]]
 
@@ -82,6 +143,7 @@ class BoundaryBaseComp(ConstraintComponent):
         self.add_input(topfarm.y_key, np.zeros(self.n_wt),
                        desc='y coordinates of turbines in global ref. frame')
 
+        self.add_output('penalty_' + self.const_id, val=0.0)
         # Explicitly size output array
         # (vector with positive elements if turbines outside of hull)
         self.add_output('boundaryDistances', self.zeros,
@@ -92,7 +154,9 @@ class BoundaryBaseComp(ConstraintComponent):
 
     def compute(self, inputs, outputs):
         # calculate distances from each point to each face
-        outputs['boundaryDistances'] = self.distances(x=inputs[topfarm.x_key], y=inputs[topfarm.y_key])
+        boundaryDistances = self.distances(x=inputs[topfarm.x_key], y=inputs[topfarm.y_key])
+        outputs['boundaryDistances'] = boundaryDistances
+        outputs['penalty_' + self.const_id] = -np.minimum(boundaryDistances, 0).sum()
 
     def compute_partials(self, inputs, partials):
         # return Jacobian dict
@@ -108,10 +172,11 @@ class BoundaryBaseComp(ConstraintComponent):
 
 
 class ConvexBoundaryComp(BoundaryBaseComp):
-    def __init__(self, n_wt, xy_boundary=None, boundary_type='convex_hull'):
+    def __init__(self, n_wt, xy_boundary=None, boundary_type='convex_hull', const_id=None):
         self.boundary_type = boundary_type
+#        self.const_id = const_id
         self.calculate_boundary_and_normals(xy_boundary)
-        super().__init__(n_wt, self.xy_boundary)
+        super().__init__(n_wt, self.xy_boundary, const_id)
         self.calculate_gradients()
         self.zeros = np.zeros([self.n_wt, self.nVertices])
 
@@ -250,9 +315,10 @@ class ConvexBoundaryComp(BoundaryBaseComp):
 
 
 class PolygonBoundaryComp(BoundaryBaseComp):
-    def __init__(self, n_wt, xy_boundary):
+    def __init__(self, n_wt, xy_boundary, const_id=None):
 
         self.nTurbines = n_wt
+        self.const_id = const_id
         self.zeros = np.zeros(self.nTurbines)
         vertices = np.array(xy_boundary)
         self.nVertices = vertices.shape[0]
@@ -271,7 +337,7 @@ class PolygonBoundaryComp(BoundaryBaseComp):
                 return vertices[:-1], x1, y1, x2, y2
 
         xy_boundary, self.x1, self.y1, self.x2, self.y2 = edges_counter_clockwise(vertices)
-        BoundaryBaseComp.__init__(self, n_wt, xy_boundary=xy_boundary)
+        BoundaryBaseComp.__init__(self, n_wt, xy_boundary=xy_boundary, const_id=self.const_id)
         self.min_x, self.min_y = np.min([self.x1, self.x2], 0), np.min([self.y1, self.y2], )
         self.max_x, self.max_y = np.max([self.x1, self.x2], 1), np.max([self.y1, self.y2], 0)
         self.dx = self.x2 - self.x1
@@ -383,71 +449,13 @@ class PolygonBoundaryComp(BoundaryBaseComp):
         return state
 
 
-class CircleBoundaryConstraint(Constraint):
-    def __init__(self, center, radius):
-        """Initialize CircleBoundaryConstraint
-
-        Parameters
-        ----------
-        center : (float, float)
-            center position (x,y)
-        radius : int or float
-            circle radius [m]
-        """
-
-        self.center = np.array(center)
-        self.radius = radius
-
-    def get_comp(self, n_wt):
-        if not hasattr(self, 'boundary_comp'):
-            self.boundary_comp = CircleBoundaryComp(n_wt, self.center, self.radius)
-        return self.boundary_comp
-
-    @property
-    def constraintComponent(self):
-        return self.boundary_comp
-
-    def set_design_var_limits(self, design_vars):
-        for k, l, u in zip([topfarm.x_key, topfarm.y_key],
-                           self.center - self.radius,
-                           self.center + self.radius):
-            if isinstance(design_vars[k], tuple):
-                design_vars[k] = (design_vars[k][0], np.maximum(design_vars[k][1], l), np.minimum(design_vars[k][2], u))
-            else:
-                design_vars[k] = (design_vars[k], l, u)
-
-    def _setup(self, problem):
-        n_wt = problem.n_wt
-        self.boundary_comp = self.get_comp(n_wt)
-        self.set_design_var_limits(problem.design_vars)
-        # t = np.linspace(0, 2 * np.pi, 100)
-        # problem.xy_boundary = self.center + np.array([np.cos(t), np.sin(t)]).T * self.radius
-        problem.indeps.add_output('xy_boundary', self.boundary_comp.xy_boundary)
-
-    def setup_as_constraint(self, problem):
-        self._setup(problem)
-        problem.model.add_subsystem('xy_bound_comp', self.boundary_comp, promotes=['*'])
-        problem.model.add_constraint('boundaryDistances', lower=self.boundary_comp.zeros)
-
-    def setup_as_penalty(self, problem, penalty=1e10):
-        self._setup(problem)
-
-        def setup():
-            self._cost_comp.add_input('boundaryDistances', val=self.boundary_comp.zeros)
-
-        def penalty(inputs):
-            return -np.minimum(inputs['boundaryDistances'], 0).sum()
-
-        self._setup_as_penalty(problem, 'xy_bound_comp', self.boundary_comp, setup, penalty)
-
-
 class CircleBoundaryComp(PolygonBoundaryComp):
-    def __init__(self, n_wt, center, radius):
+    def __init__(self, n_wt, center, radius, const_id=None):
         self.center = center
         self.radius = radius
         t = np.linspace(0, 2 * np.pi, 100)
         xy_boundary = self.center + np.array([np.cos(t), np.sin(t)]).T * self.radius
-        BoundaryBaseComp.__init__(self, n_wt, xy_boundary)
+        BoundaryBaseComp.__init__(self, n_wt, xy_boundary, const_id)
         self.zeros = np.zeros(self.n_wt)
 
     def plot(self, ax=None):

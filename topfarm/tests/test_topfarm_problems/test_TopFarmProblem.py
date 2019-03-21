@@ -4,8 +4,7 @@ import pytest
 import numpy as np
 from topfarm import ProblemComponent
 from topfarm import TopFarmProblem
-from topfarm.cost_models.cost_model_wrappers import CostModelComponent,\
-    IncomeModelComponent
+from topfarm.cost_models.cost_model_wrappers import CostModelComponent
 from topfarm.cost_models.dummy import DummyCost
 from topfarm.tests import npt
 from topfarm.constraint_components.spacing import SpacingConstraint
@@ -163,12 +162,12 @@ def testTopFarmProblem_check_gradients(turbineXYZOptimizationProblem_generator):
 
 def testTopFarmProblem_check_gradients_Income(turbineXYZOptimizationProblem_generator):
     # Check that gradients check does not raise exception for correct gradients
-    cost_comp = IncomeModelComponent('xy', 4, income, income_gradients)
+    cost_comp = CostModelComponent('xy', 4, income, income_gradients, income_model=True)
     tf = turbineXYZOptimizationProblem_generator(None, cost_comp)
     tf.check_gradients(True)
 
     # Check that gradients check raises an exception for incorrect gradients
-    cost_comp = IncomeModelComponent('xy', 4, income, wrong_gradients)
+    cost_comp = CostModelComponent('xy', 4, income, wrong_gradients, income_model=True)
     tf = turbineXYZOptimizationProblem_generator(None, cost_comp)
     with pytest.raises(Warning, match="Mismatch between finite difference derivative of 'cost' wrt. 'y' and derivative computed in 'cost_comp' is"):
         tf.check_gradients()

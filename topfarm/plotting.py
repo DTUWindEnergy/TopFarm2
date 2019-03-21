@@ -98,6 +98,7 @@ class XYPlotComp(NoPlot):
             self.cost_key = "Cost"
             self.cost_unit = ""
         self.add_input(self.cost_key, 0.)
+        self.add_output('plot_counter')
 
     def init_plot(self, limits):
         self.ax.cla()
@@ -150,7 +151,11 @@ class XYPlotComp(NoPlot):
 
     def set_title(self, cost0, cost):
         rec = self.problem.recorder
-        title = "%d) %s %f %s" % (rec.num_cases, self.cost_key, cost, self.cost_unit)
+        if hasattr(self.problem.cost_comp, 'inc_or_exp'):
+            inc_or_exp = self.problem.cost_comp.inc_or_exp
+        else:
+            inc_or_exp = 1.0
+        title = "%d) %s %f %s" % (rec.num_cases, self.cost_key, cost * inc_or_exp, self.cost_unit)
         if cost0 != 0:
             title += " (%+.2f%%)" % ((cost - cost0) / cost0 * 100)
         self.ax.set_title(title)
@@ -213,6 +218,7 @@ class XYPlotComp(NoPlot):
             mypause(self.delay)
 
             self.counter += 1
+            outputs['plot_counter'] = self.counter
 
 
 class PlotComp(XYPlotComp):

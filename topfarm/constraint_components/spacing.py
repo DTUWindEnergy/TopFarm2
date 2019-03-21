@@ -13,44 +13,41 @@ class SpacingConstraint(Constraint):
             Minimum spacing between turbines [m]
         """
         self.min_spacing = min_spacing
+        self.const_id = 'spacing_comp_{}'.format(int(min_spacing))
 
     @property
     def constraintComponent(self):
         return self.spacing_comp
 
-    def setup_as_constraint(self, problem):
-        n_wt = problem.n_wt
-        self.spacing_comp = SpacingComp(n_wt, self.min_spacing)
-        problem.model.add_subsystem('spacing_comp', self.spacing_comp, promotes=['*'])
-        zero = np.zeros(int(((n_wt - 1.) * n_wt / 2.)))
-        problem.model.add_constraint('wtSeparationSquared', lower=zero + (self.min_spacing)**2)
+    def _setup(self, problem):
+        self.n_wt = problem.n_wt
+        self.spacing_comp = SpacingComp(self.n_wt, self.min_spacing, self.const_id)
+        problem.model.add_subsystem(self.const_id, self.spacing_comp, promotes=[
+                                    'x', 'y', 'penalty_' + self.const_id, 'wtSeparationSquared'])
+#        problem.model.add_constraint('wtSeparationSquared', lower=zero + (self.min_spacing)**2)
         self.spacing_comp.x = problem.design_vars[topfarm.x_key]
         self.spacing_comp.y = problem.design_vars[topfarm.y_key]
 
+    def setup_as_constraint(self, problem):
+        self._setup(problem)
+        zero = np.zeros(int(((self.n_wt - 1.) * self.n_wt / 2.)))
+        problem.model.add_constraint('wtSeparationSquared', lower=zero + (self.min_spacing)**2)
+
     def setup_as_penalty(self, problem, penalty=1e10):
-        n_wt = problem.n_wt
-        zero = np.zeros(int(((n_wt - 1.) * n_wt / 2.)))
-        self.spacing_comp = SpacingComp(n_wt, self.min_spacing)
-
-        def setup():
-            self._cost_comp.add_input('wtSeparationSquared', val=zero)
-
-        def penalty(inputs):
-            return -np.minimum(inputs['wtSeparationSquared'] - self.min_spacing**2, 0).sum()
-
-        self._setup_as_penalty(problem, 'spacing_comp', self.spacing_comp, setup, penalty)
+        self._setup(problem)
 
 
 class SpacingComp(ConstraintComponent):
     """
     Calculates inter-turbine spacing for all turbine pairs.
-    Code from wake-exchange module
+
     """
 
-    def __init__(self, n_wt, min_spacing):
+    def __init__(self, n_wt, min_spacing, const_id=None):
         super().__init__()
         self.n_wt = n_wt
         self.min_spacing = min_spacing
+        self.const_id = const_id
 
     def setup(self):
         # Explicitly size input arrays
@@ -58,7 +55,7 @@ class SpacingComp(ConstraintComponent):
                        desc='x coordinates of turbines in wind dir. ref. frame')
         self.add_input(topfarm.y_key, val=np.zeros(self.n_wt),
                        desc='y coordinates of turbines in wind dir. ref. frame')
-
+        self.add_output('penalty_' + self.const_id, val=0.0)
         # Explicitly size output array
         self.add_output('wtSeparationSquared', val=np.zeros(int((self.n_wt - 1) * self.n_wt / 2)),
                         desc='spacing of all turbines in the wind farm')
@@ -70,6 +67,7 @@ class SpacingComp(ConstraintComponent):
         self.y = inputs[topfarm.y_key]
         separation_squared = self._compute(self.x, self.y)
         outputs['wtSeparationSquared'] = separation_squared
+        outputs['penalty_' + self.const_id] = -np.minimum(separation_squared - self.min_spacing**2, 0).sum()
 
     def _compute(self, x, y):
         n_wt = self.n_wt

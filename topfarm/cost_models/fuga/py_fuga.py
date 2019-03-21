@@ -22,9 +22,13 @@ class PyFuga(PyColonel):
 
 def main():
     if __name__ == '__main__':
-        from topfarm.cost_models import fuga
-        if not os.path.isdir(os.path.dirname(fuga.__file__) + "/Colonel/py_colonel"):
+        try:
+            import py_colonel
+        except ModuleNotFoundError:
             pytest.xfail("Colonel submodule not found\n")
+        from py_colonel.py_colonel_lib import fugalib_path
+        if os.path.isfile(fugalib_path) is False:
+            pytest.xfail("Fugalib '%s' not found\n" % fugalib_path)
         pyFuga = PyFuga()
         pyFuga.setup(farm_name='Horns Rev 1',
                      turbine_model_path=fuga_path + 'LUTs-T/', turbine_model_name='Vestas_V80_(2_MW_offshore)[h=70.00]',
