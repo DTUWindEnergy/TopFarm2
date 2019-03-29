@@ -48,6 +48,7 @@ class SpacingComp(ConstraintComponent):
         self.n_wt = n_wt
         self.min_spacing = min_spacing
         self.const_id = const_id
+        self.veclen = int((n_wt - 1.) * n_wt / 2.)
 
     def setup(self):
         # Explicitly size input arrays
@@ -57,10 +58,16 @@ class SpacingComp(ConstraintComponent):
                        desc='y coordinates of turbines in wind dir. ref. frame')
         self.add_output('penalty_' + self.const_id, val=0.0)
         # Explicitly size output array
-        self.add_output('wtSeparationSquared', val=np.zeros(int((self.n_wt - 1) * self.n_wt / 2)),
+        self.add_output('wtSeparationSquared', val=np.zeros(self.veclen),
                         desc='spacing of all turbines in the wind farm')
+        # Sparse partial declaration
+        cols = np.array([(i, j) for i in range(self.n_wt - 1)
+                         for j in range(i + 1, self.n_wt)]).flatten()
+        rows = np.repeat(np.arange(self.veclen), 2)
 
-        self.declare_partials('wtSeparationSquared', [topfarm.x_key, topfarm.y_key])
+        self.declare_partials('wtSeparationSquared',
+                              [topfarm.x_key, topfarm.y_key],
+                              rows=rows, cols=cols)
 
     def compute(self, inputs, outputs):
         self.x = inputs[topfarm.x_key]
@@ -71,13 +78,13 @@ class SpacingComp(ConstraintComponent):
 
     def _compute(self, x, y):
         n_wt = self.n_wt
-        separation_squared = np.zeros(int((n_wt - 1) * n_wt / 2))
-        k = 0
-        for i in range(0, n_wt):
-            for j in range(i + 1, n_wt):
-                separation_squared[k] = (x[j] - x[i])**2 + (y[j] - y[i])**2
-                k += 1
-        return separation_squared
+
+        # compute distance matrixes
+        dX, dY = [np.subtract(*np.meshgrid(xy, xy, indexing='ij')).T
+                  for xy in [x, y]]
+        dXY2 = dX**2 + dY**2
+        # return upper triangle (above diagonal)
+        return dXY2[np.triu_indices(n_wt, 1)]
 
     def compute_partials(self, inputs, J):
         # obtain necessary inputs
@@ -86,33 +93,24 @@ class SpacingComp(ConstraintComponent):
 
         dSdx, dSdy = self._compute_partials(x, y)
         # populate Jacobian dict
-        J['wtSeparationSquared', topfarm.x_key] = dSdx
-        J['wtSeparationSquared', topfarm.y_key] = dSdy
+        J['wtSeparationSquared', topfarm.x_key] = dSdx.flatten()
+        J['wtSeparationSquared', topfarm.y_key] = dSdy.flatten()
 
-    def _compute_partials(self, turbineX, turbineY):
+    def _compute_partials(self, x, y):
         # get number of turbines
         n_wt = self.n_wt
 
-        # initialize gradient calculation array
-        dSdx = np.zeros((int((n_wt - 1.) * n_wt / 2.), n_wt))  # col: dx_1-dx_n, row: d12, d13,..,d1n, d23..d2n,..
-        dSdy = np.zeros((int((n_wt - 1.) * n_wt / 2.), n_wt))
+        # S = (xi-xj)^2 + (yi-yj)^2 = dx^2 + dy^2
+        # dS/dx = [dS/dx_i, dS/dx_j]  = -2dx, 2dx
 
-        # set turbine pair counter to zero
-        k = 0
+        # compute distance matrixes
+        dX, dY = [np.subtract(*np.meshgrid(xy, xy, indexing='ij')).T
+                  for xy in [x, y]]
+        # upper triangle -> 1 row per WT pair [(0,1), (0,2),..(n-1,n)]
+        dx, dy = dX[np.triu_indices(n_wt, 1)], dY[np.triu_indices(n_wt, 1)]
 
-        # calculate the gradient of the distance between each pair of turbines w.r.t. turbineX and turbineY
-        for i in range(0, n_wt):
-            for j in range(i + 1, n_wt):
-                # separation wrt Xj
-                dSdx[k, j] = 2 * (turbineX[j] - turbineX[i])
-                # separation wrt Xi
-                dSdx[k, i] = -2 * (turbineX[j] - turbineX[i])
-                # separation wrt Yj
-                dSdy[k, j] = 2 * (turbineY[j] - turbineY[i])
-                # separation wrt Yi
-                dSdy[k, i] = -2 * (turbineY[j] - turbineY[i])
-                # increment turbine pair counter
-                k += 1
+        dSdx = np.array([-2 * dx, 2 * dx]).T
+        dSdy = np.array([-2 * dy, 2 * dy]).T
         return dSdx, dSdy
 
     def plot(self, ax=None):
@@ -125,13 +123,18 @@ class SpacingComp(ConstraintComponent):
 
     def satisfy(self, state, n_iter=100, step_size=0.1):
         x, y = [state[xy].astype(np.float) for xy in [topfarm.x_key, topfarm.y_key]]
+        pair_i, pair_j = np.triu_indices(len(x), 1)
         for _ in range(n_iter):
             dist = self._compute(x, y)
             dx, dy = self._compute_partials(x, y)
-            index = int(np.argmin(dist))
+            index = np.argmin(dist)
+
             if dist[index] < self.min_spacing**2:
-                x += dx[index] * step_size
-                y += dy[index] * step_size
+                i, j = pair_i[index], pair_j[index]
+                x[i] += dx[index, 0] * step_size
+                x[j] += dx[index, 1] * step_size
+                y[i] += dy[index, 0] * step_size
+                y[j] += dy[index, 1] * step_size
             else:
                 break
         state.update({topfarm.x_key: x, topfarm.y_key: y})
