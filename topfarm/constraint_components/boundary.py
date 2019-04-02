@@ -56,7 +56,7 @@ class XYBoundaryConstraint(Constraint):
         self._setup(problem)
         problem.model.add_constraint('boundaryDistances', lower=self.boundary_comp.zeros)
 
-    def setup_as_penalty(self, problem, penalty=1e10):
+    def setup_as_penalty(self, problem):
         self._setup(problem)
 
 #        def setup():

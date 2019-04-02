@@ -43,7 +43,7 @@ from openmdao.utils import mpi
 
 class TopFarmProblem(Problem):
 
-    def __init__(self, design_vars, cost_comp, driver=EasyScipyOptimizeDriver(),
+    def __init__(self, design_vars, cost_comp=None, driver=EasyScipyOptimizeDriver(),
                  constraints=[], plot_comp=NoPlot(), record_id=None,
                  expected_cost=1, ext_vars={}):
         """Initialize TopFarmProblem
@@ -102,9 +102,10 @@ class TopFarmProblem(Problem):
             comm = FakeComm()
 
         Problem.__init__(self, comm=comm)
-        if isinstance(cost_comp, TopFarmProblem):
-            cost_comp = cost_comp.as_component()
-        cost_comp.parent = self
+        if cost_comp:
+            if isinstance(cost_comp, TopFarmProblem):
+                cost_comp = cost_comp.as_component()
+            cost_comp.parent = self
         self.cost_comp = cost_comp
 
         if isinstance(driver, list):
@@ -173,8 +174,9 @@ class TopFarmProblem(Problem):
             self.indeps.add_output(k, v)
         self.ext_vars = ext_vars
 
-        self.model.add_subsystem('cost_comp', cost_comp, promotes=['*'])
-        self.model.add_objective('cost', scaler=1 / abs(expected_cost))
+        if cost_comp:
+            self.model.add_subsystem('cost_comp', cost_comp, promotes=['*'])
+            self.model.add_objective('cost', scaler=1 / abs(expected_cost))
 
         if plot_comp:
             self.model.add_subsystem('plot_comp', plot_comp, promotes=['*'])

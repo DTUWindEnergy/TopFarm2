@@ -23,7 +23,7 @@ class SpacingConstraint(Constraint):
         self.n_wt = problem.n_wt
         self.spacing_comp = SpacingComp(self.n_wt, self.min_spacing, self.const_id)
         problem.model.add_subsystem(self.const_id, self.spacing_comp, promotes=[
-                                    'x', 'y', 'penalty_' + self.const_id, 'wtSeparationSquared'])
+                                    topfarm.x_key, topfarm.y_key, 'penalty_' + self.const_id, 'wtSeparationSquared'])
 #        problem.model.add_constraint('wtSeparationSquared', lower=zero + (self.min_spacing)**2)
         self.spacing_comp.x = problem.design_vars[topfarm.x_key]
         self.spacing_comp.y = problem.design_vars[topfarm.y_key]
@@ -33,7 +33,7 @@ class SpacingConstraint(Constraint):
         zero = np.zeros(int(((self.n_wt - 1.) * self.n_wt / 2.)))
         problem.model.add_constraint('wtSeparationSquared', lower=zero + (self.min_spacing)**2)
 
-    def setup_as_penalty(self, problem, penalty=1e10):
+    def setup_as_penalty(self, problem):
         self._setup(problem)
 
 
