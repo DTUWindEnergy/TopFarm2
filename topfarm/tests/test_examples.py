@@ -38,7 +38,7 @@ def test_main(module):
         pass
     plt.show = no_show  # disable plt show that requires the user to close the plot
 
-    def no_print(s):
+    def no_print(*args, **kwargs):
         pass
 
     try:

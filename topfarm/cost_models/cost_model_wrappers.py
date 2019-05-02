@@ -8,7 +8,7 @@ class CostModelComponent(ExplicitComponent):
 
     def __init__(self, input_keys, n_wt, cost_function, cost_gradient_function=None,
                  output_key="Cost", output_unit="", additional_output=[], max_eval=None,
-                 objective=True, income_model=False, output_val=0.0):
+                 objective=True, income_model=False, output_val=0.0, input_units=None):
         """Initialize wrapper for pure-Python cost function
 
         Parameters
@@ -37,6 +37,8 @@ class CostModelComponent(ExplicitComponent):
             If False: Objective is minimized during optimization
         output_val : float or array_like
             Format of output
+        input_units : list of str
+            Units of the respective input_keys
         """
         super().__init__()
         assert isinstance(n_wt, int), n_wt
@@ -54,17 +56,21 @@ class CostModelComponent(ExplicitComponent):
         else:
             self.cost_factor = 1.0
         self.output_val = output_val
+        if not input_units:
+            self.input_units = [None] * len(self.input_keys)
+        else:
+            self.input_units = input_units
         self.n_func_eval = 0
         self.func_time_sum = 0
         self.n_grad_eval = 0
         self.grad_time_sum = 0
 
     def setup(self):
-        for i in self.input_keys:
+        for i, u in zip(self.input_keys, self.input_units):
             if isinstance(i, tuple) and len(i) == 2:
-                self.add_input(i[0], val=i[1])
+                self.add_input(i[0], val=i[1], units=u)
             else:
-                self.add_input(i, val=np.zeros(self.n_wt))
+                self.add_input(i, val=np.zeros(self.n_wt), units=u)
         self.add_input('penalty', val=0.0)
         if self.objective:
             self.add_output('cost', val=0.0)

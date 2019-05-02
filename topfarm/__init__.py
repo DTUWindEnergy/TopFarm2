@@ -1,5 +1,12 @@
 from ._topfarm import *
 from .deprectated_topfarm_problems import *
+import pkg_resources
+
+plugins = {
+    entry_point.name: entry_point.load()
+    for entry_point
+    in pkg_resources.iter_entry_points('topfarm.plugins')
+}
 
 __version__ = 'filled by setup.py'
 __release__ = 'filled by setup.py'

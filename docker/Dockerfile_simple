@@ -24,6 +24,25 @@ RUN conda update -y conda && \
 
 # update pip then install openmdao, windio and fused-wake (nocache to save space)
 RUN pip install --upgrade pip && \
-    pip install --no-cache-dir openmdao && \
+    pip install --no-cache-dir openmdao==2.5.0 && \
     pip install --no-cache-dir git+https://github.com/FUSED-Wind/windIO.git && \
     pip install --no-cache-dir git+https://gitlab.windenergy.dtu.dk/TOPFARM/FUSED-Wake.git
+
+RUN pip install --upgrade git+git://github.com/FUSED-Wind/FUSED-Wake@master && \
+	pip install --upgrade git+https://gitlab.windenergy.dtu.dk/TOPFARM/PyWake.git && \
+	pip install --upgrade git+https://github.com/WISDEM/akima.git
+
+RUN	git clone https://gitlab.windenergy.dtu.dk/TOPFARM/FLORISSE.git && \
+	cd FLORISSE && \
+	git checkout develop-1 && \
+	cd src/florisse && \
+	gcc -fPIC -c adStack.c  && \
+	gfortran -fPIC -c adBuffer.f && \
+	f2py -c --opt=-O2 -m _floris floris.f90 adBuffer.o adStack.o && \
+	cd .. && \
+	cd .. && \
+	pip install .
+
+RUN pip install --upgrade git+https://gitlab.windenergy.dtu.dk/TOPFARM/PlantEnergy.git@develop
+
+	

@@ -54,11 +54,15 @@ class TopFarmProblem(Problem):
             Design variables for the problem.\n
             Ex: {'x': [1,2,3], 'y':([3,2,1],0,1), 'z':([4,5,6],[4,5,4], [6,7,6])}\n
             Ex: [('x', [1,2,3]), ('y',([3,2,1],0,1)), ('z',([4,5,6],[4,5,4], [6,7,6]))]\n
+            Ex: [('x', ([1,2,3],0,3,'m')), ('y',([3,2,1],'m')), ('z',([4,5,6],[4,5,4], [6,7,6]))]\n
             Ex: zip('xy', pos.T)\n
             The keys (x, y, z) are the names of the design variable.\n
             The values are either\n
             - the initial value or\n
-            - a tuple of (initial value, lower bound, upper bound)
+            - on of the following tuples:
+                (initial value, unit)
+                (initial value, lower bound, upper bound)
+                (initial value, lower bound, upper bound, unit)
         cost_comp : ExplicitComponent or TopFarmProblem
             A cost component in the style of an OpenMDAO v2 ExplicitComponent.
             Pure python cost functions can be wrapped using ``CostModelComponent``
@@ -123,13 +127,18 @@ class TopFarmProblem(Problem):
             design_vars = dict(design_vars)
         self.design_vars = design_vars
         self.indeps = self.model.add_subsystem('indeps', IndepVarComp(), promotes=['*'])
-#        self.indeps.add_output('penalty',val=0.0)
+        for k, v in design_vars.items():
+            if isinstance(v, tuple):
+                if (not isinstance(v[-1], str)) or (not v[-1]):
+                    design_vars[k] += (None, )
+            else:
+                design_vars[k] = (design_vars[k], None)
+            v = design_vars[k]
+            self.indeps.add_output(k, v[0], units=v[-1])
+
         for k in [topfarm.x_key, topfarm.y_key, topfarm.type_key]:
             if k in design_vars:
-                if isinstance(design_vars[k], tuple):
-                    self.n_wt = len(design_vars[k][0])
-                else:
-                    self.n_wt = len(design_vars[k])
+                self.n_wt = len(design_vars[k][0])
                 break
         else:
             self.n_wt = 0
@@ -149,10 +158,7 @@ class TopFarmProblem(Problem):
 
         do = self.driver.options
         for k, v in design_vars.items():
-            if isinstance(v, tuple):
-                assert len(v) == 3, "Design_vars values must be either value or (value, lower, upper)"
-                self.indeps.add_output(k, v[0])
-
+            if len(v) == 4:
                 if ('optimizer' in do and do['optimizer'] == 'COBYLA'):
                     ref0 = np.min(v[1])
                     ref1 = np.max(v[2])
@@ -161,7 +167,6 @@ class TopFarmProblem(Problem):
                 else:
                     kwargs = {'lower': v[1], 'upper': v[2]}
             else:
-                self.indeps.add_output(k, v)
                 kwargs = {}
 
             if 'optimizer' in do and do['optimizer'] == 'SLSQP':
@@ -444,20 +449,11 @@ class TopFarmGroup(Group):
         self.comps = comps
         for i, comp in enumerate(comps):
             self.add_subsystem('comp_{}'.format(i), comp, promotes=['*'])
-            if comp.objective:
-                self.output_key = comp.output_key
-                self.output_unit = comp.output_unit
-                self.cost_factor = comp.cost_factor
-
-    def compute(self, inputs, outputs):
-        for comp in self.comps:
-            comp.compute(inputs, outputs)
-
-    def add_input(self, name, val=1.0, shape=None, src_indices=None, flat_src_indices=None, units=None, desc=''):
-        for comp in self.comps:
-            if comp.objective:
-                comp.add_input(name, val=val, shape=shape, src_indices=src_indices,
-                               flat_src_indices=flat_src_indices, units=units, desc=desc)
+            if hasattr(comp, 'objective'):
+                if comp.objective:
+                    self.output_key = comp.output_key
+                    self.output_unit = comp.output_unit
+                    self.cost_factor = comp.cost_factor
 
 
 def main():

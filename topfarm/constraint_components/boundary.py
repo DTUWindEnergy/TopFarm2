@@ -5,7 +5,7 @@ import topfarm
 
 
 class XYBoundaryConstraint(Constraint):
-    def __init__(self, boundary, boundary_type='convex_hull'):
+    def __init__(self, boundary, boundary_type='convex_hull', units=None):
         """Initialize XYBoundaryConstraint
 
         Parameters
@@ -22,13 +22,14 @@ class XYBoundaryConstraint(Constraint):
         self.boundary = np.array(boundary)
         self.boundary_type = boundary_type
         self.const_id = 'xyboundary_comp_{}_{}'.format(boundary_type, int(self.boundary.sum()))
+        self.units = units
 
     def get_comp(self, n_wt):
         if not hasattr(self, 'boundary_comp'):
             if self.boundary_type == 'polygon':
-                self.boundary_comp = PolygonBoundaryComp(n_wt, self.boundary, self.const_id)
+                self.boundary_comp = PolygonBoundaryComp(n_wt, self.boundary, self.const_id, self.units)
             else:
-                self.boundary_comp = ConvexBoundaryComp(n_wt, self.boundary, self.boundary_type, self.const_id)
+                self.boundary_comp = ConvexBoundaryComp(n_wt, self.boundary, self.boundary_type, self.const_id, self.units)
         return self.boundary_comp
 
     @property
@@ -39,10 +40,10 @@ class XYBoundaryConstraint(Constraint):
         for k, l, u in zip([topfarm.x_key, topfarm.y_key],
                            self.boundary_comp.xy_boundary.min(0),
                            self.boundary_comp.xy_boundary.max(0)):
-            if isinstance(design_vars[k], tuple):
-                design_vars[k] = (design_vars[k][0], np.maximum(design_vars[k][1], l), np.minimum(design_vars[k][2], u))
+            if len(design_vars[k]) == 4:
+                design_vars[k] = (design_vars[k][0], np.maximum(design_vars[k][1], l), np.minimum(design_vars[k][2], u), design_vars[k][-1])
             else:
-                design_vars[k] = (design_vars[k], l, u)
+                design_vars[k] = (design_vars[k][0], l, u, design_vars[k][-1])
 
     def _setup(self, problem):
         n_wt = problem.n_wt
@@ -97,10 +98,10 @@ class CircleBoundaryConstraint(Constraint):
         for k, l, u in zip([topfarm.x_key, topfarm.y_key],
                            self.center - self.radius,
                            self.center + self.radius):
-            if isinstance(design_vars[k], tuple):
-                design_vars[k] = (design_vars[k][0], np.maximum(design_vars[k][1], l), np.minimum(design_vars[k][2], u))
+            if len(design_vars[k]) == 4:
+                design_vars[k] = (design_vars[k][0], np.maximum(design_vars[k][1], l), np.minimum(design_vars[k][2], u), design_vars[k][-1])
             else:
-                design_vars[k] = (design_vars[k], l, u)
+                design_vars[k] = (design_vars[k][0], l, u, design_vars[k][-1])
 
     def _setup(self, problem):
         n_wt = problem.n_wt
@@ -128,21 +129,21 @@ class CircleBoundaryConstraint(Constraint):
 
 
 class BoundaryBaseComp(ConstraintComponent):
-    def __init__(self, n_wt, xy_boundary=None, const_id=None, **kwargs):
+    def __init__(self, n_wt, xy_boundary=None, const_id=None, units=None, **kwargs):
         super().__init__(**kwargs)
         self.n_wt = n_wt
         self.xy_boundary = np.array(xy_boundary)
         self.const_id = const_id
+        self.units = units
         if np.any(self.xy_boundary[0] != self.xy_boundary[-1]):
             self.xy_boundary = np.r_[self.xy_boundary, self.xy_boundary[:1]]
 
     def setup(self):
         # Explicitly size input arrays
         self.add_input(topfarm.x_key, np.zeros(self.n_wt),
-                       desc='x coordinates of turbines in global ref. frame')
+                       desc='x coordinates of turbines in global ref. frame', units=self.units)
         self.add_input(topfarm.y_key, np.zeros(self.n_wt),
-                       desc='y coordinates of turbines in global ref. frame')
-
+                       desc='y coordinates of turbines in global ref. frame', units=self.units)
         self.add_output('penalty_' + self.const_id, val=0.0)
         # Explicitly size output array
         # (vector with positive elements if turbines outside of hull)
@@ -172,13 +173,14 @@ class BoundaryBaseComp(ConstraintComponent):
 
 
 class ConvexBoundaryComp(BoundaryBaseComp):
-    def __init__(self, n_wt, xy_boundary=None, boundary_type='convex_hull', const_id=None):
+    def __init__(self, n_wt, xy_boundary=None, boundary_type='convex_hull', const_id=None, units=None):
         self.boundary_type = boundary_type
 #        self.const_id = const_id
         self.calculate_boundary_and_normals(xy_boundary)
-        super().__init__(n_wt, self.xy_boundary, const_id)
+        super().__init__(n_wt, self.xy_boundary, const_id, units)
         self.calculate_gradients()
         self.zeros = np.zeros([self.n_wt, self.nVertices])
+#        self.units = units
 
     def calculate_boundary_and_normals(self, xy_boundary):
         xy_boundary = np.asarray(xy_boundary)
@@ -315,13 +317,14 @@ class ConvexBoundaryComp(BoundaryBaseComp):
 
 
 class PolygonBoundaryComp(BoundaryBaseComp):
-    def __init__(self, n_wt, xy_boundary, const_id=None):
+    def __init__(self, n_wt, xy_boundary, const_id=None, units=None):
 
         self.nTurbines = n_wt
         self.const_id = const_id
         self.zeros = np.zeros(self.nTurbines)
         vertices = np.array(xy_boundary)
         self.nVertices = vertices.shape[0]
+        self.units = units
 
         def edges_counter_clockwise(vertices):
             if np.any(vertices[0] != vertices[-1]):
@@ -337,7 +340,7 @@ class PolygonBoundaryComp(BoundaryBaseComp):
                 return vertices[:-1], x1, y1, x2, y2
 
         xy_boundary, self.x1, self.y1, self.x2, self.y2 = edges_counter_clockwise(vertices)
-        BoundaryBaseComp.__init__(self, n_wt, xy_boundary=xy_boundary, const_id=self.const_id)
+        BoundaryBaseComp.__init__(self, n_wt, xy_boundary=xy_boundary, const_id=self.const_id, units=self.units)
         self.min_x, self.min_y = np.min([self.x1, self.x2], 0), np.min([self.y1, self.y2], )
         self.max_x, self.max_y = np.max([self.x1, self.x2], 1), np.max([self.y1, self.y2], 0)
         self.dx = self.x2 - self.x1
@@ -450,12 +453,12 @@ class PolygonBoundaryComp(BoundaryBaseComp):
 
 
 class CircleBoundaryComp(PolygonBoundaryComp):
-    def __init__(self, n_wt, center, radius, const_id=None):
+    def __init__(self, n_wt, center, radius, const_id=None, units=None):
         self.center = center
         self.radius = radius
         t = np.linspace(0, 2 * np.pi, 100)
         xy_boundary = self.center + np.array([np.cos(t), np.sin(t)]).T * self.radius
-        BoundaryBaseComp.__init__(self, n_wt, xy_boundary, const_id)
+        BoundaryBaseComp.__init__(self, n_wt, xy_boundary, const_id, units)
         self.zeros = np.zeros(self.n_wt)
 
     def plot(self, ax=None):

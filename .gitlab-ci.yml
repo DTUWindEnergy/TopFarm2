@@ -9,6 +9,7 @@ test_topfarm:  # name the job what we like
     test
   script:
   - pip install --upgrade git+git://github.com/FUSED-Wind/FUSED-Wake@master
+  - pip install --upgrade git+https://gitlab.windenergy.dtu.dk/TOPFARM/PlantEnergy.git@develop
   - pip install -e .
   - py.test
   tags:  # only runners with this tag can do the job [3]
@@ -21,6 +22,7 @@ test_topfarm_pep8:  # name the job what we like
     test
   script:
   - pip install --upgrade git+git://github.com/FUSED-Wind/FUSED-Wake@master
+  - pip install --upgrade git+https://gitlab.windenergy.dtu.dk/TOPFARM/PlantEnergy.git@develop
   - pip install -e .
   - pycodestyle --ignore=E501 --exclude="*Colonel*" topfarm
   tags:  # only runners with this tag can do the job [3]
@@ -33,6 +35,7 @@ test_topfarm_windows:  # name the job what we like
   stage:  # build, test, deploy defined by default [2]
     test
   script:  # runs on windows machine due to tag below
+  - c:/Anaconda3/envs/pyTopfarm_openmdao_2_5/scripts/pip install --upgrade git+https://gitlab.windenergy.dtu.dk/TOPFARM/PlantEnergy.git@develop
   - c:/Anaconda3/envs/pyTopfarm_openmdao_2_5/scripts/pip install -e .
   - c:/Anaconda3/envs/pyTopfarm_openmdao_2_5/python.exe -m pytest --cov-report term-missing:skip-covered --cov=topfarm --cov-config .coveragerc --ignore=topfarm/cost_models/fuga/Colonel
   tags:  # tag for shared runner on windows machine
@@ -44,6 +47,7 @@ pages:  # "pages" is a job specifically for GitLab pages [1]
     deploy
   script:  # use sphinx to build docs, move to public page
   - pip install --upgrade git+git://github.com/FUSED-Wind/FUSED-Wake@master
+  - pip install --upgrade git+https://gitlab.windenergy.dtu.dk/TOPFARM/PlantEnergy.git@develop
   - pip install --upgrade git+https://gitlab.windenergy.dtu.dk/TOPFARM/PyWake.git
   - pip install -e .
   - pip install sphinx --upgrade

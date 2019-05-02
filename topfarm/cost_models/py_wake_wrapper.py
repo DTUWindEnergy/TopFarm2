@@ -7,7 +7,7 @@ from topfarm.cost_models.cost_model_wrappers import AEPCostModelComponent
 from topfarm.easy_drivers import EasyRandomSearchDriver
 from topfarm.drivers.random_search_driver import RandomizeTurbinePosition_Circle
 from py_wake.wake_models.gaussian import IEA37SimpleBastankhahGaussian
-from topfarm import x_key, y_key, z_key, type_key
+import topfarm
 import numpy as np
 from scipy.interpolate.interpolate import RegularGridInterpolator
 
@@ -27,10 +27,10 @@ class PyWakeAEP(AEPCalculator):
             input_keys=['x', 'y'],
             n_wt=n_wt,
             cost_function=lambda **kwargs:
-                self.calculate_AEP(x_i=kwargs[x_key],
-                                   y_i=kwargs[y_key],
-                                   h_i=kwargs.get(z_key, None),
-                                   type_i=kwargs.get(type_key, None),
+                self.calculate_AEP(x_i=kwargs[topfarm.x_key],
+                                   y_i=kwargs[topfarm.y_key],
+                                   h_i=kwargs.get(topfarm.z_key, None),
+                                   type_i=kwargs.get(topfarm.type_key, None),
                                    wd=wd, ws=ws).sum(),
             output_unit='GWh')
 

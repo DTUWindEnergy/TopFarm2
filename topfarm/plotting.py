@@ -87,8 +87,18 @@ class XYPlotComp(NoPlot):
 
     def setup(self):
         NoPlot.setup(self)
-        self.add_input(topfarm.x_key, np.zeros(self.n_wt))
-        self.add_input(topfarm.y_key, np.zeros(self.n_wt))
+        if topfarm.x_key in self.problem.design_vars:
+            self.min_x, self.max_x = self.problem.design_vars[topfarm.x_key][1:-1]
+            units_x = self.problem.design_vars[topfarm.x_key][-1]
+        else:
+            units_x = None
+        if topfarm.y_key in self.problem.design_vars:
+            self.min_y, self.max_y = self.problem.design_vars[topfarm.y_key][1:-1]
+            units_y = self.problem.design_vars[topfarm.y_key][-1]
+        else:
+            units_y = None
+        self.add_input(topfarm.x_key, np.zeros(self.n_wt), units=units_x)
+        self.add_input(topfarm.y_key, np.zeros(self.n_wt), units=units_y)
         if hasattr(self.problem, 'xy_boundary'):
             self.xy_boundary = self.problem.xy_boundary
         if hasattr(self.problem.cost_comp, 'output_key'):
@@ -183,12 +193,12 @@ class XYPlotComp(NoPlot):
 
             if (topfarm.x_key in self.problem.design_vars and
                     isinstance(self.problem.design_vars[topfarm.x_key], tuple)):
-                min_x, max_x = self.problem.design_vars[topfarm.x_key][1:]
+                min_x, max_x = self.min_x, self.max_x
             else:
                 min_x, max_x = min(inputs[topfarm.x_key]), max(inputs[topfarm.x_key])
             if (topfarm.y_key in self.problem.design_vars and
                     isinstance(self.problem.design_vars[topfarm.y_key], tuple)):
-                min_y, max_y = self.problem.design_vars[topfarm.y_key][1:]
+                min_y, max_y = self.min_y, self.max_y
             else:
                 min_y, max_y = min(inputs[topfarm.y_key]), max(inputs[topfarm.y_key])
 

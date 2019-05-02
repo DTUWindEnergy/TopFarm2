@@ -4,7 +4,7 @@ import topfarm
 
 
 class SpacingConstraint(Constraint):
-    def __init__(self, min_spacing):
+    def __init__(self, min_spacing, units=None):
         """Initialize SpacingConstraint
 
         Parameters
@@ -14,6 +14,7 @@ class SpacingConstraint(Constraint):
         """
         self.min_spacing = min_spacing
         self.const_id = 'spacing_comp_{}'.format(int(min_spacing))
+        self.units = units
 
     @property
     def constraintComponent(self):
@@ -21,7 +22,7 @@ class SpacingConstraint(Constraint):
 
     def _setup(self, problem):
         self.n_wt = problem.n_wt
-        self.spacing_comp = SpacingComp(self.n_wt, self.min_spacing, self.const_id)
+        self.spacing_comp = SpacingComp(self.n_wt, self.min_spacing, self.const_id, self.units)
         problem.model.add_subsystem(self.const_id, self.spacing_comp, promotes=[
                                     topfarm.x_key, topfarm.y_key, 'penalty_' + self.const_id, 'wtSeparationSquared'])
 #        problem.model.add_constraint('wtSeparationSquared', lower=zero + (self.min_spacing)**2)
@@ -43,19 +44,20 @@ class SpacingComp(ConstraintComponent):
 
     """
 
-    def __init__(self, n_wt, min_spacing, const_id=None):
+    def __init__(self, n_wt, min_spacing, const_id=None, units=None):
         super().__init__()
         self.n_wt = n_wt
         self.min_spacing = min_spacing
         self.const_id = const_id
         self.veclen = int((n_wt - 1.) * n_wt / 2.)
+        self.units = units
 
     def setup(self):
         # Explicitly size input arrays
         self.add_input(topfarm.x_key, val=np.zeros(self.n_wt),
-                       desc='x coordinates of turbines in wind dir. ref. frame')
+                       desc='x coordinates of turbines in wind dir. ref. frame', units=self.units)
         self.add_input(topfarm.y_key, val=np.zeros(self.n_wt),
-                       desc='y coordinates of turbines in wind dir. ref. frame')
+                       desc='y coordinates of turbines in wind dir. ref. frame', units=self.units)
         self.add_output('penalty_' + self.const_id, val=0.0)
         # Explicitly size output array
         self.add_output('wtSeparationSquared', val=np.zeros(self.veclen),
