@@ -88,12 +88,10 @@ class XYPlotComp(NoPlot):
     def setup(self):
         NoPlot.setup(self)
         if topfarm.x_key in self.problem.design_vars:
-            self.min_x, self.max_x = self.problem.design_vars[topfarm.x_key][1:-1]
             units_x = self.problem.design_vars[topfarm.x_key][-1]
         else:
             units_x = None
         if topfarm.y_key in self.problem.design_vars:
-            self.min_y, self.max_y = self.problem.design_vars[topfarm.y_key][1:-1]
             units_y = self.problem.design_vars[topfarm.y_key][-1]
         else:
             units_y = None
@@ -192,13 +190,15 @@ class XYPlotComp(NoPlot):
             # find limits
 
             if (topfarm.x_key in self.problem.design_vars and
-                    isinstance(self.problem.design_vars[topfarm.x_key], tuple)):
-                min_x, max_x = self.min_x, self.max_x
+                    isinstance(self.problem.design_vars[topfarm.x_key], tuple) and
+                    len(self.problem.design_vars[topfarm.x_key]) == 4):
+                min_x, max_x = self.problem.design_vars[topfarm.x_key][1:-1]
             else:
                 min_x, max_x = min(inputs[topfarm.x_key]), max(inputs[topfarm.x_key])
             if (topfarm.y_key in self.problem.design_vars and
-                    isinstance(self.problem.design_vars[topfarm.y_key], tuple)):
-                min_y, max_y = self.min_y, self.max_y
+                    isinstance(self.problem.design_vars[topfarm.y_key], tuple) and
+                    len(self.problem.design_vars[topfarm.y_key]) == 4):
+                min_y, max_y = self.problem.design_vars[topfarm.y_key][1:-1]
             else:
                 min_y, max_y = min(inputs[topfarm.y_key]), max(inputs[topfarm.y_key])
 

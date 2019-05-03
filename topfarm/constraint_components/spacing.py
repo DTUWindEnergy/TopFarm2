@@ -119,7 +119,15 @@ class SpacingComp(ConstraintComponent):
         from matplotlib.pyplot import Circle
         import matplotlib.pyplot as plt
         ax = ax or plt.gca()
-        for x, y in zip(self.x, self.y):
+        if isinstance(self.x, tuple):
+            x_plot = self.x[0]
+        else:
+            x_plot = self.x
+        if isinstance(self.y, tuple):
+            y_plot = self.y[0]
+        else:
+            y_plot = self.y
+        for x, y in zip(x_plot, y_plot):
             circle = Circle((x, y), self.min_spacing / 2, color='k', ls='--', fill=False)
             ax.add_artist(circle)
 
