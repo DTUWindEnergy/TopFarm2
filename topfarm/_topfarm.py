@@ -182,8 +182,10 @@ class TopFarmProblem(Problem):
         if cost_comp:
             self.model.add_subsystem('cost_comp', cost_comp, promotes=['*'])
             self.model.add_objective('cost', scaler=1 / abs(expected_cost))
+        else:
+            self.indeps.add_output('cost')
 
-        if plot_comp:
+        if plot_comp and not isinstance(plot_comp, NoPlot):
             self.model.add_subsystem('plot_comp', plot_comp, promotes=['*'])
             plot_comp.problem = self
             plot_comp.n_wt = self.n_wt

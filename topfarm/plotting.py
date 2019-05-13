@@ -19,31 +19,14 @@ def mypause(interval):
             return
 
 
-class NoPlot(ExplicitComponent):
+class NoPlot():
     """Plotting component for no plotting"""
-    def __init__(self, *args, **kwargs):
-        """Initialize no-plot component
-
-        Parameters
-        ----------
-        *args : arguments, optional
-            Arguments to be passed to ExplicitComponent (OpenMDAO)
-        **kwargs : keyword arguments, optional
-            Keyword arguments to be passed to ExplicitComponent (OpenMDAO)
-        """
-        ExplicitComponent.__init__(self)
 
     def show(self):
         pass
 
-    def setup(self):
-        self.add_input('cost', 0.)
 
-    def compute(self, inputs, outputs):
-        pass
-
-
-class XYPlotComp(NoPlot):
+class XYPlotComp(ExplicitComponent):
     """Plotting component for turbine locations"""
     # colors = ['b', 'r', 'm', 'c', 'g', 'y', 'orange', 'indigo', 'grey'] * 100
     colors = [c['color'] for c in iter(matplotlib.rcParams['axes.prop_cycle'])] * 100
@@ -86,7 +69,6 @@ class XYPlotComp(NoPlot):
         plt.show()
 
     def setup(self):
-        NoPlot.setup(self)
         if topfarm.x_key in self.problem.design_vars:
             units_x = self.problem.design_vars[topfarm.x_key][-1]
         else:
