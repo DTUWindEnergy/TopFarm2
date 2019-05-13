@@ -82,16 +82,17 @@ def test_xyz_boundary():
 
 
 def test_move_inside():
-    pbc = ConvexBoundaryComp(1, [(0, 0), (10, 0), (10, 10)])
+    pbc = ConvexBoundaryComp(1, [(0, 0), (9, 0), (10, 1), (10, 10)])
     x0, y0 = [3, 3, 3, 12, 12, 12], [3, 5, 10, 8, 10, 12]
     state = pbc.satisfy({'x': x0, 'y': y0})
     x, y = state['x'], state['y']
-#     import matplotlib.pyplot as plt
-#     b = np.r_[pbc.xy_boundary, pbc.xy_boundary[:1]]
-#     plt.plot(b[:, 0], b[:, 1], 'k')
-#     for x0_, x_, y0_, y_ in zip(x0, x, y0, y):
-#         plt.plot([x0_, x_], [y0_, y_], '.-')
-#     plt.show()
+    if 0:
+        import matplotlib.pyplot as plt
+        b = np.r_[pbc.xy_boundary, pbc.xy_boundary[:1]]
+        plt.plot(b[:, 0], b[:, 1], 'k')
+        for x0_, x_, y0_, y_ in zip(x0, x, y0, y):
+            plt.plot([x0_, x_], [y0_, y_], '.-')
+        plt.show()
     eps = 1e-10
     npt.assert_array_less(y, x + eps)
     npt.assert_array_less(x, 10 + eps)

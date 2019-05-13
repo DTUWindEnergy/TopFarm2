@@ -98,7 +98,7 @@ class CostModelComponent(ExplicitComponent):
     @property
     def counter(self):
         counter = float(self.n_func_eval)
-        if self.grad_time_sum > 0 and self.func_time_sum > 0:
+        if self.grad_time_sum > 0 and self.func_time_sum > 0 and self.n_grad_eval > 0 and self.n_func_eval > 0:
             ratio = ((self.grad_time_sum / self.n_grad_eval) /
                      (self.func_time_sum / self.n_func_eval))
             counter += self.n_grad_eval * max(ratio, 1)

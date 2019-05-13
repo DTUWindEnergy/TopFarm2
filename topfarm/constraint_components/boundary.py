@@ -29,7 +29,8 @@ class XYBoundaryConstraint(Constraint):
             if self.boundary_type == 'polygon':
                 self.boundary_comp = PolygonBoundaryComp(n_wt, self.boundary, self.const_id, self.units)
             else:
-                self.boundary_comp = ConvexBoundaryComp(n_wt, self.boundary, self.boundary_type, self.const_id, self.units)
+                self.boundary_comp = ConvexBoundaryComp(
+                    n_wt, self.boundary, self.boundary_type, self.const_id, self.units)
         return self.boundary_comp
 
     @property
@@ -41,7 +42,8 @@ class XYBoundaryConstraint(Constraint):
                            self.boundary_comp.xy_boundary.min(0),
                            self.boundary_comp.xy_boundary.max(0)):
             if len(design_vars[k]) == 4:
-                design_vars[k] = (design_vars[k][0], np.maximum(design_vars[k][1], l), np.minimum(design_vars[k][2], u), design_vars[k][-1])
+                design_vars[k] = (design_vars[k][0], np.maximum(design_vars[k][1], l),
+                                  np.minimum(design_vars[k][2], u), design_vars[k][-1])
             else:
                 design_vars[k] = (design_vars[k][0], l, u, design_vars[k][-1])
 
@@ -83,7 +85,8 @@ class CircleBoundaryConstraint(Constraint):
 
         self.center = np.array(center)
         self.radius = radius
-        self.const_id = 'circle_boundary_comp_{}_{}'.format('_'.join([str(int(c)) for c in center]), int(radius)).replace('.', '_')
+        self.const_id = 'circle_boundary_comp_{}_{}'.format(
+            '_'.join([str(int(c)) for c in center]), int(radius)).replace('.', '_')
 
     def get_comp(self, n_wt):
         if not hasattr(self, 'boundary_comp'):
@@ -99,7 +102,8 @@ class CircleBoundaryConstraint(Constraint):
                            self.center - self.radius,
                            self.center + self.radius):
             if len(design_vars[k]) == 4:
-                design_vars[k] = (design_vars[k][0], np.maximum(design_vars[k][1], l), np.minimum(design_vars[k][2], u), design_vars[k][-1])
+                design_vars[k] = (design_vars[k][0], np.maximum(design_vars[k][1], l),
+                                  np.minimum(design_vars[k][2], u), design_vars[k][-1])
             else:
                 design_vars[k] = (design_vars[k][0], l, u, design_vars[k][-1])
 
@@ -297,6 +301,7 @@ class ConvexBoundaryComp(BoundaryBaseComp):
     def satisfy(self, state, pad=1.1):
         x, y = [np.asarray(state[xyz], dtype=np.float) for xyz in [topfarm.x_key, topfarm.y_key]]
         dist = self.distances(x, y)
+        dist = np.where(dist < 0, np.minimum(dist, -.01), dist)
         dx, dy = self.gradients(x, y)  # independent of position
         dx = dx[:self.nVertices, 0]
         dy = dy[:self.nVertices, 0]
@@ -306,8 +311,8 @@ class ConvexBoundaryComp(BoundaryBaseComp):
             v = np.linspace(-np.abs(d.min()), np.abs(d.min()), 100)
             X, Y = np.meshgrid(v, v)
             m = np.ones_like(X)
-            for j in range(3):
-                m = np.logical_and(m, X * dx[j] + Y * dy[j] >= -dist[i][j])
+            for dx_, dy_, d in zip(dx, dy, dist.T):
+                m = np.logical_and(m, X * dx_ + Y * dy_ >= -d[i])
             index = np.argmin(X[m]**2 + Y[m]**2)
             x[i] += X[m][index]
             y[i] += Y[m][index]
