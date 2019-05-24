@@ -1,5 +1,5 @@
 import matplotlib
-from openmdao.core.explicitcomponent import ExplicitComponent
+from openmdao.api import ExplicitComponent
 import matplotlib.pyplot as plt
 import numpy as np
 import topfarm
@@ -113,21 +113,23 @@ class XYPlotComp(ExplicitComponent):
     def plot_history(self, x, y):
         rec = self.problem.recorder
         if rec.num_cases > 0:
-            def get(xy, xy_key):
-                rec_xy = rec[xy_key][-self.memory:]
+            def get(xy, xy_key, pw):
+                rec_xy = pw[xy_key][-self.memory:]
                 if len(rec_xy.shape) == 1:
                     rec_xy = rec_xy[:, np.newaxis]
                 return np.r_[rec_xy, [xy]]
-            x = get(x, topfarm.x_key)
-            y = get(y, topfarm.y_key)
+            pw = self.problem.get_vars_from_recorder()
+            x = get(x, topfarm.x_key, pw)
+            y = get(y, topfarm.y_key, pw)
             for c, x_, y_ in zip(self.colors, x.T, y.T):
                 self.ax.plot(x_, y_, '--', color=c)
 
     def plot_initial2current(self, x0, y0, x, y):
         rec = self.problem.recorder
         if rec.num_cases > 0:
-            x0 = np.atleast_1d(rec[topfarm.x_key][0])
-            y0 = np.atleast_1d(rec[topfarm.y_key][0])
+            pw = self.problem.get_vars_from_recorder()
+            x0 = np.atleast_1d(pw['x0'])
+            y0 = np.atleast_1d(pw['y0'])
             for c, x0_, y0_, x_, y_ in zip(self.colors, x0, y0, x, y):
                 self.ax.plot(x0_, y0_, '>', markerfacecolor=c, markeredgecolor='k')
                 self.ax.plot((x0_, x_), (y0_, y_), '-', color=c)
@@ -153,11 +155,8 @@ class XYPlotComp(ExplicitComponent):
     def get_initial(self):
         rec = self.problem.recorder
         if rec.num_cases > 0:
-            x0 = rec[topfarm.x_key][0]
-            y0 = rec[topfarm.y_key][0]
-            c = rec[self.cost_key]
-            cost0 = np.r_[c[c != 0], 0][0]  # first non-zero if exists
-            return x0, y0, cost0
+            pw = self.problem.get_vars_from_recorder()
+            return pw['x0'], pw['y0'], pw['cost0']
 
     def compute(self, inputs, outputs):
         if self.by_pass is False:

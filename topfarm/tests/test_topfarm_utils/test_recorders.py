@@ -3,8 +3,8 @@ Created on 17. jul. 2018
 
 @author: mmpe
 '''
-from topfarm.recorders import ListRecorder, TopFarmListRecorder, split_record_id,\
-    recordid2filename, _get_source_system, CaseTable
+from topfarm.recorders import TopFarmListRecorder, split_record_id,\
+    recordid2filename
 import numpy as np
 from openmdao.drivers.doe_generators import ListGenerator
 import pytest
@@ -65,10 +65,9 @@ def test_ListRecorder():
            [-1.53, 2.92, 60.9397],
            [-1.25, 7.84, 145.4481]]
     prob.driver = DOEDriver(ListGenerator([[('x', xy[0]), ('y', xy[1])] for xy in xyf]))
-    recorder = ListRecorder()
+    recorder = TopFarmListRecorder()
     recorder._initialize_database()
     recorder._cleanup_abs2meta()
-    recorder.record_metadata_driver(None)
     recorder.record_iteration_problem(None, None, None)
     recorder.record_iteration_system(None, None, None)
     recorder.record_iteration_solver(None, None, None)
@@ -76,10 +75,6 @@ def test_ListRecorder():
     recorder.record_metadata_solver(None)
     recorder.record_derivatives_driver(None, None, None)
     recorder.shutdown()
-    _get_source_system('')
-    ct = CaseTable(None, None, None, None, None, None, None, None, None)
-    ct.count()
-    ct.list_cases()
 
     prob.driver.add_recorder(recorder)
     prob.driver.recording_options['record_desvars'] = True
@@ -90,24 +85,14 @@ def test_ListRecorder():
     prob.run_driver()
     prob.cleanup()
 
-    cases = recorder.driver_cases
-    assert cases.num_cases == 4
-
-    recorder._driver_cases.get_cases()
-    recorder._driver_cases.get_case(0)
-    recorder._driver_cases._get_iteration_coordinate(None)
-    recorder._driver_cases._load_cases()
-    recorder._driver_cases.list_sources()
-    recorder._driver_cases._get_source('')
-    recorder._driver_cases._get_row_source(None)
-    recorder._driver_cases._get_first(None)
+    assert recorder.num_cases == 4
 
     npt.assert_array_equal(recorder.get('counter'), range(1, 5))
     npt.assert_array_equal(recorder['counter'], range(1, 5))
 
     npt.assert_array_almost_equal(recorder.get(['x', 'y', 'f_xy']), xyf, 4)
     for xyf, k in zip(xyf[0], ['x', 'y', 'f_xy']):
-        npt.assert_allclose(cases.get_case(0).outputs[k][0], xyf)
+        npt.assert_allclose(recorder[k][0], xyf)
 
     with pytest.raises(KeyError, match="missing"):
         recorder.get('missing')
@@ -261,7 +246,7 @@ def test_TopFarmListRecorder_continue(tf_generator, load_case, n_rec, n_fev, get
     # 1) delete file "test_files/recordings/test_TopFarmListRecorder_continue"
     # 2) Uncomment line below, run and recomment
 #    if load_case == "": recorder.save()  # create test file
-    npt.assert_equal(recorder.driver_cases.num_cases, n_rec)
+    npt.assert_equal(recorder.num_cases, n_rec)
     npt.assert_equal(tf.driver.result['nfev'], n_fev)
 
     tf.plot_comp.show()

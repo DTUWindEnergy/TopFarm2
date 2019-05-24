@@ -21,24 +21,21 @@ mpi.MPI = None```
 """
 import time
 import numpy as np
-from openmdao.drivers.doe_generators import DOEGenerator, ListGenerator
-from openmdao.drivers.doe_driver import DOEDriver
-from openmdao.drivers.genetic_algorithm_driver import SimpleGADriver
-
-from topfarm.recorders import ListRecorder, NestedTopFarmListRecorder,\
-    TopFarmListRecorder, split_record_id
-from openmdao.api import Problem, IndepVarComp, Group
-from topfarm.plotting import NoPlot
 import warnings
+import copy
+from openmdao.api import Problem, IndepVarComp, Group, ParallelGroup,\
+    ExplicitComponent, ListGenerator, DOEDriver, SimpleGADriver
+from openmdao.drivers.doe_generators import DOEGenerator
+from openmdao.utils import mpi
 import topfarm
-from openmdao.core.explicitcomponent import ExplicitComponent
+from topfarm.recorders import NestedTopFarmListRecorder,\
+    TopFarmListRecorder, split_record_id
+from topfarm.plotting import NoPlot
 from topfarm.easy_drivers import EasyScipyOptimizeDriver, EasySimpleGADriver
 from topfarm.utils import smart_start
 from topfarm.constraint_components.spacing import SpacingComp
 from topfarm.constraint_components.boundary import BoundaryBaseComp
 from topfarm.constraint_components.penalty_component import PenaltyComponent
-import copy
-from openmdao.utils import mpi
 
 
 class TopFarmProblem(Problem):
@@ -98,7 +95,6 @@ class TopFarmProblem(Problem):
         --------
         See main() in the bottom of this file
         """
-
         if mpi.MPI:
             comm = None
         else:
@@ -229,6 +225,17 @@ class TopFarmProblem(Problem):
         else:
             self.recorder = TopFarmListRecorder(self.record_id)
 
+    def get_vars_from_recorder(self):
+        rec = self.recorder
+        x = np.array(rec[topfarm.x_key])
+        y = np.array(rec[topfarm.y_key])
+        c = np.array(rec[topfarm.cost_key])
+        x0 = x[0]
+        y0 = y[0]
+        cost0 = c[0]
+        return {'x0': x0, 'y0': y0, 'cost0': cost0,
+                topfarm.x_key: x, topfarm.y_key: y, 'c': c}
+
     def setup(self):
         if self._setup_status == 0:
             Problem.setup(self, check=True)
@@ -237,7 +244,7 @@ class TopFarmProblem(Problem):
                 warnings.filterwarnings('error')
                 try:
                     if len(self.driver._rec_mgr._recorders) == 0:
-                        tmp_recorder = ListRecorder()
+                        tmp_recorder = TopFarmListRecorder()
                         self.driver.add_recorder(tmp_recorder)
                         Problem.final_setup(self)
                     else:
@@ -270,7 +277,7 @@ class TopFarmProblem(Problem):
         Current cost : float
         Current state : dict
         """
-        tmp_recorder = ListRecorder()
+        tmp_recorder = TopFarmListRecorder()
         self.driver.add_recorder(tmp_recorder)
         self.setup()
         self.update_state(state)
@@ -285,7 +292,7 @@ class TopFarmProblem(Problem):
         """Evaluate the gradients."""
         self.setup()
         t = time.time()
-        rec = ListRecorder()
+        rec = TopFarmListRecorder()
         self.driver.add_recorder(rec)
         res = self.compute_totals(['cost'], wrt=[topfarm.x_key, topfarm.y_key], return_format='dict')
         self.driver._rec_mgr._recorders.remove(rec)
@@ -334,12 +341,14 @@ class TopFarmProblem(Problem):
         if self.driver._rec_mgr._recorders != []:  # in openmdao<2.4 cleanup does not delete recorders
             self.driver._rec_mgr._recorders.remove(self.recorder)
         if isinstance(self.driver, DOEDriver) or isinstance(self.driver, SimpleGADriver):
-            costs = self.recorder.get('cost')
-            cases = self.recorder.driver_cases
-            costs = [cases.get_case(i).outputs['cost'] for i in range(cases.num_cases)]
+            costs = self.recorder['cost']
+#            cases = self.recorder.driver_cases
+#            costs = [cases.get_case(i).outputs['cost'] for i in range(cases.num_cases)]
             best_case_index = int(np.argmin(costs))
-            best_case = cases.get_case(best_case_index)
-            self.evaluate({k: best_case.outputs[k] for k in best_case.outputs})
+#            best_case = cases.get_case(best_case_index)
+            best_state = {k: self.recorder[k][best_case_index] for k in self.design_vars}
+#            self.evaluate({k: best_case.outputs[k] for k in best_case.outputs})
+            self.evaluate(best_state)
         return self.cost, copy.deepcopy(self.state), self.recorder
 
     def check_gradients(self, check_all=False, tol=1e-3):
@@ -445,17 +454,36 @@ class ProblemComponent(ExplicitComponent):
             outputs[output_key] = self.problem[output_key]
 
 
-class TopFarmGroup(Group):
+class TopFarmBaseGroup(Group):
     def __init__(self, comps=[], output_key=None, output_unit=''):
-        super(TopFarmGroup, self).__init__()
-        self.comps = comps
+        super().__init__()
+        self.comps = []
+        self.obj_comp = None
+        for i, comp in enumerate(comps):
+            if hasattr(comp, 'objective') and comp.objective:
+                self.output_key = comp.output_key
+                self.output_unit = comp.output_unit
+                self.cost_factor = comp.cost_factor
+                self.obj_comp = comp
+            else:
+                self.comps.append(comp)
+
+
+class TopFarmGroup(TopFarmBaseGroup):
+    def __init__(self, comps=[], output_key=None, output_unit=''):
+        super().__init__(comps, output_key, output_unit)
         for i, comp in enumerate(comps):
             self.add_subsystem('comp_{}'.format(i), comp, promotes=['*'])
-            if hasattr(comp, 'objective'):
-                if comp.objective:
-                    self.output_key = comp.output_key
-                    self.output_unit = comp.output_unit
-                    self.cost_factor = comp.cost_factor
+
+
+class TopFarmParallelGroup(TopFarmBaseGroup):
+    def __init__(self, comps=[], output_key=None, output_unit=''):
+        super().__init__(comps, output_key, output_unit)
+        parallel = ParallelGroup()
+        for i, comp in enumerate(self.comps):
+                parallel.add_subsystem('comp_{}'.format(i), comp, promotes=['*'])
+        self.add_subsystem('parallel', parallel, promotes=['*'])
+        self.add_subsystem('objective', self.obj_comp, promotes=['*'])
 
 
 def main():

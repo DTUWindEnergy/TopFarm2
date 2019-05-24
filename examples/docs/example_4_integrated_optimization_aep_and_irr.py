@@ -9,12 +9,20 @@ from topfarm import TopFarmGroup, TopFarmProblem
 from topfarm.easy_drivers import EasyRandomSearchDriver
 from topfarm.drivers.random_search_driver import RandomizeTurbinePosition_Circle
 from topfarm.constraint_components.boundary import CircleBoundaryConstraint
-from topfarm.plotting import XYPlotComp
+from topfarm.plotting import XYPlotComp, NoPlot
 from topfarm.constraint_components.spacing import SpacingConstraint
 
 
 def main():
     if __name__ == '__main__':
+        try:
+            import matplotlib.pyplot as plt
+            plt.gcf()
+            plot_comp = XYPlotComp()
+            plot = True
+        except RuntimeError:
+            plot_comp = NoPlot()
+            plot = False
 
         n_wt = 16
         site = IEA37Site(n_wt)
@@ -40,9 +48,9 @@ def main():
                 driver=EasyRandomSearchDriver(randomize_func=RandomizeTurbinePosition_Circle(), max_iter=50),
                 constraints=[SpacingConstraint(200),
                              CircleBoundaryConstraint([0, 0], 1300.1)],
-                plot_comp=XYPlotComp())
+                plot_comp=plot_comp)
         cost, state, recorder = problem.optimize()
         #        problem.evaluate()
-        view_model(problem, outfile='example_4_integrated_optimization_aep_and_irr_n2.html', show_browser=False)
+#        view_model(problem, outfile='example_4_integrated_optimization_aep_and_irr_n2.html', show_browser=False)
 
 main()

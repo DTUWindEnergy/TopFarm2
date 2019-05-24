@@ -111,7 +111,7 @@ def test_optimizers_scaling(driver, tol, N, cost_scale, cost_offset, topfarm_gen
 
     tf = topfarm_generator_scalable(driver, cost_scale=cost_scale, cost_offset=cost_offset)
     _, _, recorder = tf.optimize()
-    uta.assertLessEqual(recorder.driver_cases.num_cases, N)
+    uta.assertLessEqual(recorder.num_cases, N)
 
     tb_pos = tf.turbine_positions[:, :2]
     tf.plot_comp.show()
@@ -130,7 +130,7 @@ def find_optimal_scaling(topfarm_generator_scalable):
         tf.model.get_objectives()['cost_comp.cost']['scaler'] = i
 
         cost, _, recorder = tf.optimize()
-        N = recorder.driver_cases.num_cases
+        N = recorder.num_cases
         res.append((i, N, cost))
         print(i, N, cost)
         i *= 2

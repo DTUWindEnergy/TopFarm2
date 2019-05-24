@@ -20,10 +20,19 @@ from topfarm.cost_models.utils.aep_calculator import AEPCalculator
 from topfarm.cost_models.utils.wind_resource import WindResource
 from topfarm.easy_drivers import EasyScipyOptimizeDriver
 from topfarm.tests import test_files
+from topfarm.plotting import XYPlotComp, NoPlot
 
 
 def main():
     if __name__ == '__main__':
+        try:
+            import matplotlib.pyplot as plt
+            plt.gcf()
+            plot_comp = XYPlotComp()
+            plot = True
+        except RuntimeError:
+            plot_comp = NoPlot()
+            plot = False
         # ------------------------ INPUTS ------------------------
 
         # paths to input files
@@ -59,7 +68,8 @@ def main():
                                         ).get_TopFarm_cost_component(),
                 constraints=[SpacingConstraint(min_spacing),
                              XYBoundaryConstraint(boundary)],
-                driver=EasyScipyOptimizeDriver())
+                driver=EasyScipyOptimizeDriver(),
+                plot_comp=plot_comp)
 
         with warnings.catch_warnings():
             warnings.filterwarnings('ignore')  # temporarily disable fusedwake warnings
@@ -103,7 +113,7 @@ def main():
 
         # ------------------------ PLOT (if possible) ------------------------
 
-        try:
+        if plot:
 
             # initialize the figure and axes
             fig = plt.figure(1, figsize=(7, 5))
@@ -132,8 +142,8 @@ def main():
             fig.savefig(folder + "/figures/" + file.replace('.py', '.png'))
 
 
-        except RuntimeError:
-            pass
+#        except RuntimeError:
+#            pass
 
 
 main()

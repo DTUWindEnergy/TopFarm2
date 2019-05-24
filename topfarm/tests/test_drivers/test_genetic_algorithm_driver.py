@@ -738,6 +738,7 @@ class MPITestSimpleGA(unittest.TestCase):
 
 
 @unittest.skipUnless(PETScVector, "PETSc is required.")
+@unittest.skipUnless(MPI, "MPI is required.")
 class MPITestSimpleGA4Procs(unittest.TestCase):
 
     N_PROCS = 4

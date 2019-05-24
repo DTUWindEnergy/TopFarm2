@@ -15,6 +15,7 @@ from topfarm import TopFarmProblem
 from topfarm.constraint_components.boundary import XYBoundaryConstraint
 from topfarm.constraint_components.spacing import SpacingConstraint
 from topfarm.easy_drivers import EasyScipyOptimizeDriver
+from topfarm.plotting import NoPlot
 
 
 def main():
@@ -28,6 +29,14 @@ def main():
         optimal = np.array([[2.5, -3], [6, -7], [4.5, -3], [3, -7]])  # optimal layout
         min_spacing = 2  # min distance between turbines
 
+        try:
+            import matplotlib.pyplot as plt
+            plt.gcf()
+            plot_comp = DummyCostPlotComp(desired)
+            plot = True
+        except RuntimeError:
+            plot_comp = NoPlot()
+            plot = False
         # ------------------------ OPTIMIZATION ------------------------
 
         # create the wind farm and run the optimization
@@ -37,7 +46,7 @@ def main():
             cost_comp=DummyCost(desired, ['x', 'y']),
             constraints=[XYBoundaryConstraint(boundary),
                          SpacingConstraint(min_spacing)],
-            plot_comp=DummyCostPlotComp(desired),
+            plot_comp=plot_comp,
             driver=EasyScipyOptimizeDriver()
         )
         cost, state, recorder = tf.optimize()
@@ -54,7 +63,7 @@ def main():
 
         # ------------------------ PLOT (if possible) ------------------------
 
-        try:
+        if plot:
 
             # initialize the figure and axes
             fig = plt.figure(1, figsize=(7, 5))
@@ -87,8 +96,8 @@ def main():
             folder, file = os.path.split(__file__)
             fig.savefig(folder + "/figures/" + file.replace('.py', '.png'))
 
-        except RuntimeError:
-            pass
+#        except RuntimeError:
+#            pass
 
 
 main()
