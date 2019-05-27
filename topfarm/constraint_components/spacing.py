@@ -25,9 +25,6 @@ class SpacingConstraint(Constraint):
         self.spacing_comp = SpacingComp(self.n_wt, self.min_spacing, self.const_id, self.units)
         problem.model.add_subsystem(self.const_id, self.spacing_comp, promotes=[
                                     topfarm.x_key, topfarm.y_key, 'penalty_' + self.const_id, 'wtSeparationSquared'])
-#        problem.model.add_constraint('wtSeparationSquared', lower=zero + (self.min_spacing)**2)
-        self.spacing_comp.x = problem.design_vars[topfarm.x_key]
-        self.spacing_comp.y = problem.design_vars[topfarm.y_key]
 
     def setup_as_constraint(self, problem):
         self._setup(problem)
@@ -119,15 +116,14 @@ class SpacingComp(ConstraintComponent):
         from matplotlib.pyplot import Circle
         import matplotlib.pyplot as plt
         ax = ax or plt.gca()
-        if isinstance(self.x, tuple):
-            x_plot = self.x[0]
-        else:
-            x_plot = self.x
-        if isinstance(self.y, tuple):
-            y_plot = self.y[0]
-        else:
-            y_plot = self.y
-        for x, y in zip(x_plot, y_plot):
+
+        def get_xy(xy):
+            if not hasattr(self, xy):
+                setattr(self, xy, dict(self.list_inputs(out_stream=None))[f'{self.name}.{xy}']['value'])
+            xy = getattr(self, xy)
+            return xy if not isinstance(xy, tuple) else xy[0]
+
+        for x, y in zip(get_xy('x'), get_xy('y')):
             circle = Circle((x, y), self.min_spacing / 2, color='k', ls='--', fill=False)
             ax.add_artist(circle)
 

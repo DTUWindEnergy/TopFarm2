@@ -7,8 +7,8 @@ class CostModelComponent(ExplicitComponent):
     """Wrapper for pure-Python cost functions"""
 
     def __init__(self, input_keys, n_wt, cost_function, cost_gradient_function=None,
-                 output_key="Cost", output_unit="", additional_output=[], max_eval=None,
-                 objective=True, income_model=False, output_val=0.0, input_units=None):
+                 output_key="Cost", output_unit="", additional_input=[], additional_output=[], max_eval=None,
+                 objective=True, income_model=False, output_val=0.0, input_units=[]):
         """Initialize wrapper for pure-Python cost function
 
         Parameters
@@ -25,6 +25,9 @@ class CostModelComponent(ExplicitComponent):
             Name of output key
         output_unit : str
             Units of output of cost function
+        additional_input : list of str
+            Other (non-design-variable) inputs required by the cost function\n
+            Gradients will not be computed for these inputs
         additional_output : list of str
             Other outputs to request\n
             The cost function must return: cost, {'add_out1_name': add_out1, ...}
@@ -48,6 +51,7 @@ class CostModelComponent(ExplicitComponent):
         self.n_wt = n_wt
         self.output_key = output_key
         self.output_unit = output_unit
+        self.additional_input = additional_input
         self.additional_output = additional_output
         self.max_eval = max_eval or 1e100
         self.objective = objective
@@ -56,17 +60,17 @@ class CostModelComponent(ExplicitComponent):
         else:
             self.cost_factor = 1.0
         self.output_val = output_val
-        if not input_units:
-            self.input_units = [None] * len(self.input_keys)
-        else:
-            self.input_units = input_units
+
+        n_input = len(self.input_keys) + len(additional_input)
+        self.input_units = (input_units + [None] * n_input)[:n_input]
+
         self.n_func_eval = 0
         self.func_time_sum = 0
         self.n_grad_eval = 0
         self.grad_time_sum = 0
 
     def setup(self):
-        for i, u in zip(self.input_keys, self.input_units):
+        for i, u in zip(self.input_keys + self.additional_input, self.input_units):
             if isinstance(i, tuple) and len(i) == 2:
                 self.add_input(i[0], val=i[1], units=u)
             else:
@@ -80,7 +84,7 @@ class CostModelComponent(ExplicitComponent):
             self.add_output(key, val=val)
 
         input_keys = list([(i, i[0])[isinstance(i, tuple)] for i in self.input_keys])
-        self.inp_keys = input_keys
+        self.inp_keys = input_keys + list([(i, i[0])[isinstance(i, tuple)] for i in self.additional_input])
         if self.objective:
             if self.cost_gradient_function:
                 self.declare_partials('cost', input_keys)

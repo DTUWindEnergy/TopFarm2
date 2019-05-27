@@ -96,7 +96,7 @@ class XYPlotComp(ExplicitComponent):
 
         mi = limits.min(0)
         ma = limits.max(0)
-        ra = ma - mi
+        ra = ma - mi + 1
         ext = .1
         xlim, ylim = np.array([mi - ext * ra, ma + ext * ra]).T
         self.ax.set_xlim(xlim)

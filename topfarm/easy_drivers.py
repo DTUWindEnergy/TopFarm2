@@ -2,6 +2,7 @@ from openmdao.drivers.scipy_optimizer import ScipyOptimizeDriver
 # from openmdao.drivers.genetic_algorithm_driver import SimpleGADriver  # version 2.5.0 has bug see Issue #874
 from topfarm.drivers.genetic_algorithm_driver import SimpleGADriver
 from topfarm.drivers.random_search_driver import RandomSearchDriver
+import sys
 
 
 class EasyScipyOptimizeDriver(ScipyOptimizeDriver):
@@ -24,8 +25,10 @@ class EasyScipyOptimizeDriver(ScipyOptimizeDriver):
 
 
 try:
-    from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
+    class PyOptSparseMissingDriver(object):
+        options = {}
 
+    from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
 #     Not working:
 #     capi_return is NULL
 #     Call-back cb_slfunc_in_slsqp__user__routines failed.
@@ -44,13 +47,27 @@ try:
                                       'start_with_resto': 'yes',
                                       'expect_infeasible_problem': 'yes'})
 
+    from pyoptsparse.pyIPOPT.pyIPOPT import pyipoptcore
+    if pyipoptcore is None:
+        setattr(sys.modules[__name__], 'EasyPyOptSparseIPOPT', PyOptSparseMissingDriver)
+
+    class EasyPyOptSparseSNOPT(pyOptSparseDriver):
+        def __init__(self, major_iteration_limit=200, major_feasibility_tolerance=1e-6, major_optimality_tolerance=1e-6, difference_interval=1e-6, function_precision=1e-8, print_results=False):
+            pyOptSparseDriver.__init__(self)
+            self.options.update({'optimizer': 'SNOPT', 'print_results': print_results})
+            self.opt_settings.update({
+                'Major feasibility tolerance': major_feasibility_tolerance,
+                'Major optimality tolerance': major_optimality_tolerance,
+                'Difference interval': difference_interval,
+                'Hessian full memory': None,
+                'Function precision': function_precision,
+                'Major iterations limit': major_iteration_limit,
+                'Major step limit': 2.0})
+
 
 except ModuleNotFoundError:
-    class PyOptSparseMissingDriver(object):
-        options = {}
-
-    EasyPyOptSparseSLSQP = PyOptSparseMissingDriver
-    EasyPyOptSparseIPOPT = PyOptSparseMissingDriver
+    for n in ['EasyPyOptSparseSLSQP', 'EasyPyOptSparseIPOPT', 'EasyPyOptSparseSNOPT']:
+        setattr(sys.modules[__name__], n, PyOptSparseMissingDriver)
 
 
 class EasySimpleGADriver(SimpleGADriver):

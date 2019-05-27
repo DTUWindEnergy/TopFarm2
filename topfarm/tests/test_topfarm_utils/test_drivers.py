@@ -7,7 +7,7 @@ from topfarm.drivers.random_search_driver import RandomizeTurbinePosition_Circle
     RandomizeTurbineTypeAndPosition, RandomizeTurbinePosition_Normal,\
     RandomizeAllUniform, RandomizeAllRelativeMaxStep
 from topfarm.easy_drivers import EasyScipyOptimizeDriver, EasyPyOptSparseIPOPT,\
-    EasySimpleGADriver, EasyRandomSearchDriver
+    EasySimpleGADriver, EasyRandomSearchDriver, EasyPyOptSparseSNOPT
 from topfarm.plotting import NoPlot
 from topfarm.tests import uta, npt
 from topfarm.constraint_components.spacing import SpacingConstraint
@@ -27,7 +27,7 @@ def topfarm_generator_scalable():
     def _topfarm_obj(driver, xy_scale=[1, 1], cost_scale=1, cost_offset=0, spacing=2):
         from topfarm.cost_models.dummy import DummyCostPlotComp
 
-        # plot_comp = DummyCostPlotComp(desired[:,:2] * xy_scale, plot_improvements_only=True)
+        # plot_comp = DummyCostPlotComp(desired[:, :2] * xy_scale, plot_improvements_only=True)
         plot_comp = NoPlot()
 
         class DummyCostScaled(DummyCost):
@@ -75,17 +75,20 @@ def topfarm_generator():
     (EasyScipyOptimizeDriver(optimizer='COBYLA', tol=1e-3, disp=False), 1e-2),
     (EasySimpleGADriver(max_gen=10, pop_size=100, bits={'x': [12] * 3, 'y':[12] * 3}, random_state=1), 1e-1),
     (EasyPyOptSparseIPOPT(), 1e-4),
+    (EasyPyOptSparseSNOPT(), 1e-4),
 ][:])
 def test_optimizers(driver, tol, topfarm_generator_scalable):
     if driver.__class__.__name__ == "PyOptSparseMissingDriver":
         pytest.xfail("Driver missing")
     tf = topfarm_generator_scalable(driver)
     tf.evaluate()
-    cost, _, recorder = tf.optimize()
+    cost, _, recorder = tf.optimize({'x': [6., 6., 1.], 'y': [-.01, -8., 1.]})
 
     tb_pos = tf.turbine_positions[:, :2]
+
     assert sum((tb_pos[2] - tb_pos[0])**2) > 2**2 - tol  # check min spacing
     assert tb_pos[1][0] < 6 + tol  # check within border
+    tf.plot_comp.show()
     if isinstance(driver, EasySimpleGADriver):
         assert cost == recorder['cost'].min()
     else:

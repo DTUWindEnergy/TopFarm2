@@ -309,3 +309,34 @@ class RandomizeAllRelativeMaxStep():
                 step = (np.random.random(values.shape) * 2 - 1) * (ubound - lbound) * self.rel_max_step
                 values[:] = np.maximum(np.minimum(values + step, ubound), lbound)
         return desvar_dict
+
+
+class RandomizeNUniform():
+    def __init__(self, N, int_design_vars_lst=[]):
+        """Initialize RandomizeNUniform
+
+        Parameters
+        ----------
+        N : int
+            Number of elements of the design vectors to randomize
+        int_design_vars_lst : list
+            names of all integer design variables
+        """
+        self.N = N
+        self.int_design_vars_lst = int_design_vars_lst
+
+    def __call__(self, desvar_dict):
+
+        indexes = np.random.randint(0, len(list(desvar_dict.items())[0][1][0]), self.N)
+        for name, (values, lbound, ubound) in desvar_dict.items():
+            if name in self.int_design_vars_lst:
+                if np.all(lbound == lbound[0]) and np.all(ubound == ubound[0]):
+                    values[indexes] = np.random.randint(lbound[0], ubound[0] + 1, len(indexes))
+                else:
+                    lbound_arr = np.zeros_like(values) + lbound
+                    ubound_arr = np.zeros_like(values) + ubound
+                    for i in indexes:
+                        values[i] = np.random.randint(lbound_arr[i], ubound_arr[i] + 1)
+            else:
+                values[indexes] = np.random.uniform(lbound[indexes], ubound[indexes], len(indexes))
+        return desvar_dict
