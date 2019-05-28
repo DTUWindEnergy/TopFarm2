@@ -113,6 +113,9 @@ class TopFarmProblem(Problem):
         elif isinstance(driver, DOEGenerator):
             driver = DOEDriver(generator=driver)
         self.driver = driver
+        self.driver.recording_options['record_desvars'] = True
+        self.driver.recording_options['includes'] = ['*']
+        self.driver.recording_options['record_inputs'] = True
 
         self.plot_comp = plot_comp
 
@@ -159,6 +162,8 @@ class TopFarmProblem(Problem):
                     ref0 = np.min(v[1])
                     ref1 = np.max(v[2])
                     l, u = [lu * (ref1 - ref0) + ref0 for lu in [v[1], v[2]]]
+                    ref0 = 0  # COBYLA no longer works with ref-setting. See issue on Github: https://github.com/OpenMDAO/OpenMDAO/issues/942
+                    ref1 = 1  # COBYLA no longer works with ref-setting. See issue on Github: https://github.com/OpenMDAO/OpenMDAO/issues/942
                     kwargs = {'ref0': ref0, 'ref': ref1, 'lower': l, 'upper': u}
                 else:
                     kwargs = {'lower': v[1], 'upper': v[2]}
@@ -177,6 +182,8 @@ class TopFarmProblem(Problem):
 
         if cost_comp:
             self.model.add_subsystem('cost_comp', cost_comp, promotes=['*'])
+            if ('optimizer' in do and do['optimizer'] == 'COBYLA'):
+                expected_cost = 1  # COBYLA no longer works with scaling. See issue on Github: https://github.com/OpenMDAO/OpenMDAO/issues/942
             self.model.add_objective('cost', scaler=1 / abs(expected_cost))
         else:
             self.indeps.add_output('cost')
@@ -329,9 +336,10 @@ class TopFarmProblem(Problem):
                 return self.optimize(state, disp)
 
         self.driver.add_recorder(self.recorder)
-        self.driver.recording_options['record_desvars'] = True
-        self.driver.recording_options['includes'] = ['*']
-        self.driver.recording_options['record_inputs'] = True
+#        self.recording_options['includes'] = ['*']
+#        self.driver.recording_options['record_desvars'] = True
+#        self.driver.recording_options['includes'] = ['*']
+#        self.driver.recording_options['record_inputs'] = True
         self.setup()
         t = time.time()
         self.run_driver()
@@ -481,7 +489,7 @@ class TopFarmParallelGroup(TopFarmBaseGroup):
         super().__init__(comps, output_key, output_unit)
         parallel = ParallelGroup()
         for i, comp in enumerate(self.comps):
-                parallel.add_subsystem('comp_{}'.format(i), comp, promotes=['*'])
+            parallel.add_subsystem('comp_{}'.format(i), comp, promotes=['*'])
         self.add_subsystem('parallel', parallel, promotes=['*'])
         self.add_subsystem('objective', self.obj_comp, promotes=['*'])
 

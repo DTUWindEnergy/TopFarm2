@@ -31,137 +31,18 @@ def recordid2filename(record_id):
     return os.path.join(folder, filename).replace("\\", "/"), load_case.lower()
 
 
-def convert_to_list(vals):
-    """
-    Recursively convert arrays, tuples, and sets to lists.
-
-    Parameters
-    ----------
-    vals : numpy.array or list or tuple
-        the object to be converted to a list
-
-    Returns
-    -------
-    list :
-        The converted list.
-    """
-    if isinstance(vals, np.ndarray):
-        return convert_to_list(vals.tolist())
-    elif isinstance(vals, (list, tuple, set)):
-        return [convert_to_list(item) for item in vals]
-    else:
-        return vals
-
-
 class TopFarmListRecorder(SqliteRecorder):
     def __init__(self, record_id=None, filepath='cases.sql', append=False, pickle_version=2, record_viewer_data=False):
         super().__init__(filepath, append, pickle_version, record_viewer_data)
         self.iteration_coordinate_lst = []
         self.filepath = filepath
         self.driver_iteration_dict = {}
-        filepath, _ = recordid2filename(record_id)
-        self.load_if_exists(record_id)
         self.meta_field_names = ['counter', 'iteration_coordinate', 'timestamp', 'success', 'msg']
         self._abs2prom = {'input': {}, 'output': {}}
         self._prom2abs = {'input': {}, 'output': {}}
         self._abs2meta = {}
-
-    def startup(self, recording_requester):
-        """
-        Prepare for a new run and create/update the abs2prom and prom2abs variables.
-
-        Parameters
-        ----------
-        recording_requester : object
-            Object to which this recorder is attached.
-        """
-        super().startup(recording_requester)
-
-        # grab the system
-        if isinstance(recording_requester, Driver):
-            system = recording_requester._problem.model
-        elif isinstance(recording_requester, System):
-            system = recording_requester
-        else:
-            system = recording_requester._system
-
-        # grab all of the units and type (collective calls)
-        states = system._list_states_allprocs()
-        desvars = system.get_design_vars(True)
-        responses = system.get_responses(True)
-        objectives = system.get_objectives(True)
-        constraints = system.get_constraints(True)
-        inputs = system._var_allprocs_abs_names['input']
-        outputs = system._var_allprocs_abs_names['output']
-        full_var_set = [(inputs, 'input'), (outputs, 'output'),
-                        (desvars, 'desvar'), (responses, 'response'),
-                        (objectives, 'objective'), (constraints, 'constraint')]
-
-        # merge current abs2prom and prom2abs with this system's version
-        for io in ['input', 'output']:
-            for v in system._var_abs2prom[io]:
-                self._abs2prom[io][v] = system._var_abs2prom[io][v]
-            for v in system._var_allprocs_prom2abs_list[io]:
-                if v not in self._prom2abs[io]:
-                    self._prom2abs[io][v] = system._var_allprocs_prom2abs_list[io][v]
-                else:
-                    self._prom2abs[io][v] = list(set(self._prom2abs[io][v]) |
-                                                 set(system._var_allprocs_prom2abs_list[io][v]))
-
-        for var_set, var_type in full_var_set:
-            for name in var_set:
-                if name not in self._abs2meta:
-                    self._abs2meta[name] = system._var_allprocs_abs2meta[name].copy()
-                    self._abs2meta[name]['type'] = set()
-                    if name in states:
-                        self._abs2meta[name]['explicit'] = False
-
-                if var_type not in self._abs2meta[name]['type']:
-                    self._abs2meta[name]['type'].add(var_type)
-                self._abs2meta[name]['explicit'] = True
-
-        for name in inputs:
-            self._abs2meta[name] = system._var_allprocs_abs2meta[name].copy()
-            self._abs2meta[name]['type'] = set()
-            self._abs2meta[name]['type'].add('input')
-            self._abs2meta[name]['explicit'] = True
-            if name in states:
-                self._abs2meta[name]['explicit'] = False
-
-        var_settings = {}
-        var_settings.update(desvars)
-        var_settings.update(objectives)
-        var_settings.update(constraints)
-        var_settings = self._cleanup_var_settings(var_settings)
-
-    def _cleanup_var_settings(self, var_settings):
-        """
-        Convert all var_settings variable properties to a form that can be dumped as JSON.
-
-        Parameters
-        ----------
-        var_settings : dict
-            Dictionary mapping absolute variable names to variable settings.
-
-        Returns
-        -------
-        var_settings : dict
-            Dictionary mapping absolute variable names to var settings that are JSON compatible.
-        """
-        # otherwise we trample on values that are used elsewhere
-        var_settings = deepcopy(var_settings)
-        for name in var_settings:
-            for prop in var_settings[name]:
-                val = var_settings[name][prop]
-                if isinstance(val, np.int8) or isinstance(val, np.int16) or\
-                   isinstance(val, np.int32) or isinstance(val, np.int64):
-                    var_settings[name][prop] = val.item()
-                elif isinstance(val, tuple):
-                    var_settings[name][prop] = [int(v) for v in val]
-                elif isinstance(val, np.ndarray):
-                    var_settings[name][prop] = convert_to_list(var_settings[name][prop])
-
-        return var_settings
+        filepath, _ = recordid2filename(record_id)
+        self.load_if_exists(record_id)
 
     def get(self, key):
         if isinstance(key, (tuple, list)):
@@ -208,6 +89,7 @@ class TopFarmListRecorder(SqliteRecorder):
             for key in data['in']:
                 rec_key = key.split('.')[-1]
                 if rec_key not in out_keys:
+                    in_keys.append(rec_key)
                     self.driver_iteration_dict[rec_key] = [data['in'][key]]
             for k, v in meta_fields:
                 self.driver_iteration_dict[k] = [v]
@@ -341,8 +223,7 @@ class TopFarmListRecorder(SqliteRecorder):
         return self
 
     def keys(self):
-        return list(np.unique(['counter', 'iteration_coordinate', 'timestamp', 'success', 'msg'] +
-                              list(self._prom2abs['input']) + list(self._prom2abs['output'])))
+        return list(self.driver_iteration_dict)
 
 
 class NestedTopFarmListRecorder(TopFarmListRecorder):

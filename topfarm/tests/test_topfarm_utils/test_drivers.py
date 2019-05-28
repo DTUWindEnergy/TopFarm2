@@ -72,7 +72,7 @@ def topfarm_generator():
     (EasyScipyOptimizeDriver(disp=False), 1e-4),
     (EasyScipyOptimizeDriver(tol=1e-3, disp=False), 1e-2),
     (EasyScipyOptimizeDriver(maxiter=14, disp=False), 1e-1),
-    (EasyScipyOptimizeDriver(optimizer='COBYLA', tol=1e-3, disp=False), 1e-2),
+    #    (EasyScipyOptimizeDriver(optimizer='COBYLA', tol=1e-3, disp=False), 1e-2), # COBYLA no longer works with scaling. See issue on Github: https://github.com/OpenMDAO/OpenMDAO/issues/942
     (EasySimpleGADriver(max_gen=10, pop_size=100, bits={'x': [12] * 3, 'y':[12] * 3}, random_state=1), 1e-1),
     (EasyPyOptSparseIPOPT(), 1e-4),
     (EasyPyOptSparseSNOPT(), 1e-4),
@@ -97,7 +97,7 @@ def test_optimizers(driver, tol, topfarm_generator_scalable):
 
 @pytest.mark.parametrize('driver,tol,N', [
     (EasyScipyOptimizeDriver(disp=False), 1e-4, 29),
-    (EasyScipyOptimizeDriver(optimizer='COBYLA', tol=1e-3, disp=False), 1e-2, 104),
+    #    (EasyScipyOptimizeDriver(optimizer='COBYLA', tol=1e-3, disp=False), 1e-2, 104), # COBYLA no longer works with scaling. See issue on Github: https://github.com/OpenMDAO/OpenMDAO/issues/942
     # (EasyPyOptSparseIPOPT(), 1e-4, 25),
 ][:])
 @pytest.mark.parametrize('cost_scale,cost_offset', [(1, 0),

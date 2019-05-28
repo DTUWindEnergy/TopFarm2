@@ -46,8 +46,7 @@ def test_main(module):
             with mock.patch.object(module, "print", no_print):
                 getattr(module, 'main')()
     except Exception as e:
-        raise type(e)(str(e) +
-                      ' in %s.main' % module.__name__).with_traceback(sys.exc_info()[2])
+        raise type(e)(str(e) + ' in %s.main' % module.__name__).with_traceback(sys.exc_info()[2])
 
 
 if __name__ == '__main__':
