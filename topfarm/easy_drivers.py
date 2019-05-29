@@ -3,9 +3,25 @@ from openmdao.drivers.scipy_optimizer import ScipyOptimizeDriver
 from topfarm.drivers.genetic_algorithm_driver import SimpleGADriver
 from topfarm.drivers.random_search_driver import RandomSearchDriver
 import sys
+import numpy as np
+import openmdao
 
 
-class EasyScipyOptimizeDriver(ScipyOptimizeDriver):
+class EasyDriverBase():
+
+    def get_desvar_kwargs(self, model, desvar_name, desvar_values):
+        if len(desvar_values) == 4:
+            kwargs = {'lower': desvar_values[1], 'upper': desvar_values[2]}
+        else:
+            kwargs = {}
+        return kwargs
+
+    @property
+    def supports_expected_cost(self):
+        return True
+
+
+class EasyScipyOptimizeDriver(ScipyOptimizeDriver, EasyDriverBase):
 
     def __init__(self, optimizer='SLSQP', maxiter=200, tol=1e-6, disp=True):
         """
@@ -22,6 +38,26 @@ class EasyScipyOptimizeDriver(ScipyOptimizeDriver):
         """
         ScipyOptimizeDriver.__init__(self)
         self.options.update({'optimizer': optimizer, 'maxiter': maxiter, 'tol': tol, 'disp': disp})
+
+    def get_desvar_kwargs(self, model, desvar_name, desvar_values):
+        kwargs = super().get_desvar_kwargs(model, desvar_name, desvar_values)
+        if self.options['optimizer'] == 'SLSQP':
+            # Upper and lower disturbs SLSQP when running with constraints. Add limits as constraints
+            model.add_constraint(desvar_name, kwargs.get('lower', None), kwargs.get('upper', None))
+            kwargs = {'lower': np.nan, 'upper': np.nan}  # Default +/- sys.float_info.max does not work for SLSQP
+        elif openmdao.__version__ != '2.6.0' and self.options['optimizer'] == 'COBYLA':
+            # COBYLA does not work with ref-setting in openmdao 2.6.0.
+            # See issue on Github: https://github.com/OpenMDAO/OpenMDAO/issues/942
+            if len(desvar_values) == 4:
+                ref0 = np.min(desvar_values[1])
+                ref1 = np.max(desvar_values[2])
+                l, u = [lu * (ref1 - ref0) + ref0 for lu in [desvar_values[1], desvar_values[2]]]
+                kwargs = {'ref0': ref0, 'ref': ref1, 'lower': l, 'upper': u}
+        return kwargs
+
+    @property
+    def supports_expected_cost(self):
+        return not (openmdao.__version__ == '2.6.0' and self.options['optimizer'] == 'COBYLA')
 
 
 try:
@@ -51,7 +87,7 @@ try:
     if pyipoptcore is None:
         setattr(sys.modules[__name__], 'EasyPyOptSparseIPOPT', PyOptSparseMissingDriver)
 
-    class EasyPyOptSparseSNOPT(pyOptSparseDriver):
+    class EasyPyOptSparseSNOPT(pyOptSparseDriver, EasyDriverBase):
         def __init__(self, major_iteration_limit=200, major_feasibility_tolerance=1e-6, major_optimality_tolerance=1e-6, difference_interval=1e-6, function_precision=1e-8, print_results=False):
             pyOptSparseDriver.__init__(self)
             self.options.update({'optimizer': 'SNOPT', 'print_results': print_results})
@@ -64,13 +100,22 @@ try:
                 'Major iterations limit': major_iteration_limit,
                 'Major step limit': 2.0})
 
+        def get_desvar_kwargs(self, model, desvar_name, desvar_values):
+            kwargs = EasyDriverBase.get_desvar_kwargs(self, model, desvar_name, desvar_values)
+            if len(desvar_values) == 4:
+                ref0 = np.min(desvar_values[1])
+                ref1 = np.max(desvar_values[2])
+                l, u = desvar_values[1], desvar_values[2]
+                kwargs = {'ref0': ref0, 'ref': ref1, 'lower': l, 'upper': u}
+            return kwargs
+
 
 except ModuleNotFoundError:
     for n in ['EasyPyOptSparseSLSQP', 'EasyPyOptSparseIPOPT', 'EasyPyOptSparseSNOPT']:
         setattr(sys.modules[__name__], n, PyOptSparseMissingDriver)
 
 
-class EasySimpleGADriver(SimpleGADriver):
+class EasySimpleGADriver(SimpleGADriver, EasyDriverBase):
     def __init__(self, max_gen=100, pop_size=25, Pm=None, Pc=.5, elitism=True, bits={}, debug_print=[], run_parallel=False, random_state=None):
         """SimpleGA driver with optional arguments
 
@@ -106,7 +151,7 @@ class EasySimpleGADriver(SimpleGADriver):
             self._randomstate = random_state
 
 
-class EasyRandomSearchDriver(RandomSearchDriver):
+class EasyRandomSearchDriver(RandomSearchDriver, EasyDriverBase):
     def __init__(self, randomize_func, max_iter=100, max_time=600, disp=False):
         """Easy initialization of RandomSearchDriver
 

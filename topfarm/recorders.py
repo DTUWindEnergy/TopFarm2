@@ -85,23 +85,23 @@ class TopFarmListRecorder(SqliteRecorder):
             for key in data['out']:
                 rec_key = key.split('.')[-1]
                 out_keys.append(rec_key)
-                self.driver_iteration_dict[rec_key] = [data['out'][key]]
+                self.driver_iteration_dict[rec_key] = [data['out'][key].copy()]
             for key in data['in']:
                 rec_key = key.split('.')[-1]
                 if rec_key not in out_keys:
                     in_keys.append(rec_key)
-                    self.driver_iteration_dict[rec_key] = [data['in'][key]]
+                    self.driver_iteration_dict[rec_key] = [data['in'][key].copy()]
             for k, v in meta_fields:
                 self.driver_iteration_dict[k] = [v]
 
         else:
             for key in data['out']:
                 rec_key = key.split('.')[-1]
-                self.driver_iteration_dict[rec_key].append(data['out'][key])
+                self.driver_iteration_dict[rec_key].append(data['out'][key].copy())
             for key in data['in']:
                 rec_key = key.split('.')[-1]
                 if rec_key in in_keys:
-                    self.driver_iteration_dict[rec_key].append(data['in'][key])
+                    self.driver_iteration_dict[rec_key].append(data['in'][key].copy())
             for k, v in meta_fields:
                 self.driver_iteration_dict[k].append(v)
 

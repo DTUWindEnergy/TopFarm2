@@ -31,7 +31,7 @@ import topfarm
 from topfarm.recorders import NestedTopFarmListRecorder,\
     TopFarmListRecorder, split_record_id
 from topfarm.plotting import NoPlot
-from topfarm.easy_drivers import EasyScipyOptimizeDriver, EasySimpleGADriver
+from topfarm.easy_drivers import EasyScipyOptimizeDriver, EasySimpleGADriver, EasyDriverBase
 from topfarm.utils import smart_start
 from topfarm.constraint_components.spacing import SpacingComp
 from topfarm.constraint_components.boundary import BoundaryBaseComp
@@ -83,9 +83,10 @@ class TopFarmProblem(Problem):
             - "best": Continue from best case (minimum cost)\n
             - "0": Start from scratch (initial position)\n
             - "4": Start from case number 4\n
-        expected_cost : int or float
-            Used to scale the cost. This has influence on some drivers, e.g.
-            SLSQP where it affects the step size
+        expected_cost : int, float or None, optional
+            Used to scale the cost, default is 1. This has influence on some drivers, e.g.
+            SLSQP where it affects the step size\n
+            If None, the value is found by evaluating the cost function
         ext_vars : dict or list of key-initial_value tuple
             Used for nested problems to propagate variables from parent problem\n
             Ex. {'type': [1,2,3]}\n
@@ -157,23 +158,10 @@ class TopFarmProblem(Problem):
 
         do = self.driver.options
         for k, v in design_vars.items():
-            if len(v) == 4:
-                if ('optimizer' in do and do['optimizer'] == 'COBYLA'):
-                    ref0 = np.min(v[1])
-                    ref1 = np.max(v[2])
-                    l, u = [lu * (ref1 - ref0) + ref0 for lu in [v[1], v[2]]]
-                    ref0 = 0  # COBYLA no longer works with ref-setting. See issue on Github: https://github.com/OpenMDAO/OpenMDAO/issues/942
-                    ref1 = 1  # COBYLA no longer works with ref-setting. See issue on Github: https://github.com/OpenMDAO/OpenMDAO/issues/942
-                    kwargs = {'ref0': ref0, 'ref': ref1, 'lower': l, 'upper': u}
-                else:
-                    kwargs = {'lower': v[1], 'upper': v[2]}
+            if isinstance(driver, EasyDriverBase):
+                kwargs = driver.get_desvar_kwargs(self.model, k, v)
             else:
-                kwargs = {}
-
-            if 'optimizer' in do and do['optimizer'] == 'SLSQP':
-                # Upper and lower disturbs SLSQP when running with constraints. Add limits as constraints
-                self.model.add_constraint(k, kwargs.get('lower', None), kwargs.get('upper', None))
-                kwargs = {'lower': np.nan, 'upper': np.nan}  # Default +/- sys.float_info.max does not work for SLSQP
+                kwargs = EasyDriverBase.get_desvar_kwargs(None, self.model, k, v)
             self.model.add_design_var(k, **kwargs)
 
         for k, v in ext_vars.items():
@@ -182,8 +170,12 @@ class TopFarmProblem(Problem):
 
         if cost_comp:
             self.model.add_subsystem('cost_comp', cost_comp, promotes=['*'])
-            if ('optimizer' in do and do['optimizer'] == 'COBYLA'):
-                expected_cost = 1  # COBYLA no longer works with scaling. See issue on Github: https://github.com/OpenMDAO/OpenMDAO/issues/942
+
+            if expected_cost is None:
+                expected_cost = self.evaluate()[0]
+                self._setup_status = 0
+            if isinstance(driver, EasyDriverBase) and driver.supports_expected_cost is False:
+                expected_cost = 1
             self.model.add_objective('cost', scaler=1 / abs(expected_cost))
         else:
             self.indeps.add_output('cost')

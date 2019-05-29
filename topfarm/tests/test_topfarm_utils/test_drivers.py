@@ -6,8 +6,7 @@ from topfarm.cost_models.dummy import DummyCost
 from topfarm.drivers.random_search_driver import RandomizeTurbinePosition_Circle, RandomizeTurbinePosition_Square,\
     RandomizeTurbineTypeAndPosition, RandomizeTurbinePosition_Normal,\
     RandomizeAllUniform, RandomizeAllRelativeMaxStep
-from topfarm.easy_drivers import EasyScipyOptimizeDriver, EasyPyOptSparseIPOPT,\
-    EasySimpleGADriver, EasyRandomSearchDriver, EasyPyOptSparseSNOPT
+from topfarm.easy_drivers import EasyScipyOptimizeDriver, EasySimpleGADriver, EasyRandomSearchDriver, EasyPyOptSparseSNOPT, EasyPyOptSparseIPOPT
 from topfarm.plotting import NoPlot
 from topfarm.tests import uta, npt
 from topfarm.constraint_components.spacing import SpacingConstraint
@@ -25,9 +24,8 @@ desired = np.array([[3, -3, 1], [7, -7, 2], [4, -3, 4]])  # desired turbine layo
 @pytest.fixture
 def topfarm_generator_scalable():
     def _topfarm_obj(driver, xy_scale=[1, 1], cost_scale=1, cost_offset=0, spacing=2):
-        from topfarm.cost_models.dummy import DummyCostPlotComp
-
-        # plot_comp = DummyCostPlotComp(desired[:, :2] * xy_scale, plot_improvements_only=True)
+        # from topfarm.cost_models.dummy import DummyCostPlotComp
+        # plot_comp = DummyCostPlotComp(desired[:, :2] * xy_scale, plot_improvements_only=False)
         plot_comp = NoPlot()
 
         class DummyCostScaled(DummyCost):
@@ -72,7 +70,7 @@ def topfarm_generator():
     (EasyScipyOptimizeDriver(disp=False), 1e-4),
     (EasyScipyOptimizeDriver(tol=1e-3, disp=False), 1e-2),
     (EasyScipyOptimizeDriver(maxiter=14, disp=False), 1e-1),
-    #    (EasyScipyOptimizeDriver(optimizer='COBYLA', tol=1e-3, disp=False), 1e-2), # COBYLA no longer works with scaling. See issue on Github: https://github.com/OpenMDAO/OpenMDAO/issues/942
+    (EasyScipyOptimizeDriver(optimizer='COBYLA', tol=1e-3, disp=False), 1e-2),
     (EasySimpleGADriver(max_gen=10, pop_size=100, bits={'x': [12] * 3, 'y':[12] * 3}, random_state=1), 1e-1),
     (EasyPyOptSparseIPOPT(), 1e-4),
     (EasyPyOptSparseSNOPT(), 1e-4),
@@ -97,8 +95,13 @@ def test_optimizers(driver, tol, topfarm_generator_scalable):
 
 @pytest.mark.parametrize('driver,tol,N', [
     (EasyScipyOptimizeDriver(disp=False), 1e-4, 29),
-    #    (EasyScipyOptimizeDriver(optimizer='COBYLA', tol=1e-3, disp=False), 1e-2, 104), # COBYLA no longer works with scaling. See issue on Github: https://github.com/OpenMDAO/OpenMDAO/issues/942
-    # (EasyPyOptSparseIPOPT(), 1e-4, 25),
+    (EasyPyOptSparseSNOPT(), 1e-4, 39),
+    # COBYLA no longer works with scaling.
+    # See issue on Github: https://github.com/OpenMDAO/OpenMDAO/issues/942
+    # It can therefore requires 120 iterations instead of 104
+    #    (EasyScipyOptimizeDriver(optimizer='COBYLA', tol=1e-3, disp=False), 1e-2, 104),
+    (EasyScipyOptimizeDriver(optimizer='COBYLA', tol=1e-3, disp=False), 1e-2, 120),
+    (EasyPyOptSparseIPOPT(), 1e-4, 25),
 ][:])
 @pytest.mark.parametrize('cost_scale,cost_offset', [(1, 0),
                                                     (1000, 0),
