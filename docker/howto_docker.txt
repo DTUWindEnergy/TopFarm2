@@ -17,6 +17,15 @@ Run image
 ---------
 docker run -v <path to topfarm2>:/TopFarm2 -it -t dtuwindenergy/topfarm2
 
+Run image notebooks
+---------
+docker run -v <path to topfarm2>:/TopFarm2 -it -p 8888:8888 -t dtuwindenergy/topfarm2
+# From inside the container run
+jupyter notebook --ip 0.0.0.0 --no-browser --allow-root 
+# In browser run (similar to) this: (the path to launching jupyter will be promted in the terminal)
+http://127.0.0.1:8888/?token=[token]
+
+
 Push image
 ----------
 docker login
