@@ -156,7 +156,9 @@ class XYPlotComp(ExplicitComponent):
         rec = self.problem.recorder
         if rec.num_cases > 0:
             pw = self.problem.get_vars_from_recorder()
-            return pw['x0'], pw['y0'], pw['cost0']
+            cost0 = self.problem.recorder[self.cost_key][0]
+            # cost0 = pw['cost0']
+            return pw['x0'], pw['y0'], cost0
 
     def compute(self, inputs, outputs):
         if self.by_pass is False:

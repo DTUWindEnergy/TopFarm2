@@ -41,11 +41,12 @@ class XYBoundaryConstraint(Constraint):
         for k, l, u in zip([topfarm.x_key, topfarm.y_key],
                            self.boundary_comp.xy_boundary.min(0),
                            self.boundary_comp.xy_boundary.max(0)):
-            if len(design_vars[k]) == 4:
-                design_vars[k] = (design_vars[k][0], np.maximum(design_vars[k][1], l),
-                                  np.minimum(design_vars[k][2], u), design_vars[k][-1])
-            else:
-                design_vars[k] = (design_vars[k][0], l, u, design_vars[k][-1])
+            if k in design_vars:
+                if len(design_vars[k]) == 4:
+                    design_vars[k] = (design_vars[k][0], np.maximum(design_vars[k][1], l),
+                                      np.minimum(design_vars[k][2], u), design_vars[k][-1])
+                else:
+                    design_vars[k] = (design_vars[k][0], l, u, design_vars[k][-1])
 
     def _setup(self, problem):
         n_wt = problem.n_wt

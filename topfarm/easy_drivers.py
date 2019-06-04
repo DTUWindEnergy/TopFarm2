@@ -45,6 +45,14 @@ class EasyScipyOptimizeDriver(ScipyOptimizeDriver, EasyDriverBase):
             # Upper and lower disturbs SLSQP when running with constraints. Add limits as constraints
             model.add_constraint(desvar_name, kwargs.get('lower', None), kwargs.get('upper', None))
             kwargs = {'lower': np.nan, 'upper': np.nan}  # Default +/- sys.float_info.max does not work for SLSQP
+            ref0 = 0
+            ref1 = 1
+            # TODO: Check if the following improves performance
+            # if len(desvar_values) == 4:
+            #     ref0 = np.min(desvar_values[1])
+            #     ref1 = np.max(desvar_values[2])
+
+            kwargs = {'ref0': ref0, 'ref': ref1, 'lower': np.nan, 'upper': np.nan}
         elif openmdao.__version__ != '2.6.0' and self.options['optimizer'] == 'COBYLA':
             # COBYLA does not work with ref-setting in openmdao 2.6.0.
             # See issue on Github: https://github.com/OpenMDAO/OpenMDAO/issues/942

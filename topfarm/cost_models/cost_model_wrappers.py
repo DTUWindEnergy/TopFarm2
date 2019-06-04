@@ -1,6 +1,7 @@
 from openmdao.core.explicitcomponent import ExplicitComponent
 import numpy as np
 import time
+from _collections import defaultdict
 
 
 class CostModelComponent(ExplicitComponent):
@@ -28,8 +29,10 @@ class CostModelComponent(ExplicitComponent):
         additional_input : list of str
             Other (non-design-variable) inputs required by the cost function\n
             Gradients will not be computed for these inputs
-        additional_output : list of str
+        additional_output : list of str or list of tuples
             Other outputs to request\n
+            if list of str: ['add_out_name',...]\n
+            if list of tuples [('add_out_name', val),...], where val is a template value of the output
             The cost function must return: cost, {'add_out1_name': add_out1, ...}
         max_eval : int
             Maximum number of function evaluations
@@ -52,7 +55,7 @@ class CostModelComponent(ExplicitComponent):
         self.output_key = output_key
         self.output_unit = output_unit
         self.additional_input = additional_input
-        self.additional_output = additional_output
+        self.additional_output = [((x, np.zeros(self.n_wt)), x)[isinstance(x, tuple)] for x in additional_output]
         self.max_eval = max_eval or 1e100
         self.objective = objective
         if income_model:
@@ -68,6 +71,7 @@ class CostModelComponent(ExplicitComponent):
         self.func_time_sum = 0
         self.n_grad_eval = 0
         self.grad_time_sum = 0
+        self.step = {}
 
     def setup(self):
         for i, u in zip(self.input_keys + self.additional_input, self.input_units):
@@ -90,7 +94,11 @@ class CostModelComponent(ExplicitComponent):
                 self.declare_partials('cost', input_keys)
             else:
                 # Finite difference all partials.
-                self.declare_partials('cost', input_keys, method='fd')
+                if self.step == {}:
+                    self.declare_partials('cost', input_keys, method='fd')
+                else:
+                    for i in input_keys:
+                        self.declare_partials('cost', i, step=self.step.get('cost', {}).get(i, None), method='fd')
             self.declare_partials(self.output_key, input_keys)
         else:
             if self.cost_gradient_function:
