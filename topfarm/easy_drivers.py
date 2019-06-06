@@ -96,7 +96,12 @@ try:
         setattr(sys.modules[__name__], 'EasyPyOptSparseIPOPT', PyOptSparseMissingDriver)
 
     class EasyPyOptSparseSNOPT(pyOptSparseDriver, EasyDriverBase):
-        def __init__(self, major_iteration_limit=200, major_feasibility_tolerance=1e-6, major_optimality_tolerance=1e-6, difference_interval=1e-6, function_precision=1e-8, print_results=False):
+        def __init__(self, major_iteration_limit=200, major_feasibility_tolerance=1e-6, major_optimality_tolerance=1e-6,
+                     difference_interval=1e-6, function_precision=1e-8,
+                     Print_file='SNOPT_print.out', Summary_file='SNOPT_summary.out', print_results=False):
+            """For information about the arguments see
+            https://web.stanford.edu/group/SOL/software/snoptHelp/whgdata/whlstt9.htm#9
+            """
             pyOptSparseDriver.__init__(self)
             self.options.update({'optimizer': 'SNOPT', 'print_results': print_results})
             self.opt_settings.update({
@@ -106,6 +111,8 @@ try:
                 'Hessian full memory': None,
                 'Function precision': function_precision,
                 'Major iterations limit': major_iteration_limit,
+                'Print file': Print_file,
+                'Summary file': Summary_file,
                 'Major step limit': 2.0})
 
         def get_desvar_kwargs(self, model, desvar_name, desvar_values):

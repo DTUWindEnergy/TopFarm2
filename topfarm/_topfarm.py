@@ -191,6 +191,9 @@ class TopFarmProblem(Problem):
     def cost(self):
         return self['cost'][0]
 
+    def __getitem__(self, name):
+        return Problem.__getitem__(self, name).copy()
+
     @property
     def state(self):
         """Return current state"""
