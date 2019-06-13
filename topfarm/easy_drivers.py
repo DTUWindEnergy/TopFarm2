@@ -8,6 +8,7 @@ import openmdao
 
 
 class EasyDriverBase():
+    expected_cost = 1
 
     def get_desvar_kwargs(self, model, desvar_name, desvar_values):
         if len(desvar_values) == 4:
