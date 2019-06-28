@@ -64,8 +64,8 @@ class TopFarmProblem(Problem):
             A cost component in the style of an OpenMDAO v2 ExplicitComponent.
             Pure python cost functions can be wrapped using ``CostModelComponent``
             class in ``topfarm.cost_models.cost_model_wrappers``.\n
-            For nested problems, the cost comp_comp is typically a TopFarmProblem
-        driver : openmdao Driver, optinal
+            For nested problems, the cost_comp component is typically a TopFarmProblem
+        driver : openmdao Driver, optional
             Driver used to solve the optimization driver. For an example, see the
             ``EasyScipyOptimizeDriver`` class in ``topfarm.easy_drivers``.
         constraints : list of Constraint-objects

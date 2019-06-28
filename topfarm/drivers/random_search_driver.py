@@ -63,7 +63,7 @@ class RandomSearchDriver(Driver):
 
     def run(self):
         """
-        Excute the genetic algorithm.
+        Execute the genetic algorithm.
 
         Returns
         -------

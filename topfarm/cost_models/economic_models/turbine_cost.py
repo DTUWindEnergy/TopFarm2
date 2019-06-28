@@ -208,11 +208,11 @@ def main():
         bar = ax.barh(ind, barplotvector, width, color='b')
 
         # add some text for labels, title and axes ticks
-        ax.set_xlabel('Procentage of total costs [%]')
+        ax.set_xlabel('Percentage of total costs [%]')
         ax.set_title('Wind turbine components costs')
         ax.set_yticks(ind + width / 2)
         ax.set_yticklabels(('Blades', 'Hub', 'Pitch System', 'Nose cone', 'Bearing', 'Break and coupling', 'Generator',
-                            'Variable speed electornics', 'Yaw system', 'Mainframe', 'Platform railing', 'Electical connections',
+                            'Variable speed electronics', 'Yaw system', 'Mainframe', 'Platform railing', 'Electrical connections',
                             'Hydraulic cooling systems', 'Nacelle cover', 'Control', 'Tower', 'Foundation', 'Transportation',
                             'Roads', 'Assembly and installation', 'Electrical interface'))
         labels = ax.get_xticklabels()

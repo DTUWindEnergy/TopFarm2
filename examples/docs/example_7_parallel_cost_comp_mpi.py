@@ -56,7 +56,7 @@ def main():
         )
 #        view_model(tf)
         #print(tf.evaluate({'x': desired[:, 0], 'y': desired[:, 1]}))
-        print(tf.evaluate({'x': optimal[:, 0], 'y': optimal[:, 1]}, disp=False))
+        # print(tf.evaluate({'x': optimal[:, 0], 'y': optimal[:, 1]}, disp=False))
         #print(tf.evaluate({'x': initial[:, 0], 'y': initial[:, 1]}))
 #        tic = time.time()
         cost, state, recorder = tf.optimize()
