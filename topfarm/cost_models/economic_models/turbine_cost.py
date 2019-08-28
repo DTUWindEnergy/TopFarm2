@@ -16,11 +16,12 @@ plt.close("all")
 
 class economic_evaluation():
 
-    def __init__(self, D_rotor_array, Power_rated_array, hub_height_array, aep_array):
+    def __init__(self, D_rotor_array, Power_rated_array, hub_height_array, aep_array, electrical_connection_cost=None):
         self.D_rotor_array = D_rotor_array
         self.Power_rated_array = Power_rated_array
         self.hub_height_array = hub_height_array
         self.aep_array = aep_array
+        self.electrical_connection_cost = electrical_connection_cost
 
     def calculate_irr(self):
 
@@ -100,7 +101,8 @@ class economic_evaluation():
         self.platform_railing_cost = self.platform_railing_mass * 8.7
 
         # Electrical connections
-        self.electrical_connection_cost = machine_rating * 40.
+        if not self.electrical_connection_cost:
+            self.electrical_connection_cost = machine_rating * 40.
 
         # Hydraulic and Cooling Systems
         self.hydraulic_cooling_system_mass = 0.08 * machine_rating
