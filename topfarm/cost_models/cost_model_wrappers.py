@@ -9,7 +9,7 @@ class CostModelComponent(ExplicitComponent):
 
     def __init__(self, input_keys, n_wt, cost_function, cost_gradient_function=None,
                  output_key="Cost", output_unit="", additional_input=[], additional_output=[], max_eval=None,
-                 objective=True, income_model=False, output_val=0.0, input_units=[]):
+                 objective=True, income_model=False, output_val=0.0, input_units=[], **kwargs):
         """Initialize wrapper for pure-Python cost function
 
         Parameters
@@ -46,7 +46,7 @@ class CostModelComponent(ExplicitComponent):
         input_units : list of str
             Units of the respective input_keys
         """
-        super().__init__()
+        super().__init__(**kwargs)
         assert isinstance(n_wt, int), n_wt
         self.input_keys = list(input_keys)
         self.cost_function = cost_function
