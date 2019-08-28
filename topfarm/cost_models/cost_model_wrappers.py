@@ -89,6 +89,7 @@ class CostModelComponent(ExplicitComponent):
 
         input_keys = list([(i, i[0])[isinstance(i, tuple)] for i in self.input_keys])
         self.inp_keys = input_keys + list([(i, i[0])[isinstance(i, tuple)] for i in self.additional_input])
+        self.input_keys = input_keys
         if self.objective:
             if self.cost_gradient_function:
                 self.declare_partials('cost', input_keys)
