@@ -5,6 +5,8 @@ from openmdao.core.analysis_error import AnalysisError
 import topfarm
 import time
 
+from openmdao.utils.concurrent import concurrent_eval
+
 
 class RandomSearchDriver(Driver):
 
@@ -53,6 +55,12 @@ class RandomSearchDriver(Driver):
         """
         super()._setup_driver(problem)
 
+        model_mpi = None
+        comm = self._problem.comm
+        if not self.options['run_parallel']:
+            comm = None
+
+
         if len(self._objs) > 1:
             msg = 'RandomSearchDriver currently does not support multiple objectives.'
             raise RuntimeError(msg)
@@ -60,6 +68,45 @@ class RandomSearchDriver(Driver):
         if len(self._cons) > 0:
             msg = 'RandomSearchDriver currently does not support constraints.'
             raise RuntimeError(msg)
+        
+        self.comm = comm
+
+    def _setup_comm(self, comm):
+        """
+        Perform any driver-specific setup of communicators for the model.
+        Here, we generate the model communicators.
+        Parameters
+        ----------
+        comm : MPI.Comm or <FakeComm> or None
+            The communicator for the Problem.
+        Returns
+        -------
+        MPI.Comm or <FakeComm> or None
+            The communicator for the Problem model.
+        """
+        # procs_per_model = self.options['procs_per_model']
+        # if MPI and self.options['run_parallel'] and procs_per_model > 1:
+
+        #     full_size = comm.size
+        #     size = full_size // procs_per_model
+        #     if full_size != size * procs_per_model:
+        #         raise RuntimeError("The total number of processors is not evenly divisible by the "
+        #                            "specified number of processors per model.\n Provide a "
+        #                            "number of processors that is a multiple of %d, or "
+        #                            "specify a number of processors per model that divides "
+        #                            "into %d." % (procs_per_model, full_size))
+        #     color = comm.rank % size
+        #     model_comm = comm.Split(color)
+
+        #     # Everything we need to figure out which case to run.
+        #     self._concurrent_pop_size = size
+        #     self._concurrent_color = color
+
+        #     return model_comm
+
+        # self._concurrent_pop_size = 0
+        # self._concurrent_color = 0
+        return comm
 
     def run(self):
         """
@@ -116,29 +163,61 @@ class RandomSearchDriver(Driver):
                        for name, meta in iteritems(desvars)]
         desvar_dict = {name: (x0[i:j].copy(), lbound[i:j], ubound[i:j]) for (name, i, j, lbound, ubound) in desvar_info}
         start = time.time()
+
+        comm = self.comm
+
         while n_iter < max_iter and time.time() - start < max_time:
 
             for name, i, j, _, _ in desvar_info:
                 desvar_dict[name][0][:] = x0[i:j].copy()
-            desvar_dict = self.randomize_func(desvar_dict)
-            for name, i, j, _, _ in desvar_info:
-                x1[i:j] = desvar_dict[name][0][:]
 
-            obj_value_x1, success = self.objective_callback(x1, record=False)
-            if success and obj_value_x1 < obj_value_x0:
-                obj_value_x1, success = self.objective_callback(x1, record=True)
-                x0 = x1.copy()
-                obj_value_x0 = obj_value_x1
-                n_iter += 1
-                if disp:
-                    print(n_iter, obj_value_x1)
+            if comm is not None:
+                ## We do it in parallel: One case per CPU available
+                cases = []
+                for ii in range(comm.size):
+                    desvar_dict = self.randomize_func(desvar_dict)
+                    x1 = x0.copy()
+                    for name, i, j, _, _ in desvar_info:
+                        x1[i:j] = desvar_dict[name][0][:]
+                    cases.append(((x1, ii), None))
+
+                ## Let's make sure we have the same cases everywhere
+                cases = comm.bcast(cases, root=0)
+
+                results = concurrent_eval(self.objective_callback, cases, comm, allgather=True)
+                for i, result in enumerate(results):
+                    returns, traceback = result
+                    obj_value_x1, success = returns
+                    if success and obj_value_x1 < obj_value_x0:
+                        x0 = cases[i][0][0].copy()
+                        obj_value_x0 = obj_value_x1
+                        n_iter += 1
+                        if disp:
+                            print(n_iter, obj_value_x1)
+                    else:
+                        if obj_value_x1 < 1e10:
+                            n_iter += 1
             else:
-                if obj_value_x1 < 1e10:
+                ## We only use one CPU
+
+                desvar_dict = self.randomize_func(desvar_dict)
+                for name, i, j, _, _ in desvar_info:
+                    x1[i:j] = desvar_dict[name][0][:]
+
+                obj_value_x1, success = self.objective_callback(x1, record=False)
+                if success and obj_value_x1 < obj_value_x0:
+                    obj_value_x1, success = self.objective_callback(x1, record=True)
+                    x0 = x1.copy()
+                    obj_value_x0 = obj_value_x1
                     n_iter += 1
+                    if disp:
+                        print(n_iter, obj_value_x1)
+                else:
+                    if obj_value_x1 < 1e10:
+                        n_iter += 1
 
         if not success or obj_value_x1 > obj_value_x0:
             obj_value_x1, success = self.objective_callback(x0, record=True)
-
         return False
 
     def objective_callback(self, x, record=True):
