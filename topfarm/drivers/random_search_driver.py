@@ -41,6 +41,8 @@ class RandomSearchDriver(Driver):
                              desc='Maximum time in seconds (set to None to disable)')
         self.options.declare('disp', True,
                              desc='Set to False to prevent printing')
+        self.options.declare('run_parallel', False,
+                             desc='Flag to run in parallel or not, requires mpi')
 
     def _setup_driver(self, problem):
         """
@@ -174,29 +176,34 @@ class RandomSearchDriver(Driver):
             if comm is not None:
                 ## We do it in parallel: One case per CPU available
                 cases = []
-                for ii in range(comm.size):
-                    desvar_dict = self.randomize_func(desvar_dict)
-                    x1 = x0.copy()
-                    for name, i, j, _, _ in desvar_info:
-                        x1[i:j] = desvar_dict[name][0][:]
-                    cases.append(((x1, ii), None))
+                if comm.rank == 0:
+                    for ii in range(comm.size):
+                        desvar_dict = self.randomize_func(desvar_dict)
+                        x1 = x0.copy()
+                        for name, i, j, _, _ in desvar_info:
+                            x1[i:j] = desvar_dict[name][0][:]
+                        cases.append(((x1, ii), None))
 
                 ## Let's make sure we have the same cases everywhere
                 cases = comm.bcast(cases, root=0)
 
                 results = concurrent_eval(self.objective_callback, cases, comm, allgather=True)
+                one_success = False
                 for i, result in enumerate(results):
                     returns, traceback = result
                     obj_value_x1, success = returns
                     if success and obj_value_x1 < obj_value_x0:
+                        one_success = True
                         x0 = cases[i][0][0].copy()
                         obj_value_x0 = obj_value_x1
-                        n_iter += 1
-                        if disp:
-                            print(n_iter, obj_value_x1)
-                    else:
-                        if obj_value_x1 < 1e10:
-                            n_iter += 1
+                        #n_iter += 1
+                    elif obj_value_x1 < 1e10:
+                        one_success = True
+                    #        n_iter += 1
+                if one_success:
+                    n_iter += 1
+                    if disp and comm.rank==0:
+                        print('rank:', comm.rank, n_iter, obj_value_x0)
             else:
                 ## We only use one CPU
 
@@ -216,8 +223,8 @@ class RandomSearchDriver(Driver):
                     if obj_value_x1 < 1e10:
                         n_iter += 1
 
-        if not success or obj_value_x1 > obj_value_x0:
-            obj_value_x1, success = self.objective_callback(x0, record=True)
+                if not success or obj_value_x1 > obj_value_x0:
+                    obj_value_x1, success = self.objective_callback(x0, record=True)
         return False
 
     def objective_callback(self, x, record=True):
