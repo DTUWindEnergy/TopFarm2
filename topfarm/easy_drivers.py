@@ -170,7 +170,7 @@ class EasySimpleGADriver(SimpleGADriver, EasyDriverBase):
 
 
 class EasyRandomSearchDriver(RandomSearchDriver, EasyDriverBase):
-    def __init__(self, randomize_func, max_iter=100, max_time=600, disp=False):
+    def __init__(self, randomize_func, max_iter=100, max_time=600, disp=False, run_parallel=False):
         """Easy initialization of RandomSearchDriver
 
         Parameters
@@ -184,4 +184,4 @@ class EasyRandomSearchDriver(RandomSearchDriver, EasyDriverBase):
         disp : bool
         """
         RandomSearchDriver.__init__(self, randomize_func=randomize_func,
-                                    max_iter=max_iter, max_time=max_time, disp=disp)
+                                    max_iter=max_iter, max_time=max_time, disp=disp, run_parallel=run_parallel)
