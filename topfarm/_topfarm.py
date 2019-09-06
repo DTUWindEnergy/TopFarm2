@@ -42,7 +42,7 @@ class TopFarmProblem(Problem):
 
     def __init__(self, design_vars, cost_comp=None, driver=EasyScipyOptimizeDriver(),
                  constraints=[], plot_comp=NoPlot(), record_id=None,
-                 expected_cost=1, ext_vars={}):
+                 expected_cost=1, ext_vars={}, additional_recorders= None):
         """Initialize TopFarmProblem
 
         Parameters
@@ -90,7 +90,7 @@ class TopFarmProblem(Problem):
         ext_vars : dict or list of key-initial_value tuple
             Used for nested problems to propagate variables from parent problem\n
             Ex. {'type': [1,2,3]}\n
-            Ex. [('type', [1,2,3])]\n
+            Ex. [('type', [1,2,3])]\n  ## TODO: implement the list case
 
         Examples
         --------
@@ -101,6 +101,8 @@ class TopFarmProblem(Problem):
         else:
             from openmdao.utils.mpi import FakeComm
             comm = FakeComm()
+
+        self._additional_recorders = additional_recorders
 
         Problem.__init__(self, comm=comm)
         if cost_comp:
@@ -331,6 +333,10 @@ class TopFarmProblem(Problem):
                 return self.optimize(state, disp)
 
         self.driver.add_recorder(self.recorder)
+        if self._additional_recorders:
+            for r in self._additional_recorders:
+                self.driver.add_recorder(r)
+
 #        self.recording_options['includes'] = ['*']
 #        self.driver.recording_options['record_desvars'] = True
 #        self.driver.recording_options['includes'] = ['*']
@@ -424,9 +430,10 @@ class TopFarmProblem(Problem):
 class ProblemComponent(ExplicitComponent):
     """class used to wrap a TopFarmProblem as a cost_component"""
 
-    def __init__(self, problem):
+    def __init__(self, problem, additional_inputs=[]):
         ExplicitComponent.__init__(self)
         self.problem = problem
+        self.additional_inputs = additional_inputs
 
     def setup(self):
         missing_in_problem = (set([c[0] for c in self.parent.indeps._indep_external]) -
