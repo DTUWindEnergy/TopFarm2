@@ -203,6 +203,7 @@ class RandomSearchDriver(Driver):
                 if one_success:
                     n_iter += 1
                     if disp and comm.rank==0:
+                        obj_value_x0, success = self.objective_callback(x0, record=True)
                         print('rank:', comm.rank, n_iter, obj_value_x0)
             else:
                 ## We only use one CPU
@@ -227,7 +228,7 @@ class RandomSearchDriver(Driver):
                     obj_value_x1, success = self.objective_callback(x0, record=True)
         return False
 
-    def objective_callback(self, x, record=True):
+    def objective_callback(self, x, record=False):
         """
         Evaluate problem objective at the requested point.
 
