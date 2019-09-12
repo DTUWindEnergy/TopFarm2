@@ -24,7 +24,7 @@ class EasyDriverBase():
 
 class EasyScipyOptimizeDriver(ScipyOptimizeDriver, EasyDriverBase):
 
-    def __init__(self, optimizer='SLSQP', maxiter=200, tol=1e-6, disp=True):
+    def __init__(self, optimizer='SLSQP', maxiter=200, tol=1e-6, disp=True, **kwargs):
         """
         Parameters
         ----------
@@ -39,6 +39,8 @@ class EasyScipyOptimizeDriver(ScipyOptimizeDriver, EasyDriverBase):
         """
         ScipyOptimizeDriver.__init__(self)
         self.options.update({'optimizer': optimizer, 'maxiter': maxiter, 'tol': tol, 'disp': disp})
+        if kwargs:
+            self.options.update(kwargs)
 
     def get_desvar_kwargs(self, model, desvar_name, desvar_values):
         kwargs = super().get_desvar_kwargs(model, desvar_name, desvar_values)
