@@ -35,14 +35,47 @@ from topfarm.easy_drivers import EasyScipyOptimizeDriver, EasySimpleGADriver, Ea
 from topfarm.utils import smart_start
 from topfarm.constraint_components.spacing import SpacingComp
 from topfarm.constraint_components.boundary import BoundaryBaseComp
-from topfarm.constraint_components.penalty_component import PenaltyComponent
+from topfarm.constraint_components.penalty_component import PenaltyComponent, PostPenaltyComponent
+from topfarm.cost_models.aggregated_cost import AggregatedCost
+
+
+class TopFarmBaseGroup(Group):
+    def __init__(self, comps=[], output_key=None, output_unit=''):
+        super().__init__()
+        self.comps = []
+        self.obj_comp = None
+        for i, comp in enumerate(comps):
+            if hasattr(comp, 'objective') and comp.objective:
+                self.output_key = comp.output_key
+                self.output_unit = comp.output_unit
+                self.cost_factor = comp.cost_factor
+                self.obj_comp = comp
+            else:
+                self.comps.append(comp)
+
+
+class TopFarmGroup(TopFarmBaseGroup):
+    def __init__(self, comps=[], output_key=None, output_unit=''):
+        super().__init__(comps, output_key, output_unit)
+        for i, comp in enumerate(comps):
+            self.add_subsystem('comp_{}'.format(i), comp, promotes=['*'])
+
+
+class TopFarmParallelGroup(TopFarmBaseGroup):
+    def __init__(self, comps=[], output_key=None, output_unit=''):
+        super().__init__(comps, output_key, output_unit)
+        parallel = ParallelGroup()
+        for i, comp in enumerate(self.comps):
+            parallel.add_subsystem('comp_{}'.format(i), comp, promotes=['*'])
+        self.add_subsystem('parallel', parallel, promotes=['*'])
+        self.add_subsystem('objective', self.obj_comp, promotes=['*'])
 
 
 class TopFarmProblem(Problem):
 
     def __init__(self, design_vars, cost_comp=None, driver=EasyScipyOptimizeDriver(),
                  constraints=[], plot_comp=NoPlot(), record_id=None,
-                 expected_cost=1, ext_vars={}):
+                 expected_cost=1, ext_vars={}, post_constraints=[], approx_totals=False):
         """Initialize TopFarmProblem
 
         Parameters
@@ -60,10 +93,12 @@ class TopFarmProblem(Problem):
                 (initial value, unit)
                 (initial value, lower bound, upper bound)
                 (initial value, lower bound, upper bound, unit)
-        cost_comp : ExplicitComponent or TopFarmProblem
-            A cost component in the style of an OpenMDAO v2 ExplicitComponent.
+        cost_comp : ExplicitComponent or TopFarmProblem or TopFarmGroup
+            Component that provides the cost function. It has to be the style
+            of an OpenMDAO v2 ExplicitComponent.
             Pure python cost functions can be wrapped using ``CostModelComponent``
             class in ``topfarm.cost_models.cost_model_wrappers``.\n
+            ExplicitComponent are wrapped into a TopFarmGroup.\n
             For nested problems, the cost comp_comp is typically a TopFarmProblem
         driver : openmdao Driver, optinal
             Driver used to solve the optimization driver. For an example, see the
@@ -91,6 +126,13 @@ class TopFarmProblem(Problem):
             Used for nested problems to propagate variables from parent problem\n
             Ex. {'type': [1,2,3]}\n
             Ex. [('type', [1,2,3])]\n
+        post_constraints : list of Constraint-objects that needs the cost component to be
+            evaluated, unlike (pre-)constraints which are evaluated before the cost component.
+            E.g. LoadConstraint
+        approx_totals : bool or dict
+            If True, approximates the total derivative of the cost_comp group,
+            skipping the partial ones. If it is a dictionary, it's elements
+            are passed to the approx_totals function of an OpenMDAO Group.
 
         Examples
         --------
@@ -106,6 +148,8 @@ class TopFarmProblem(Problem):
         if cost_comp:
             if isinstance(cost_comp, TopFarmProblem):
                 cost_comp = cost_comp.as_component()
+            elif isinstance(cost_comp, ExplicitComponent) and (len(post_constraints) > 0):
+                cost_comp = TopFarmGroup([cost_comp])
             cost_comp.parent = self
         self.cost_comp = cost_comp
 
@@ -122,6 +166,8 @@ class TopFarmProblem(Problem):
 
         self.record_id = record_id
         self.load_recorder()
+        if not isinstance(approx_totals, dict) and approx_totals:
+            approx_totals = {'method': 'fd'}
 
         if not isinstance(design_vars, dict):
             design_vars = dict(design_vars)
@@ -143,20 +189,26 @@ class TopFarmProblem(Problem):
         else:
             self.n_wt = 0
 
-        constraints_as_penalty = (not self.driver.supports['inequality_constraints'] or
-                                  isinstance(self.driver, SimpleGADriver))
+        constraints_as_penalty = ((not self.driver.supports['inequality_constraints'] or
+                                  isinstance(self.driver, SimpleGADriver) or
+                                  isinstance(self.driver, EasySimpleGADriver)) and
+                                  len(constraints) + len(post_constraints) > 0)
 
-        for constr in constraints:
-            if constraints_as_penalty:
-                constr.setup_as_penalty(self)
-            else:
-                constr.setup_as_constraint(self)
+        if len(constraints) > 0:
+            self.model.add_subsystem('pre_constraints', ParallelGroup(), promotes=['*'])
+            for constr in constraints:
+                if constraints_as_penalty:
+                    constr.setup_as_penalty(self)
+                else:
+                    constr.setup_as_constraint(self)
+                    # Use the assembled Jacobian.
+                    self.model.pre_constraints.options['assembled_jac_type'] = 'csc'
+                    self.model.pre_constraints.linear_solver.assemble_jac = True
+            penalty_comp = PenaltyComponent(constraints, constraints_as_penalty)
+            self.model.add_subsystem('penalty_comp', penalty_comp, promotes=['*'])
 
         self.model.constraint_components = [constr.constraintComponent for constr in constraints]
-        penalty_comp = PenaltyComponent(constraints, constraints_as_penalty)
-        self.model.add_subsystem('penalty_comp', penalty_comp, promotes=['*'])
 
-        do = self.driver.options
         for k, v in design_vars.items():
             if isinstance(driver, EasyDriverBase):
                 kwargs = driver.get_desvar_kwargs(self.model, k, v)
@@ -176,9 +228,31 @@ class TopFarmProblem(Problem):
                 self._setup_status = 0
             if isinstance(driver, EasyDriverBase) and driver.supports_expected_cost is False:
                 expected_cost = 1
-            self.model.add_objective('cost', scaler=1 / abs(expected_cost))
+            if isinstance(cost_comp, Group) and approx_totals:
+                cost_comp.approx_totals(**approx_totals)
+            # Use the assembled Jacobian.
+            if 'assembled_jac_type' in self.model.cost_comp.options:
+                self.model.cost_comp.options['assembled_jac_type'] = 'dense'
+                self.model.cost_comp.linear_solver.assemble_jac = True
+
         else:
             self.indeps.add_output('cost')
+
+        if len(post_constraints) > 0:
+            if constraints_as_penalty:
+                penalty_comp = PostPenaltyComponent(post_constraints, constraints_as_penalty)
+                self.model.add_subsystem('post_penalty_comp', penalty_comp, promotes=['*'])
+            else:
+                for constr in post_constraints:
+                    self.model.add_constraint(constr[0],
+                                              upper=np.full(self.n_wt, constr[1]))
+                    # Use the assembled Jacobian.
+#                    self.model.cost_comp.post_constraints.options['assembled_jac_type'] = 'csc'
+#                    self.model.cost_comp.post_constraints.linear_solver.assemble_jac = True
+
+        aggr_comp = AggregatedCost(constraints_as_penalty, constraints, post_constraints)
+        self.model.add_subsystem('aggr_comp', aggr_comp, promotes=['*'])
+        self.model.add_objective('aggr_cost', scaler=1 / abs(expected_cost))
 
         if plot_comp and not isinstance(plot_comp, NoPlot):
             self.model.add_subsystem('plot_comp', plot_comp, promotes=['*'])
@@ -189,7 +263,7 @@ class TopFarmProblem(Problem):
 
     @property
     def cost(self):
-        return self['cost'][0]
+        return self['aggr_cost'][0]
 
     def __getitem__(self, name):
         return Problem.__getitem__(self, name).copy()
@@ -296,7 +370,7 @@ class TopFarmProblem(Problem):
         t = time.time()
         rec = TopFarmListRecorder()
         self.driver.add_recorder(rec)
-        res = self.compute_totals(['cost'], wrt=[topfarm.x_key, topfarm.y_key], return_format='dict')
+        res = self.compute_totals(['aggr_cost'], wrt=[topfarm.x_key, topfarm.y_key], return_format='dict')
         self.driver._rec_mgr._recorders.remove(rec)
         if disp:
             print("Gradients evaluated in\t%.3fs" % (time.time() - t))
@@ -331,10 +405,6 @@ class TopFarmProblem(Problem):
                 return self.optimize(state, disp)
 
         self.driver.add_recorder(self.recorder)
-#        self.recording_options['includes'] = ['*']
-#        self.driver.recording_options['record_desvars'] = True
-#        self.driver.recording_options['includes'] = ['*']
-#        self.driver.recording_options['record_inputs'] = True
         self.setup()
         t = time.time()
         self.run_driver()
@@ -344,13 +414,9 @@ class TopFarmProblem(Problem):
         if self.driver._rec_mgr._recorders != []:  # in openmdao<2.4 cleanup does not delete recorders
             self.driver._rec_mgr._recorders.remove(self.recorder)
         if isinstance(self.driver, DOEDriver) or isinstance(self.driver, SimpleGADriver):
-            costs = self.recorder['cost']
-#            cases = self.recorder.driver_cases
-#            costs = [cases.get_case(i).outputs['cost'] for i in range(cases.num_cases)]
+            costs = self.recorder['aggr_cost']
             best_case_index = int(np.argmin(costs))
-#            best_case = cases.get_case(best_case_index)
             best_state = {k: self.recorder[k][best_case_index] for k in self.design_vars}
-#            self.evaluate({k: best_case.outputs[k] for k in best_case.outputs})
             self.evaluate(best_state)
         return self.cost, copy.deepcopy(self.state), self.recorder
 
@@ -359,7 +425,7 @@ class TopFarmProblem(Problem):
         self.setup()
         if check_all:
             comp_name_lst = [comp.pathname for comp in self.model.system_iter()
-                             if comp._has_compute_partials]
+                             if hasattr(comp, '_has_compute_partials') and comp._has_compute_partials]
         else:
             comp_name_lst = [self.cost_comp.pathname]
         print("checking %s" % ", ".join(comp_name_lst))
@@ -455,38 +521,6 @@ class ProblemComponent(ExplicitComponent):
         if hasattr(self.problem.cost_comp, "output_key"):
             output_key = self.problem.cost_comp.output_key
             outputs[output_key] = self.problem[output_key]
-
-
-class TopFarmBaseGroup(Group):
-    def __init__(self, comps=[], output_key=None, output_unit=''):
-        super().__init__()
-        self.comps = []
-        self.obj_comp = None
-        for i, comp in enumerate(comps):
-            if hasattr(comp, 'objective') and comp.objective:
-                self.output_key = comp.output_key
-                self.output_unit = comp.output_unit
-                self.cost_factor = comp.cost_factor
-                self.obj_comp = comp
-            else:
-                self.comps.append(comp)
-
-
-class TopFarmGroup(TopFarmBaseGroup):
-    def __init__(self, comps=[], output_key=None, output_unit=''):
-        super().__init__(comps, output_key, output_unit)
-        for i, comp in enumerate(comps):
-            self.add_subsystem('comp_{}'.format(i), comp, promotes=['*'])
-
-
-class TopFarmParallelGroup(TopFarmBaseGroup):
-    def __init__(self, comps=[], output_key=None, output_unit=''):
-        super().__init__(comps, output_key, output_unit)
-        parallel = ParallelGroup()
-        for i, comp in enumerate(self.comps):
-            parallel.add_subsystem('comp_{}'.format(i), comp, promotes=['*'])
-        self.add_subsystem('parallel', parallel, promotes=['*'])
-        self.add_subsystem('objective', self.obj_comp, promotes=['*'])
 
 
 def main():

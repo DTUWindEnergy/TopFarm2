@@ -12,8 +12,9 @@ class ConstrainedDiscardGenerator(DOEGenerator):
         self.generator = generator
 
     def __call__(self, design_vars, model=None):
-        xy_boundary_comp = model._get_subsystem('xy_bound_comp')
-        spacing_comp = model._get_subsystem('spacing_comp')
+        constr = model._get_subsystem('pre_constraints')
+        xy_boundary_comp = constr._get_subsystem('xy_bound_comp')
+        spacing_comp = constr._get_subsystem('spacing_comp')
         for xyz_tuple_lst in self.generator(design_vars, model=model):
             x, y = ([np.array(t[1]) for t in xyz_tuple_lst] + [0])[:2]
             if spacing_comp:

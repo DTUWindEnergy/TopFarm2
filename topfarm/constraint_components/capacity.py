@@ -25,8 +25,8 @@ class CapacityConstraint(Constraint):
     def _setup(self, problem):
         self.n_wt = problem.n_wt
         self.capacity_comp = CapacityComp(self.n_wt, self.max_capacity, self.rated_power_array, self.const_id)
-        problem.model.add_subsystem(self.const_id, self.capacity_comp, promotes=[
-                                    topfarm.type_key, 'penalty_' + self.const_id, 'totalcapacity'])
+        problem.model.pre_constraints.add_subsystem(self.const_id, self.capacity_comp, promotes=[
+            topfarm.type_key, 'penalty_' + self.const_id, 'totalcapacity'])
 
     def setup_as_constraint(self, problem):
         self._setup(problem)

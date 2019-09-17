@@ -51,7 +51,7 @@ def test_CostModelComponent():
 def testCostModelComponent_no_gradients():
     tf = get_tf(CostModelComponent(['x', 'y'], 4, cost, None))
     tf.optimize()
-    np.testing.assert_array_almost_equal(tf.turbine_positions[:, :2], optimal_with_constraints, 5)
+    np.testing.assert_array_almost_equal(tf.turbine_positions[:, :2], optimal_with_constraints, 4)
 
 
 def testAEPCostModelComponent():
