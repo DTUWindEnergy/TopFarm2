@@ -4,15 +4,24 @@ import numpy as np
 from openmdao.core.analysis_error import AnalysisError
 import topfarm
 import time
-
+from openmdao.recorders.recording_manager import RecordingManager
 from openmdao.utils.concurrent import concurrent_eval
+from openmdao.utils.record_util import create_local_meta
 
+
+class MyRecordingManager(RecordingManager):
+    def record_iteration(self, recording_requester, data, metadata):
+        #print('In MyRecordingManager record_iteration', self.rank)
+        #for recorder in self._recorders:
+        #    print(recorder.__class__, recorder._parallel)
+        super().record_iteration(recording_requester, data, metadata)
 
 class RandomSearchDriver(Driver):
 
     def __init__(self, randomize_func, **kwargs):
         self.randomize_func = randomize_func
         super().__init__(**kwargs)
+        self._rec_mgr = MyRecordingManager()
 
         # What we support
         self.supports['integer_design_vars'] = True
@@ -157,7 +166,7 @@ class RandomSearchDriver(Driver):
             x0[i:i + size] = desvar_vals[name]
             i += size
 
-        obj_value_x0, success = self.objective_callback(x0)
+        obj_value_x0, success = self.objective_callback(x0, record=True)
         x1 = x0.copy()
         n_iter = 0
 
@@ -174,6 +183,7 @@ class RandomSearchDriver(Driver):
                 desvar_dict[name][0][:] = x0[i:j].copy()
 
             if comm is not None:
+                #print('Parallel', comm.rank)
                 ## We do it in parallel: One case per CPU available
                 cases = []
                 if comm.rank == 0:
@@ -202,8 +212,9 @@ class RandomSearchDriver(Driver):
                     #        n_iter += 1
                 if one_success:
                     n_iter += 1
+                    obj_value_x0, success = self.objective_callback(x0, record=True)
                     if disp and comm.rank==0:
-                        obj_value_x0, success = self.objective_callback(x0, record=True)
+                        #obj_value_x0, success = self.objective_callback(x0, record=False)
                         print('rank:', comm.rank, n_iter, obj_value_x0)
             else:
                 ## We only use one CPU
@@ -227,6 +238,7 @@ class RandomSearchDriver(Driver):
                 if not success or obj_value_x1 > obj_value_x0:
                     obj_value_x1, success = self.objective_callback(x0, record=True)
         return False
+
 
     def objective_callback(self, x, record=False):
         """
@@ -253,6 +265,8 @@ class RandomSearchDriver(Driver):
 
         for name in self._designvars:
             i, j = self._desvar_idx[name]
+            #if record:
+            #    print('setting', name, 'to', x[i:j])
             self.set_design_var(name, x[i:j])
 
         # Execute the model
