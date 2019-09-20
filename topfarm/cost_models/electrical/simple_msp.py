@@ -7,28 +7,32 @@ from topfarm.plotting import XYPlotComp, NoPlot
 import numpy as np
 import matplotlib.pylab as plt
 
+
 class ElNetComp(om.ExplicitComponent):
     def initialize(self):
         self.options.declare('n_wt', types=int)
 
-    def setup(self): 
+    def setup(self):
         self.add_input(topfarm.x_key, np.zeros(self.options['n_wt']), units='m')
         self.add_input(topfarm.y_key, np.zeros(self.options['n_wt']), units='m')
+
 
 class ElNetLength(ElNetComp):
     def setup(self):
         super().setup()
         self.add_output('elnet_length', 0.0, units='m')
 
-        # Note that this component is NOT derivative friendly, as the electrical
-        # layout will jump from one turbine to another in a non-continuous manner
-        # if you move the turbines
-        self.declare_partials('elnet_length', [topfarm.x_key, topfarm.y_key], method='fd')
+        # Note that this component is NOT derivative friendly, as the
+        # electrical layout will jump from one turbine to another in a non-
+        # continuous manner if you move the turbines
+        self.declare_partials('elnet_length', [topfarm.x_key, topfarm.y_key],
+                              method='fd')
 
     def compute(self, inputs, outputs):
         x, y = inputs['x'], inputs['y']
         elnet_layout = spanning_tree(x, y)
         outputs['elnet_length'] = sum(list(elnet_layout.values()))
+
 
 class PlotElNet(ElNetComp):
     def compute(self, inputs, outputs):
@@ -45,13 +49,14 @@ class ElNetCost(CostModelComponent):
     def __init__(self, n_wt, length_key='elnet_length', **kwargs):
         self.n_wt = n_wt
         self.length_key = length_key
-        CostModelComponent.__init__(self, [(self.length_key, 0.0)], self.n_wt, self.cost, self.grad, **kwargs)
+        CostModelComponent.__init__(self, [(self.length_key, 0.0)], self.n_wt,
+                                    self.cost, self.grad, **kwargs)
 
     def initialize(self):
         self.options.declare('cost_per_meter')
 
     def cost(self, **kwargs):
-        return self.options['cost_per_meter'] *  kwargs[self.length_key]
+        return self.options['cost_per_meter'] * kwargs[self.length_key]
 
     def grad(self, **kwargs):
         return [self.options['cost_per_meter']]

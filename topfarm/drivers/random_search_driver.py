@@ -62,7 +62,6 @@ class RandomSearchDriver(Driver):
         if not self.options['run_parallel']:
             comm = None
 
-
         if len(self._objs) > 1:
             msg = 'RandomSearchDriver currently does not support multiple objectives.'
             raise RuntimeError(msg)
@@ -70,9 +69,8 @@ class RandomSearchDriver(Driver):
         if len(self._cons) > 0:
             msg = 'RandomSearchDriver currently does not support constraints.'
             raise RuntimeError(msg)
-        
-        self.comm = comm
 
+        self.comm = comm
 
     def run(self):
         """
@@ -138,7 +136,7 @@ class RandomSearchDriver(Driver):
                 desvar_dict[name][0][:] = x0[i:j].copy()
 
             if comm is not None:
-                ## We do it in parallel: One case per CPU available
+                # We do it in parallel: One case per CPU available
                 cases = []
                 if comm.rank == 0:
                     for ii in range(comm.size):
@@ -148,7 +146,7 @@ class RandomSearchDriver(Driver):
                             x1[i:j] = desvar_dict[name][0][:]
                         cases.append(((x1, ii), None))
 
-                ## Let's make sure we have the same cases everywhere
+                # Let's make sure we have the same cases everywhere
                 cases = comm.bcast(cases, root=0)
 
                 results = concurrent_eval(self.objective_callback, cases, comm, allgather=True)
@@ -160,18 +158,18 @@ class RandomSearchDriver(Driver):
                         one_success = True
                         x0 = cases[i][0][0].copy()
                         obj_value_x0 = obj_value_x1
-                        #n_iter += 1
+                        # n_iter += 1
                     elif obj_value_x1 < 1e10:
                         one_success = True
-                    #        n_iter += 1
+                    # n_iter += 1
                 if one_success:
                     n_iter += 1
                     obj_value_x0, success = self.objective_callback(x0, record=True)
-                    if disp and comm.rank==0:
-                        #obj_value_x0, success = self.objective_callback(x0, record=False)
+                    if disp and comm.rank == 0:
+                        # obj_value_x0, success = self.objective_callback(x0, record=False)
                         print('rank:', comm.rank, n_iter, obj_value_x0)
             else:
-                ## We only use one CPU
+                # We only use one CPU
 
                 desvar_dict = self.randomize_func(desvar_dict)
                 for name, i, j, _, _ in desvar_info:
@@ -192,7 +190,6 @@ class RandomSearchDriver(Driver):
                 if not success or obj_value_x1 > obj_value_x0:
                     obj_value_x1, success = self.objective_callback(x0, record=True)
         return False
-
 
     def objective_callback(self, x, record=False):
         """
