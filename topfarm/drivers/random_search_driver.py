@@ -4,24 +4,15 @@ import numpy as np
 from openmdao.core.analysis_error import AnalysisError
 import topfarm
 import time
-from openmdao.recorders.recording_manager import RecordingManager
 from openmdao.utils.concurrent import concurrent_eval
 from openmdao.utils.record_util import create_local_meta
 
-
-class MyRecordingManager(RecordingManager):
-    def record_iteration(self, recording_requester, data, metadata):
-        #print('In MyRecordingManager record_iteration', self.rank)
-        #for recorder in self._recorders:
-        #    print(recorder.__class__, recorder._parallel)
-        super().record_iteration(recording_requester, data, metadata)
 
 class RandomSearchDriver(Driver):
 
     def __init__(self, randomize_func, **kwargs):
         self.randomize_func = randomize_func
         super().__init__(**kwargs)
-        self._rec_mgr = MyRecordingManager()
 
         # What we support
         self.supports['integer_design_vars'] = True
@@ -82,42 +73,6 @@ class RandomSearchDriver(Driver):
         
         self.comm = comm
 
-    def _setup_comm(self, comm):
-        """
-        Perform any driver-specific setup of communicators for the model.
-        Here, we generate the model communicators.
-        Parameters
-        ----------
-        comm : MPI.Comm or <FakeComm> or None
-            The communicator for the Problem.
-        Returns
-        -------
-        MPI.Comm or <FakeComm> or None
-            The communicator for the Problem model.
-        """
-        # procs_per_model = self.options['procs_per_model']
-        # if MPI and self.options['run_parallel'] and procs_per_model > 1:
-
-        #     full_size = comm.size
-        #     size = full_size // procs_per_model
-        #     if full_size != size * procs_per_model:
-        #         raise RuntimeError("The total number of processors is not evenly divisible by the "
-        #                            "specified number of processors per model.\n Provide a "
-        #                            "number of processors that is a multiple of %d, or "
-        #                            "specify a number of processors per model that divides "
-        #                            "into %d." % (procs_per_model, full_size))
-        #     color = comm.rank % size
-        #     model_comm = comm.Split(color)
-
-        #     # Everything we need to figure out which case to run.
-        #     self._concurrent_pop_size = size
-        #     self._concurrent_color = color
-
-        #     return model_comm
-
-        # self._concurrent_pop_size = 0
-        # self._concurrent_color = 0
-        return comm
 
     def run(self):
         """
@@ -183,7 +138,6 @@ class RandomSearchDriver(Driver):
                 desvar_dict[name][0][:] = x0[i:j].copy()
 
             if comm is not None:
-                #print('Parallel', comm.rank)
                 ## We do it in parallel: One case per CPU available
                 cases = []
                 if comm.rank == 0:
@@ -265,8 +219,6 @@ class RandomSearchDriver(Driver):
 
         for name in self._designvars:
             i, j = self._desvar_idx[name]
-            #if record:
-            #    print('setting', name, 'to', x[i:j])
             self.set_design_var(name, x[i:j])
 
         # Execute the model
@@ -301,10 +253,6 @@ class RandomSearchDriver(Driver):
             for name, val in iteritems(self.get_objective_values()):
                 obj = val
                 break
-
-        # print("Functions calculated")
-        # print(x)
-        # print(obj)
         return obj, success
 
 
