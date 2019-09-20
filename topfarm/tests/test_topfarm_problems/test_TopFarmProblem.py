@@ -175,7 +175,7 @@ def testTopFarmProblem_check_gradients_Income(turbineXYZOptimizationProblem_gene
 
 def testTopFarmProblem_evaluate_gradients(turbineXYZOptimizationProblem_generator):
     tf = turbineXYZOptimizationProblem_generator(gradients)
-    np.testing.assert_array_equal(tf.evaluate_gradients()['cost']['x'], [[-6., -14., -8., -6.]])
+    np.testing.assert_array_equal(tf.evaluate_gradients()['aggr_cost']['x'], [[-6., -14., -8., -6.]])
 
 
 def testTopFarmProblem_as_component(turbineTypeOptimizationProblem):

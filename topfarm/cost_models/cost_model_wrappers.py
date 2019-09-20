@@ -122,8 +122,6 @@ class CostModelComponent(ExplicitComponent):
     def compute(self, inputs, outputs):
         """Compute cost model"""
         if inputs['penalty'] > 0:
-            if self.objective:
-                outputs['cost'] = inputs['penalty'] + 10**10
             return
         if self.counter >= self.max_eval:
             return

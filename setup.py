@@ -27,12 +27,12 @@ setup(name='topfarm',
         'matplotlib',  # for plotting
         'numpy',  # for numerical calculations
         'openmdao==2.6',  # for optimization
-#        'networkx==2.1', # for avoiding a warning/bug
         'pytest',  # for testing
         'pytest-cov',  # for calculating coverage
 		'py_wake',  # for calculating AEP
         'scipy',  # constraints
         'sphinx',  # generating documentation
-        'sphinx_rtd_theme'  # docs theme
+        'sphinx_rtd_theme',  # docs theme
+        'scikit-learn',  # load surrogate
       ],
       zip_safe=True)

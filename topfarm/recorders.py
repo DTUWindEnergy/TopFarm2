@@ -204,7 +204,7 @@ class TopFarmListRecorder(SqliteRecorder):
         if load_case == 'latest':
             load_case = None
         elif load_case == 'best':
-            load_case = np.argmin(self.get('cost')) + 1
+            load_case = np.argmin(self.get('aggr_cost')) + 1
         else:
             load_case = int(load_case)
         self.driver_iteration_dict = {k: v[:load_case] for k, v in self.driver_iteration_dict.items()}

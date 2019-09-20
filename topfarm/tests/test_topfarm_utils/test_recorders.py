@@ -108,7 +108,7 @@ def test_TopFarmListRecorderAnimation(tf_generator):
     tf = tf_generator()
     _, _, recorder = tf.optimize()
     # # Generate test file:
-    # recorder.save('topfarm/tests/test_files/recordings/COBYLA_10iter.pkl')
+#    recorder.save('topfarm/tests/test_files/recordings/COBYLA_10iter.pkl')
     fn = tfp + "/tmp/test.mp4"
     if os.path.exists(fn):
         os.remove(fn)
@@ -188,9 +188,9 @@ def test_split_recordid(record_id, record_name, load_case):
 
 
 @pytest.mark.parametrize('load_case,n,cost',
-                         [("latest", 10, 12.82842712),
-                          ('best', 6, 3),
-                          ("2", 2, 43)])
+                         [("latest", 11, 2.6187984),
+                          ('best', 11, 2.6187984),
+                          ("3", 3, 28)])
 def test_TopFarmListRecorderLoad(load_case, n, cost):
     fn = tfp + 'recordings/COBYLA_10iter:%s' % load_case
     rec = TopFarmListRecorder().load(fn)

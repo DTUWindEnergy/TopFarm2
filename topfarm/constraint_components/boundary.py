@@ -54,7 +54,7 @@ class XYBoundaryConstraint(Constraint):
         self.set_design_var_limits(problem.design_vars)
         # problem.xy_boundary = np.r_[self.boundary_comp.xy_boundary, self.boundary_comp.xy_boundary[:1]]
         problem.indeps.add_output('xy_boundary', self.boundary_comp.xy_boundary)
-        problem.model.add_subsystem('xy_bound_comp', self.boundary_comp, promotes=['*'])
+        problem.model.pre_constraints.add_subsystem('xy_bound_comp', self.boundary_comp, promotes=['*'])
 
     def setup_as_constraint(self, problem):
         self._setup(problem)
@@ -115,7 +115,7 @@ class CircleBoundaryConstraint(Constraint):
         # t = np.linspace(0, 2 * np.pi, 100)
         # problem.xy_boundary = self.center + np.array([np.cos(t), np.sin(t)]).T * self.radius
         problem.indeps.add_output('xy_boundary', self.boundary_comp.xy_boundary)
-        problem.model.add_subsystem('xy_bound_comp', self.boundary_comp, promotes=['*'])
+        problem.model.pre_constraints.add_subsystem('xy_bound_comp', self.boundary_comp, promotes=['*'])
 
     def setup_as_constraint(self, problem):
         self._setup(problem)
@@ -479,5 +479,9 @@ class CircleBoundaryComp(PolygonBoundaryComp):
 
     def gradients(self, x, y):
         theta = np.arctan2(y - self.center[1], x - self.center[0])
-        dx, dy = -np.cos(theta), -np.sin(theta)
+        dx = -1 * np.ones_like(x)
+        dy = -1 * np.ones_like(x)
+        dist = self.radius - np.sqrt((x - self.center[0])**2 + (y - self.center[1])**2)
+        not_center = dist != self.radius
+        dx[not_center], dy[not_center] = -np.cos(theta[not_center]), -np.sin(theta[not_center])
         return np.diagflat(dx), np.diagflat(dy)

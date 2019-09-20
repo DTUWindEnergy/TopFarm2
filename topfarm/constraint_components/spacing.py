@@ -23,8 +23,8 @@ class SpacingConstraint(Constraint):
     def _setup(self, problem):
         self.n_wt = problem.n_wt
         self.spacing_comp = SpacingComp(self.n_wt, self.min_spacing, self.const_id, self.units)
-        problem.model.add_subsystem(self.const_id, self.spacing_comp, promotes=[
-                                    topfarm.x_key, topfarm.y_key, 'penalty_' + self.const_id, 'wtSeparationSquared'])
+        problem.model.pre_constraints.add_subsystem(self.const_id, self.spacing_comp,
+                                                    promotes=[topfarm.x_key, topfarm.y_key, 'penalty_' + self.const_id, 'wtSeparationSquared'])
 
     def setup_as_constraint(self, problem):
         self._setup(problem)
@@ -119,7 +119,7 @@ class SpacingComp(ConstraintComponent):
 
         def get_xy(xy):
             if not hasattr(self, xy):
-                setattr(self, xy, dict(self.list_inputs(out_stream=None))[f'{self.name}.{xy}']['value'])
+                setattr(self, xy, dict(self.list_inputs(out_stream=None))[f'pre_constraints.{self.name}.{xy}']['value'])
             xy = getattr(self, xy)
             return xy if not isinstance(xy, tuple) else xy[0]
 
