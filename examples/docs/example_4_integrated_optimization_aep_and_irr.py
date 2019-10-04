@@ -27,11 +27,11 @@ def main():
         n_wt = 16
         site = IEA37Site(n_wt)
         windTurbines = IEA37_WindTurbines()
-        wake_model = IEA37SimpleBastankhahGaussian(windTurbines)
+        wake_model = IEA37SimpleBastankhahGaussian(site, windTurbines)
         Drotor_vector = [windTurbines.diameter()] * n_wt 
         power_rated_vector = [float(windTurbines.power(20)/1000)] * n_wt 
         hub_height_vector = [windTurbines.hub_height()] * n_wt 
-        AEPCalc = AEPCalculator(site, windTurbines, wake_model)         
+        AEPCalc = AEPCalculator(wake_model)         
 
         def aep_func(x, y, **kwargs):
             return AEPCalc.calculate_AEP(x_i=x, y_i=y).sum(-1).sum(-1)*10**6

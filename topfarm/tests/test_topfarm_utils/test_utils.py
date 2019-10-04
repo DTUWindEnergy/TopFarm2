@@ -84,9 +84,7 @@ def test_smart_start_aep_map():
     site.default_ws = ws_lst
     site.default_wd = wd_lst
 
-    aep = PyWakeAEP(site=site,
-                    windTurbines=turbines,
-                    wake_model=NOJ(turbines))
+    aep = PyWakeAEP(wake_model=NOJ(site, turbines))
     aep_1wt = aep.calculate_AEP([0], [0]).sum()
 
     tf = TopFarmProblem(
@@ -131,9 +129,7 @@ def test_smart_start_aep_map_large_radius():
     site.default_ws = ws_lst
     site.default_wd = wd_lst
 
-    aep = PyWakeAEP(site=site,
-                    windTurbines=turbines,
-                    wake_model=NOJ(turbines))
+    aep = PyWakeAEP(wake_model=NOJ(site, turbines))
     aep_1wt = aep.calculate_AEP([0], [0]).sum()
     tf = TopFarmProblem(
         design_vars={'x': x, 'y': y},

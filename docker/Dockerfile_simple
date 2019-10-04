@@ -3,6 +3,7 @@
 # ==================================================================
 FROM continuumio/anaconda3:latest
 MAINTAINER Jenni Rinker <rink@dtu.dk>
+ENV PATH="/opt/conda/bin:${PATH}"
 
 
 # get list of update linux files and install lib for matplotlib
@@ -12,7 +13,8 @@ MAINTAINER Jenni Rinker <rink@dtu.dk>
 RUN apt-get update && \
     apt-get install make && \
     apt-get install libgl1-mesa-glx -y && \
-    apt-get install gcc gfortran -y
+    apt-get install gcc gfortran -y && \
+	apt-get install -y texlive-latex-extra
 
 
 # use conda to update itself and install packages not in the

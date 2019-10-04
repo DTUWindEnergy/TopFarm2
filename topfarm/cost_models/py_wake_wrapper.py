@@ -47,8 +47,8 @@ def main():
     if __name__ == '__main__':
         site = IEA37Site(16)
         windTurbines = IEA37_WindTurbines()
-        wake_model = IEA37SimpleBastankhahGaussian(windTurbines)
-        aep_calc = PyWakeAEP(site, windTurbines, wake_model)
+        wake_model = IEA37SimpleBastankhahGaussian(site, windTurbines)
+        aep_calc = PyWakeAEP(wake_model)
         tf = TopFarmProblem(
             design_vars=dict(zip('xy', site.initial_position.T)),
             cost_comp=aep_calc.get_TopFarm_cost_component(16),

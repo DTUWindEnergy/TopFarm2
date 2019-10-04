@@ -97,3 +97,13 @@ def test_with_convex_boundary_and_constrain(get_tf, driver):
     uta.assertGreaterEqual(y.min(), 0)  # y
     npt.assert_array_less(y, x)
     assert all(np.sqrt(np.diff(x)**2 + np.diff(y)**2) >= 2)
+
+
+if __name__ == '__main__':
+    tf = get_InitialXYZOptimizationProblem(xy_boundary=[(0, 0), (10, 0), (10, 10)], xy_boundary_type='convex_hull',
+                                           min_spacing=2, driver=ConstrainedDiscardGenerator(UniformGenerator(10, 0)))
+    arr = tf.get_DOE_array()
+    x, y = [arr[:, i] for i in range(2)]
+    uta.assertGreaterEqual(x.min(), 0)  # x
+    uta.assertGreaterEqual(y.min(), 0)  # y
+    npt.assert_array_less(y, x)

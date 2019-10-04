@@ -51,8 +51,8 @@ def main():
                     site = Amalia1Site(f, mean_wsp=wind_speed)
                     site.initial_position = np.array([turbineX, turbineY]).T
                     wt = NREL5MWREF()
-                    wake_model = NOJ(wt)
-                    aep_calculator = AEPCalculator(site, wt, wake_model)
+                    wake_model = NOJ(site, wt)
+                    aep_calculator = AEPCalculator(wake_model)
                     n_wt = len(turbineX)
                     differentiable = differentiable
                     wake_model_options = {'nSamples': 0,

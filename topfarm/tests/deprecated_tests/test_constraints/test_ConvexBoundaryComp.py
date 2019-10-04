@@ -22,7 +22,7 @@ def test_z_boundary():
 
 
 def test_boundary_component():
-    with pytest.raises(NotImplementedError, message="Boundary type 'missing' is not implemented"):
+    with pytest.raises(NotImplementedError, match="Boundary type 'missing' is not implemented"):
         ConvexBoundaryComp(3, [(0, 0), (0, 1)], xy_boundary_type='missing')
 
 # def test_xyz_boundary():
