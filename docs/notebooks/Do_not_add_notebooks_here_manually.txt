@@ -1,0 +1,5 @@
+- Add the notebook in Topfarm2/_notebooks/elements
+- add the name in list in the bottom of Topfarm2/_notebooks/make_notebooks.py
+- run Topfarm2/_notebooks/make_notebooks
+
+Now a new notebook including "try me on google" is created in Topfarm2/notebooks
