@@ -510,9 +510,10 @@ class ProblemComponent(ExplicitComponent):
     def setup(self):
         missing_in_problem = (set([c[0] for c in self.parent.indeps._indep_external]) -
                               set([c[0] for c in self.problem.indeps._indep_external]))
-
+        self.missing_attrs = []
         for name, val, kwargs in self.parent.indeps._indep_external:
             self.add_input(name, val=val, **{k: kwargs[k] for k in ['units']})
+            self.missing_attrs.append(name)
             if name in missing_in_problem:
                 self.problem.indeps.add_output(name, val, **kwargs)
         self.problem._setup_status = 0  # redo initial setup
@@ -521,6 +522,7 @@ class ProblemComponent(ExplicitComponent):
         self.add_output('cost', val=0.0)
         if hasattr(self.problem.cost_comp, "output_key"):
             self.add_output(self.problem.cost_comp.output_key, val=0.0)
+        self.comp_lst = [comp for comp in self.problem.model.system_iter()]
 
     @property
     def state(self):
@@ -529,7 +531,14 @@ class ProblemComponent(ExplicitComponent):
     def cost_function(self, **kwargs):
         return self.problem.optimize(kwargs)[0]
 
+    def set_input_as_option(self, inputs):
+        for comp in self.comp_lst:
+            for attr in self.missing_attrs:
+                if attr in comp.options:
+                    comp.options[attr] = inputs[attr]
+
     def compute(self, inputs, outputs):
+        self.set_input_as_option(inputs)
         outputs['cost'] = self.cost_function(**inputs)
         if hasattr(self.problem.cost_comp, "output_key"):
             output_key = self.problem.cost_comp.output_key
