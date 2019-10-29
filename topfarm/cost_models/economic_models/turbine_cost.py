@@ -30,141 +30,145 @@ class economic_evaluation():
         #                           D_rotor_array, Power_rated_array))
         # weight_array = list(map(lambda x: self.simple_weight_height_trans(x),
         #                     hub_height_array))
-
-        # turbine_type_vector = [[item] for item in turbine_type_array]
-        machine_rating = np.array([[int(item)] for item in self.Power_rated_array])
-        rotor_diameter = np.array([[int(item)] for item in self.D_rotor_array])
-        hub_height = np.array([[int(item)] for item in self.hub_height_array])
-        # weight_vector = [[float(item)] for item in weight_array]
+        self.IRR = 0
         aep_vector = np.array([[float(item)] for item in self.aep_array])
+        if sum(aep_vector) > 0:
+            # turbine_type_vector = [[item] for item in turbine_type_array]
+            machine_rating = np.array([[int(item)] for item in self.Power_rated_array])
+            rotor_diameter = np.array([[int(item)] for item in self.D_rotor_array])
+            hub_height = np.array([[int(item)] for item in self.hub_height_array])
+            # weight_vector = [[float(item)] for item in weight_array]
+            aep_vector = np.array([[float(item)] for item in self.aep_array])
 
-    # def __init__(self, rotor_diameter, machine_rating, hub_height, aep_vector):
-        # calculate the blade mass and cost
-        # Baseline mode
-        self.blade_B_mass = 3 * 0.1452 * (rotor_diameter / 2)**2.9158  # all 3 blades
-        # Advanced mode
-        self.blade_A_mass = 0.4948 * (rotor_diameter / 2)**2.53  # all 3 blades
-        # Blade material cost escalator
-        self.BCE = 1
-        # Labor cost escalator
-        self.GDPE = 1
-        # Costs
-        self.blade_B_costs = 3 * ((0.4019 * (rotor_diameter / 2)**3 - 955.24) * self.BCE +
-                                  2.7445 * (rotor_diameter / 2)**2.5025 * self.GDPE) / (1 - 0.28)
-        self.blade_A_costs = 3 * ((0.4019 * (rotor_diameter / 2)**3 - 21051) * self.BCE +
-                                  2.7445 * (rotor_diameter / 2)**2.5025 * self.GDPE) / (1 - 0.28)
+        # def __init__(self, rotor_diameter, machine_rating, hub_height, aep_vector):
+            # calculate the blade mass and cost
+            # Baseline mode
+            self.blade_B_mass = 3 * 0.1452 * (rotor_diameter / 2)**2.9158  # all 3 blades
+            # Advanced mode
+            self.blade_A_mass = 0.4948 * (rotor_diameter / 2)**2.53  # all 3 blades
+            # Blade material cost escalator
+            self.BCE = 1
+            # Labor cost escalator
+            self.GDPE = 1
+            # Costs
+            self.blade_B_costs = 3 * ((0.4019 * (rotor_diameter / 2)**3 - 955.24) * self.BCE +
+                                      2.7445 * (rotor_diameter / 2)**2.5025 * self.GDPE) / (1 - 0.28)
+            self.blade_A_costs = 3 * ((0.4019 * (rotor_diameter / 2)**3 - 21051) * self.BCE +
+                                      2.7445 * (rotor_diameter / 2)**2.5025 * self.GDPE) / (1 - 0.28)
 
-        # calculate the Hub cost and weight
-        self.hub_mass = 0.954 * (self.blade_B_mass / 3) + 5680.3
-        self.hub_cost = self.hub_mass * 4.25
+            # calculate the Hub cost and weight
+            self.hub_mass = 0.954 * (self.blade_B_mass / 3) + 5680.3
+            self.hub_cost = self.hub_mass * 4.25
 
-        # Pitch mechanisms and bearings
-        self.pich_bearing_mass = 0.1295 * self.blade_B_mass + 491.31
-        self.pitch_system_mass = self.pich_bearing_mass * 1.328 + 555
-        # Total pitch costs
-        self.pitch_system_cost = 2.28 * (0.2106 * rotor_diameter**2.6578)  # All 3 blades
+            # Pitch mechanisms and bearings
+            self.pich_bearing_mass = 0.1295 * self.blade_B_mass + 491.31
+            self.pitch_system_mass = self.pich_bearing_mass * 1.328 + 555
+            # Total pitch costs
+            self.pitch_system_cost = 2.28 * (0.2106 * rotor_diameter**2.6578)  # All 3 blades
 
-        # Spinner, nose cone
-        self.nose_cone_mass = 18.5 * rotor_diameter - 520.5
-        self.nose_cone_cost = self.nose_cone_mass * 5.57
+            # Spinner, nose cone
+            self.nose_cone_mass = 18.5 * rotor_diameter - 520.5
+            self.nose_cone_cost = self.nose_cone_mass * 5.57
 
-        # Low-speed shaft
-        ''' Notes might not be used for direct drive turbine costs'''
-        self.low_speed_shaft_mass = 0.0142 * rotor_diameter**2.888
-        self.low_speed_shaft_cost = 0.01 * rotor_diameter**2.887
+            # Low-speed shaft
+            ''' Notes might not be used for direct drive turbine costs'''
+            self.low_speed_shaft_mass = 0.0142 * rotor_diameter**2.888
+            self.low_speed_shaft_cost = 0.01 * rotor_diameter**2.887
 
-        # Main bearings
-        self.bearing_mass = (rotor_diameter * 8 / 600 - 0.033) * 0.0092 * rotor_diameter**2.5
-        self.bearing_cost = 2 * self.bearing_mass * 17.6
+            # Main bearings
+            self.bearing_mass = (rotor_diameter * 8 / 600 - 0.033) * 0.0092 * rotor_diameter**2.5
+            self.bearing_cost = 2 * self.bearing_mass * 17.6
 
-        # Mecahnical brake, high-speed coupling and associated components
-        self.brake_and_coupling_cost = 1.9894 * machine_rating - 0.1141
-        self.brake_and_coupling_mass = self.brake_and_coupling_cost / 10.
+            # Mecahnical brake, high-speed coupling and associated components
+            self.brake_and_coupling_cost = 1.9894 * machine_rating - 0.1141
+            self.brake_and_coupling_mass = self.brake_and_coupling_cost / 10.
 
-        # Direct drive Generator
-        # self.generator_mass=661.25*self.low_speed_shaft_torque**0.606
-        self.generator_cost = machine_rating * 219.33
+            # Direct drive Generator
+            # self.generator_mass=661.25*self.low_speed_shaft_torque**0.606
+            self.generator_cost = machine_rating * 219.33
 
-        # Variable-speed electronics
-        self.variablespeed_electronics = machine_rating * 79.
+            # Variable-speed electronics
+            self.variablespeed_electronics = machine_rating * 79.
 
-        # Yaw Drive and Bearing
-        self.yaw_system_mass = 1.6 * (0.00098 * rotor_diameter**3.314)
-        self.yaw_system_cost = 2 * (0.0339 * rotor_diameter**2.964)
+            # Yaw Drive and Bearing
+            self.yaw_system_mass = 1.6 * (0.00098 * rotor_diameter**3.314)
+            self.yaw_system_cost = 2 * (0.0339 * rotor_diameter**2.964)
 
-        # Mainframe - Direct Drive
-        self.mainframe_mass = 1.228 * rotor_diameter**1.953
-        self.mainframe_cost = 627.28 * rotor_diameter**0.85
+            # Mainframe - Direct Drive
+            self.mainframe_mass = 1.228 * rotor_diameter**1.953
+            self.mainframe_cost = 627.28 * rotor_diameter**0.85
 
-        # Platforms and railings
-        self.platform_railing_mass = 0.125 * self.mainframe_mass
-        self.platform_railing_cost = self.platform_railing_mass * 8.7
+            # Platforms and railings
+            self.platform_railing_mass = 0.125 * self.mainframe_mass
+            self.platform_railing_cost = self.platform_railing_mass * 8.7
 
-        # Electrical connections
-        if not self.electrical_connection_cost:
-            self.electrical_connection_cost = machine_rating * 40.
+            # Electrical connections
+            if not self.electrical_connection_cost:
+                self.electrical_connection_cost = machine_rating * 40.
 
-        # Hydraulic and Cooling Systems
-        self.hydraulic_cooling_system_mass = 0.08 * machine_rating
-        self.hydraulic_cooling_system_cost = machine_rating * 12
+            # Hydraulic and Cooling Systems
+            self.hydraulic_cooling_system_mass = 0.08 * machine_rating
+            self.hydraulic_cooling_system_cost = machine_rating * 12
 
-        # Nacelle Cover
-        self.nacelle_cost = 11.537 * machine_rating + 3849.7
-        self.nacelle_mass = self.nacelle_cost / 10.
+            # Nacelle Cover
+            self.nacelle_cost = 11.537 * machine_rating + 3849.7
+            self.nacelle_mass = self.nacelle_cost / 10.
 
-        # Control, Safety Sytem, Condition Monitoring
-        self.control_cost = 35000.0
+            # Control, Safety Sytem, Condition Monitoring
+            self.control_cost = 35000.0
 
-        # Tower
-        # Baseline model
-        self.tower_B_mass = 0.3973 * (math.pi * (rotor_diameter / 2)**2) * hub_height - 1414
-        # Advanced model
-        self.tower_A_mass = 0.2694 * (math.pi * (rotor_diameter / 2)**2) * hub_height - 1779
-        self.tower_cost = self.tower_B_mass * 1.5
+            # Tower
+            # Baseline model
+            self.tower_B_mass = 0.3973 * (math.pi * (rotor_diameter / 2)**2) * hub_height - 1414
+            # Advanced model
+            self.tower_A_mass = 0.2694 * (math.pi * (rotor_diameter / 2)**2) * hub_height - 1779
+            self.tower_cost = self.tower_B_mass * 1.5
 
-        # Foundation cost
-        self.foundation_cost = 303.24 * (hub_height * (math.pi * (rotor_diameter / 2))**2)**0.4037
+            # Foundation cost
+            self.foundation_cost = 303.24 * (hub_height * (math.pi * (rotor_diameter / 2))**2)**0.4037
 
-        # Transportation cost
-        self.trasport_coeff = 1.581e-5 * machine_rating**2 - 0.0375 * machine_rating + 54.7
-        self.trasport_cost = machine_rating * self.trasport_coeff
+            # Transportation cost
+            self.trasport_coeff = 1.581e-5 * machine_rating**2 - 0.0375 * machine_rating + 54.7
+            self.trasport_cost = machine_rating * self.trasport_coeff
 
-        # Roads and Civil work
-        self.roads_civil_cost_fact = 2.17e-6 * machine_rating**2 - 0.0145 * machine_rating + 69.54
-        self.roads_civil_cost_cost = self.roads_civil_cost_fact * machine_rating
+            # Roads and Civil work
+            self.roads_civil_cost_fact = 2.17e-6 * machine_rating**2 - 0.0145 * machine_rating + 69.54
+            self.roads_civil_cost_cost = self.roads_civil_cost_fact * machine_rating
 
-        # Assembly and Installation
-        self.assembly_and_installation_cost = 1.965 * (hub_height * rotor_diameter)**1.1736
+            # Assembly and Installation
+            self.assembly_and_installation_cost = 1.965 * (hub_height * rotor_diameter)**1.1736
 
-        # Electrical Interface and connections
-        self.electrical_interface_fact = 3.49e-6 * machine_rating**2 - 0.0221 * machine_rating + 109.7
-        self.electrical_interface_cost = machine_rating * self.electrical_interface_fact
+            # Electrical Interface and connections
+            self.electrical_interface_fact = 3.49e-6 * machine_rating**2 - 0.0221 * machine_rating + 109.7
+            self.electrical_interface_cost = machine_rating * self.electrical_interface_fact
 
-        # Annual operating expenses - AOE
-        self.LCC = 0.00108 * sum(aep_vector)
-        self.OandM = 0.007 * sum(aep_vector)
-        self.LRC = sum(10.7 * machine_rating)
-        self.AOE = self.LCC + (self.OandM + self.LRC) / sum(aep_vector)
+            # Annual operating expenses - AOE
+            self.LCC = 0.00108 * sum(aep_vector)
+            self.OandM = 0.007 * sum(aep_vector)
+            self.LRC = sum(10.7 * machine_rating)
+            self.AOE = self.LCC + (self.OandM + self.LRC) / sum(aep_vector)
 
-        # I do not know how to calculate the weight
-        # self.variable_speed_elec_mass_cost=18.8*variable_speed_elec_mass
+            # I do not know how to calculate the weight
+            # self.variable_speed_elec_mass_cost=18.8*variable_speed_elec_mass
 
-        self.cost = 1.33 * (self.blade_B_costs + self.hub_cost + self.pitch_system_cost + self.nose_cone_cost + self.bearing_cost +
-                            self.brake_and_coupling_cost + self.generator_cost + self.variablespeed_electronics + self.yaw_system_cost +
-                            self.mainframe_cost + self.platform_railing_cost + self.electrical_connection_cost +
-                            self.hydraulic_cooling_system_cost + self.nacelle_cost + self.control_cost + self.tower_cost +
-                            self.foundation_cost + self.trasport_cost + self.roads_civil_cost_cost + self.assembly_and_installation_cost +
-                            self.electrical_interface_cost)  # the ratio of 1.33 is to account for inflation since 2003.
+            self.cost = 1.33 * (self.blade_B_costs + self.hub_cost + self.pitch_system_cost + self.nose_cone_cost + self.bearing_cost +
+                                self.brake_and_coupling_cost + self.generator_cost + self.variablespeed_electronics + self.yaw_system_cost +
+                                self.mainframe_cost + self.platform_railing_cost + self.electrical_connection_cost +
+                                self.hydraulic_cooling_system_cost + self.nacelle_cost + self.control_cost + self.tower_cost +
+                                self.foundation_cost + self.trasport_cost + self.roads_civil_cost_cost + self.assembly_and_installation_cost +
+                                self.electrical_interface_cost)  # the ratio of 1.33 is to account for inflation since 2003.
 
-        self.CWF = []
+            self.cost[self.aep_array == 0] = 0
 
-        for i in range(1, 20):
-            if i == 1:
-                self.CWF.append(int(0.1 * sum(aep_vector) - sum(self.cost) - self.AOE))
-            else:
-                self.CWF.append(int(0.1 * sum(aep_vector) - self.AOE))
+            self.CWF = []
 
-        self.IRR = 100 * np.irr(self.CWF)
+            for i in range(1, 20):
+                if i == 1:
+                    self.CWF.append(int(0.1 * sum(aep_vector) - sum(self.cost) - self.AOE))
+                else:
+                    self.CWF.append(int(0.1 * sum(aep_vector) - self.AOE))
+
+            self.IRR = 100 * np.irr(self.CWF)
         return self.IRR
 
 
