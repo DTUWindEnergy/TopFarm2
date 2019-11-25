@@ -49,7 +49,7 @@ def test_predict_output_1():
     input = prng.rand(5, 2)
 
     def model(input):
-        return input[:, 0] * input[:, 1]
+        return (input[:, 0] * input[:, 1]).reshape(-1, 1)
 
     output_ok = np.array(model(input))
     output_try, _ = predict_output(model, input)
@@ -66,7 +66,7 @@ def test_predict_output_2():
              'x1': [4.0, 5.0, 6.0]}
 
     def model(input):
-        return input[:, 0] * input[:, 1]
+        return (input[:, 0] * input[:, 1]).reshape(-1, 1)
 
     output_ok = np.array(model(np.array([input['x0'], input['x1']]).transpose()))
     output_try, _ = predict_output(model, input, model_in_keys=list(input))
@@ -85,7 +85,7 @@ def test_predict_output_with_input_scaler():
     input_scaled = input_scaler.fit_transform(input)
 
     def model(input):
-        return input[:, 0] * input[:, 1]
+        return (input[:, 0] * input[:, 1]).reshape(-1, 1)
 
     output_ok = model(input_scaled)
     output_try, _ = predict_output(model, input, input_scaler=input_scaler)
@@ -102,28 +102,28 @@ def test_predict_output_with_output_scaler():
     input = prng.rand(5, 2)
 
     def model(input):
-        return - 100.0 + 200.0 * input[:, 0] * input[:, 1]
+        return (- 100.0 + 200.0 * input[:, 0] * input[:, 1]).reshape(-1, 1)
 
     output_ok = model(input)
     output_scaler_mm = MinMaxScaler()
     output_scaler_std = StandardScaler()
-    output_scaler_mm.fit(output_ok.reshape(-1, 1))
-    output_scaler_std.fit(output_ok.reshape(-1, 1))
+    output_scaler_mm.fit(output_ok)
+    output_scaler_std.fit(output_ok)
 
     def model_scaled_mm(input):
         output = model(input)
-        return output_scaler_mm.transform(output.reshape(-1, 1))
+        return output_scaler_mm.transform(output)
 
     def model_scaled_std(input):
         output = model(input)
-        return output_scaler_std.transform(output.reshape(-1, 1))
+        return output_scaler_std.transform(output)
 
     output_try_mm, _ = predict_output(model_scaled_mm, input,
                                       output_scaler=output_scaler_mm)
     output_try_std, _ = predict_output(model_scaled_std, input,
                                        output_scaler=output_scaler_std)
-    output_try_mm = output_try_mm.ravel()
-    output_try_std = output_try_std.ravel()
+    output_try_mm = output_try_mm
+    output_try_std = output_try_std
 
     assert np.allclose(output_ok, output_try_mm)
     assert np.allclose(output_ok, output_try_std)
@@ -167,7 +167,7 @@ def test_boundary():
         return 2 * input
 
     def bound_fun(x):
-        return np.abs(x) < 1
+        return np.abs(x) <= 1
 
     with warnings.catch_warnings(record=True) as w:
         _, extrapolation_sample = predict_output(
@@ -303,13 +303,13 @@ def test_predict_gradient_with_output_scaler():
 
     def fun(input):
         x0, x1 = input.T
-        return x0 ** 2 * np.sin(x1)
+        return (x0 ** 2 * np.sin(x1)).reshape(-1, 1)
 
     output_ok = fun(input)
     output_scaler_mm = MinMaxScaler()
     output_scaler_std = StandardScaler()
-    output_scaler_mm.fit(output_ok.reshape(-1, 1))
-    output_scaler_std.fit(output_ok.reshape(-1, 1))
+    output_scaler_mm.fit(output_ok)
+    output_scaler_std.fit(output_ok)
 
     def Dfun_Dx0(input):
         x0, x1 = input.T
@@ -349,7 +349,7 @@ def test_MLPRegressor():
 
     prng = RandomState(seed=0)
     input = prng.rand(100, 1)
-    output = 2.0 * input.ravel()
+    output = 2.0 * input
     model = MLPRegressor(
         hidden_layer_sizes=(1),
         solver='lbfgs',
@@ -357,10 +357,9 @@ def test_MLPRegressor():
         max_iter=3000,
         activation='identity',
         learning_rate='adaptive')
-    model.fit(input, output)
+    model.fit(input, output.ravel())
 
     predicted_output, _ = predict_output(model, np.array(input))
-    predicted_output = predicted_output.ravel()
 
     assert np.allclose(output, predicted_output, atol=1.e-3)
 

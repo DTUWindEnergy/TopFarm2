@@ -70,13 +70,14 @@ _switch_output[type(lambda: None)] = _predict_output_python_function
 _switch_gradient[type(lambda: None)] = _predict_gradient_python_function
 
 
-# %% Functions related to scikit-learn neural networks.
+# %% Add scikit-learn neural networks to the switch dictionaries.
 
 def _predict_output_scikit_MLPRegressor(model, input):
     """
     Predict output function for scikit-learn MLPRegressor objects.
     """
     output = model.predict(input)
+    # Ensure that output is 2D even when there is only one output channel.
     if output.ndim == 1:
         output = output.reshape(-1, 1)
     return output
@@ -85,7 +86,7 @@ def _predict_output_scikit_MLPRegressor(model, input):
 _switch_output[MLPRegressor] = _predict_output_scikit_MLPRegressor
 
 
-# %% Import functions related to OpenTURNS and tensorflow neural networks.
+# %% Add plugins to the switch dictionaries.
 
 if 'openturnsloads' in topfarm.plugins:
 
@@ -98,6 +99,13 @@ if 'openturnsloads' in topfarm.plugins:
 if 'tensorflowloads' in topfarm.plugins:
 
     from tensorflowloads.load import update_switch
+    _switch_output_update, _switch_gradient_update = update_switch()
+    _switch_output.update(_switch_output_update)
+    _switch_gradient.update(_switch_gradient_update)
+
+if 'wind2loads' in topfarm.plugins:
+
+    from wind2loads.load import update_switch
     _switch_output_update, _switch_gradient_update = update_switch()
     _switch_output.update(_switch_output_update)
     _switch_gradient.update(_switch_gradient_update)
@@ -123,9 +131,10 @@ def predict_output(model,
     ----------
     model : python function
             scikit-learn MLPRegressor
-        The model to be evaluated, which must be a Multiple Input Single Output.
+        The model to be evaluated, which can be a Multiple Input Multiple Output.
         Support for additional model types is provided through the Loads cutting
-        edge plugins.
+        edge plugins. model must return a 2D array, where each row is a
+        different sample, and each column a different output.
 
     input : numpy.ndarray
             dict
@@ -159,7 +168,8 @@ def predict_output(model,
     -------
     output : numpy.ndarray
         Model output, optionally scaled through output_scaler.
-        1D array, where each element is associated to a different sample.
+        2D array, where each row is a different sample, and each column a
+        different output.
 
     extrapolation_sample : list
         Identifiers of the points outside of the boundary.
@@ -172,11 +182,6 @@ def predict_output(model,
     Warning: if some points are outside of the boundary.
 
     """
-
-    # This function should already work for the Multiple Output case,
-    # but we must be careful with the shape of the output:
-    # - always 2D?
-    # - 1D or 2D depending on the case?
 
     # Form the input array.
     if type(input) is dict:
