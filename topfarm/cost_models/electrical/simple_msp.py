@@ -29,14 +29,14 @@ class ElNetLength(ElNetComp):
                               method='fd')
 
     def compute(self, inputs, outputs):
-        x, y = inputs['x'], inputs['y']
+        x, y = inputs[topfarm.x_key], inputs[topfarm.y_key]
         elnet_layout = spanning_tree(x, y)
         outputs['elnet_length'] = sum(list(elnet_layout.values()))
 
 
 class PlotElNet(ElNetComp):
     def compute(self, inputs, outputs):
-        x, y = inputs['x'], inputs['y']
+        x, y = inputs[topfarm.x_key], inputs[topfarm.y_key]
         elnet_layout = spanning_tree(x, y)
         indices = np.array(list(elnet_layout.keys())).T
         plt.plot(x[indices], y[indices], color='r')
@@ -50,7 +50,8 @@ class ElNetCost(CostModelComponent):
         self.n_wt = n_wt
         self.length_key = length_key
         CostModelComponent.__init__(self, [(self.length_key, 0.0)], self.n_wt,
-                                    self.cost, self.grad, **kwargs)
+                                    self.cost, self.grad, objective=False,
+                                    **kwargs)
 
     def initialize(self):
         self.options.declare('cost_per_meter')
