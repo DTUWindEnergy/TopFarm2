@@ -16,12 +16,13 @@ plt.close("all")
 
 class economic_evaluation():
 
-    def __init__(self, D_rotor_array, Power_rated_array, hub_height_array, aep_array, electrical_connection_cost=None):
+    def __init__(self, D_rotor_array, Power_rated_array, hub_height_array, aep_array, electrical_connection_cost=None, tower_cost=None):
         self.D_rotor_array = D_rotor_array
         self.Power_rated_array = Power_rated_array
         self.hub_height_array = hub_height_array
         self.aep_array = aep_array
         self.electrical_connection_cost = electrical_connection_cost
+        self.tower_cost = tower_cost
 
     def calculate_irr(self):
 
@@ -119,10 +120,11 @@ class economic_evaluation():
 
             # Tower
             # Baseline model
-            self.tower_B_mass = 0.3973 * (math.pi * (rotor_diameter / 2)**2) * hub_height - 1414
-            # Advanced model
-            self.tower_A_mass = 0.2694 * (math.pi * (rotor_diameter / 2)**2) * hub_height - 1779
-            self.tower_cost = self.tower_B_mass * 1.5
+            if not self.tower_cost:
+                self.tower_B_mass = 0.3973 * (math.pi * (rotor_diameter / 2)**2) * hub_height - 1414
+                # Advanced model
+                self.tower_A_mass = 0.2694 * (math.pi * (rotor_diameter / 2)**2) * hub_height - 1779
+                self.tower_cost = self.tower_B_mass * 1.5
 
             # Foundation cost
             self.foundation_cost = 303.24 * (hub_height * (math.pi * (rotor_diameter / 2))**2)**0.4037
