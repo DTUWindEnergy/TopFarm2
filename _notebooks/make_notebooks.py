@@ -86,5 +86,5 @@ def check_notebooks():
 if __name__ == '__main__':
     check_notebooks()
     # make_tutorials()
-    make_doc_notebooks(['constraints', 'drivers', 'problems'])
+    make_doc_notebooks(['constraints', 'cost_models', 'drivers', 'loads', 'problems', 'roads_and_cables'])
     print('Done')
