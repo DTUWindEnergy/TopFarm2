@@ -52,7 +52,7 @@ def main(obj=False, max_con_on=True):
     
     # ---------------- DEFINE SITE & SELECT WAKE MODEL -------------------
 #        site = UniformWeibullSite(p_wd=[50, 50], a=[9, 9], k=[2.3, 2.3], ti=.1, alpha=0, h_ref=100)
-    site = UniformWeibullSite(p_wd=[100], a=[9], k=[2.3], ti=.1, alpha=0, h_ref=100)
+    site = UniformWeibullSite(p_wd=[100], a=[9], k=[2.3], ti=.1)
     site.default_ws = [9]  # reduce the number of calculations
     site.default_wd = [0]  # reduce the number of calculations
 

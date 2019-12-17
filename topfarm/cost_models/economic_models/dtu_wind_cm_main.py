@@ -15,14 +15,13 @@ class economic_evaluation():
         # Initialize dictionaries
         self.project_costs = {}
         self.project_costs_sums = {}
-
         self.discount_rate = discount_rate              # [-]
         self.distance_from_shore = distance_from_shore  # [km]
         self.energy_price = energy_price                # [Euro/kWh]
         self.project_duration = project_duration        # [years]
 
     def calculate_npv(self, rated_rpm_array, D_rotor_array, Power_rated_array,
-                      hub_height_array, water_depth_array, aep_array):
+                      hub_height_array, water_depth_array, aep_array, cabling_cost=None):
         '''
         Calculate Net Present Value [Euro]
 
@@ -41,7 +40,8 @@ class economic_evaluation():
             Power_rated_array,
             hub_height_array,
             aep_array,
-            water_depth_array)
+            water_depth_array,
+            cabling_cost)
 
         self.calculate_cash_flow()
 
@@ -50,7 +50,7 @@ class economic_evaluation():
         return self.NPV
 
     def calculate_irr(self, rated_rpm_array, D_rotor_array, Power_rated_array,
-                      hub_height_array, water_depth_array, aep_array):
+                      hub_height_array, water_depth_array, aep_array, cabling_cost=None):
         '''
         Calculate Internal Rate of Return [%]
 
@@ -69,7 +69,8 @@ class economic_evaluation():
             Power_rated_array,
             hub_height_array,
             aep_array,
-            water_depth_array)
+            water_depth_array,
+            cabling_cost)
 
         self.calculate_cash_flow()
 
@@ -97,7 +98,7 @@ class economic_evaluation():
                                     self.project_costs_sums["OPEX"]))
 
     def calculate_expenditures(self, rated_rpm, rotor_diameter, rated_power,
-                               hub_height, aep_array, water_depth):
+                               hub_height, aep_array, water_depth, cabling_cost=None):
         '''Calculate DEVEX, CAPEX, OPEX and ABEX [Euro]'''
 
         # Ensure that the variables are numpy arrays
@@ -107,7 +108,7 @@ class economic_evaluation():
         self.calculate_devex(rated_power)
 
         self.calculate_capex(rated_rpm, rotor_diameter, rated_power,
-                             hub_height, water_depth)
+                             hub_height, water_depth, cabling_cost)
 
         self.calculate_opex(rated_power)
 
@@ -132,7 +133,7 @@ class economic_evaluation():
             self.project_costs[myName].values())
 
     def calculate_capex(self, rated_rpm, rotor_diameter, rated_power,
-                        hub_height, water_depth):
+                        hub_height, water_depth, cabling_cost=None):
         '''Calculate CAPEX [Euro]'''
 
         rated_rpm = np.array(rated_rpm)
@@ -165,6 +166,9 @@ class economic_evaluation():
             np.sum(rated_power) +
             50.0 *
             np.sum(rated_power) ** 2.0}
+
+        if cabling_cost:
+            self.project_costs[myName]["array_of_cables"] = cabling_cost
 
         self.project_costs_sums[myName] = sum(
             self.project_costs[myName].values())

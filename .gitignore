@@ -112,3 +112,6 @@ venv.bak/
 # mypy
 .mypy_cache/
 /.githooks
+*.DS_Store
+__pycache__
+*.egg-info

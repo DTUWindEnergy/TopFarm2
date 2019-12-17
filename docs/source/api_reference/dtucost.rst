@@ -5,7 +5,7 @@ DTU Cost Model
 
 
 
-.. autoclass:: topfarm.cost_models.dtu_wind_cm.dtu_wind_cm_main.economic_evaluation
+.. autoclass:: topfarm.cost_models.economic_models.dtu_wind_cm_main.economic_evaluation
     
     .. autosummary::
         __init__

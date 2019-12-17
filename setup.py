@@ -29,7 +29,7 @@ setup(name='topfarm',
         'openmdao==2.6',  # for optimization
         'pytest',  # for testing
         'pytest-cov',  # for calculating coverage
-		'py_wake',  # for calculating AEP
+		'py_wake>=1.0.11',  # for calculating AEP
         'scipy',  # constraints
         'sphinx',  # generating documentation
         'sphinx_rtd_theme',  # docs theme

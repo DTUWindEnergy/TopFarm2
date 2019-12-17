@@ -61,7 +61,8 @@ DTU Cost Model
 	called individually. It generally relies on curve fitting using input parameters such as 
 	rated power or water depth, and was tuned using data obtained from the 
 	industry. It supports three types of drivetrains: high-speed, medium-speed and direct-drive.
-	It also supports two types of offshore foundations: monopile and jacket. 
+	It also supports two types of offshore foundations: monopile and jacket. The model was originally created in Excel by Kenneth Thomse and
+	Søren Oemann Lind and Rasmus (publication forthcoming). The monetary units are 2017 Euro. 
 
 	
 Drivers
