@@ -38,7 +38,7 @@ Design Variables
 
     These are the variables that should be changed during the optimization. Common
     options include wind turbine positions and/or turbine types.
-
+	
 
 Cost Component
 ----------------
@@ -51,7 +51,19 @@ Cost Component
     ``topfarm.cost_models.cost_model_wrappers``. TOPFARM also contains a wrapper
     for PyWake's AEP calculator, which can be used with a variety of wake models.
 
+	
+DTU Cost Model
+----------------	
 
+	This is the DTU offshore cost model. The class includes methods for simple calculations
+	of the Internal Rate of Return (IRR) and Net Present Value (NPV). Further, it breaks up
+	the project costs into DEVEX, CAPEX, OPEX and ABEX within seperate methods, which may be
+	called individually. It generally relies on curve fitting using input parameters such as 
+	rated power or water depth, and was tuned using data obtained from the 
+	industry. It supports three types of drivetrains: high-speed, medium-speed and direct-drive.
+	It also supports two types of offshore foundations: monopile and jacket. 
+
+	
 Drivers
 ----------
 
