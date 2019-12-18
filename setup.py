@@ -22,7 +22,7 @@ setup(name='topfarm',
       author='DTU Wind Energy',  
       author_email='dave@dtu.dk',
       license='MIT',
-      packages=find_packages(exclude=["*.examples", "*.examples.*", "examples.*", "examples"]),
+      packages=find_packages(),
       install_requires=[
         'matplotlib',  # for plotting
         'numpy',  # for numerical calculations
