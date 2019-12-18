@@ -65,7 +65,8 @@ try:
     import topfarm
 except ModuleNotFoundError:
     !pip install topfarm"""
-        nb.insert_code_cell(2, code)
+        if not name=='loads':
+            nb.insert_code_cell(2, code)
         nb.save(dst_path + name + ".ipynb")
 
 
