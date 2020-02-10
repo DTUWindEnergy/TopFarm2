@@ -81,27 +81,29 @@ class TopFarmListRecorder(SqliteRecorder):
 
         out_keys = []
         in_keys = []
+        output = data.get('output', data.get('out'))  # new name is output
+        input = data.get('input', data.get('in'))
         if self.num_cases == 1:
-            for key in data['out']:
+            for key in output:
                 rec_key = key.split('.')[-1]
                 out_keys.append(rec_key)
-                self.driver_iteration_dict[rec_key] = [data['out'][key].copy()]
-            for key in data['in']:
+                self.driver_iteration_dict[rec_key] = [output[key].copy()]
+            for key in input:
                 rec_key = key.split('.')[-1]
                 if rec_key not in out_keys:
                     in_keys.append(rec_key)
-                    self.driver_iteration_dict[rec_key] = [data['in'][key].copy()]
+                    self.driver_iteration_dict[rec_key] = [input[key].copy()]
             for k, v in meta_fields:
                 self.driver_iteration_dict[k] = [v]
 
         else:
-            for key in data['out']:
+            for key in output:
                 rec_key = key.split('.')[-1]
-                self.driver_iteration_dict[rec_key].append(data['out'][key].copy())
-            for key in data['in']:
+                self.driver_iteration_dict[rec_key].append(output[key].copy())
+            for key in input:
                 rec_key = key.split('.')[-1]
                 if rec_key in in_keys:
-                    self.driver_iteration_dict[rec_key].append(data['in'][key].copy())
+                    self.driver_iteration_dict[rec_key].append(input[key].copy())
             for k, v in meta_fields:
                 self.driver_iteration_dict[k].append(v)
 
