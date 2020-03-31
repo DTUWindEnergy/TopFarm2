@@ -257,3 +257,59 @@ class TurbineTypePlotComponent(XYPlotComp):
         for m, c, x_, y_ in zip(self.markers[self.types], self.colors, x, y):
             # self.ax.plot(x_, y_, 'o', color=c, ms=5)
             self.ax.plot(x_, y_, m + 'k', markeredgecolor=c, markeredgewidth=1, ms=8)
+
+
+class TurbineCablePlotComponent(XYPlotComp):
+    """Plotting component for electrical colletion system"""
+    colors = ['b', 'r', 'm', 'c', 'g', 'y', 'orange', 'indigo', 'grey'] * 100
+
+    def __init__(self, ecsga, **kwargs):
+        """Initialize component for plotting turbine types
+
+        Parameters
+        ----------
+        turbine_type_names : list of str
+            Names of turbine types for legend
+        **kwargs : keyword arguments, optional
+            Keyword arguments that can be passed into XYPlotComp
+        """
+        self.ecsga = ecsga
+        XYPlotComp.__init__(self, **kwargs)
+
+    def setup(self):
+        XYPlotComp.setup(self)
+        self.add_input('tree', np.zeros((self.n_wt, 5)))
+
+    def compute(self, inputs, outputs):
+        self.tree = np.asarray(inputs['tree'])
+        XYPlotComp.compute(self, inputs, outputs)
+
+    def init_plot(self, limits):
+        XYPlotComp.init_plot(self, limits)
+        for n, cable_type in enumerate(self.ecsga.Cable.ID):
+            index = self.tree[:, 3] == n
+            if index.any():
+                self.ax.plot([], [], self.colors[n], label='Cable: {} mm2'.format(self.ecsga.Cable.CrossSection[n]))
+        self.ax.legend()
+
+    def plot_current_position(self, x, y):
+        CoordX = self.ecsga.CoordX
+        CoordY = self.ecsga.CoordY
+        CoordX[1:] = x
+        CoordY[1:] = y
+        self.ax.plot(CoordX[0], CoordY[0], 'ro', markersize=10, label='OSS')
+#        if (self.tree[0].shape)[1] == 2: # If no feasible solution was found
+#            n1xs = CoordX[(self.tree[0].T[0:1]-1).astype(int)].ravel().T
+#            n2xs = CoordX[(self.tree[0].T[1:2]-1).astype(int)].ravel().T
+#            n1ys = CoordY[(self.tree[0].T[0:1]-1).astype(int)].ravel().T
+#            n2ys = CoordY[(self.tree[0].T[1:2]-1).astype(int)].ravel().T
+#            xs = np.vstack([n1xs,n2xs])
+#            ys = np.vstack([n1ys,n2ys])
+#            plt.plot(xs,ys,'{}'.format(self.colors[0]))
+#        else:
+        for n, cable_type in enumerate(self.ecsga.Cable.ID):
+            index = self.tree[:, 3].astype(int) == n
+            if index.any():
+                xs = CoordX[(self.tree[index].T[:2] - 1).astype(int)]
+                ys = CoordY[(self.tree[index].T[:2] - 1).astype(int)]
+                self.ax.plot(xs, ys, self.colors[n])
