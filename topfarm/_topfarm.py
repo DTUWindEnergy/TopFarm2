@@ -210,6 +210,10 @@ class TopFarmProblem(Problem):
                     self.model.pre_constraints.linear_solver.assemble_jac = True
             penalty_comp = PenaltyComponent(constraints, constraints_as_penalty)
             self.model.add_subsystem('penalty_comp', penalty_comp, promotes=['*'])
+        else:
+            if hasattr(self.cost_comp, 'problem'):
+                if not hasattr(self.cost_comp.problem, 'penalty_comp'):
+                    self.indeps.add_output('penalty', val=0.0)
 
         self.model.constraint_components = [constr.constraintComponent for constr in constraints]
 
@@ -248,8 +252,12 @@ class TopFarmProblem(Problem):
                 self.model.add_subsystem('post_penalty_comp', penalty_comp, promotes=['*'])
             else:
                 for constr in post_constraints:
-                    self.model.add_constraint(constr[0],
-                                              upper=np.full(self.n_wt, constr[1]))
+                    if isinstance(constr[-1], dict):
+                        self.model.add_constraint(str(constr[0]), **constr[-1])
+                    elif len(constr) == 2:  # assuming only name and upper value is specified and value is per turbine
+                        self.model.add_constraint(constr[0], upper=np.full(self.n_wt, constr[1]))
+                    elif len(constr) == 3:  # assuming only name, lower and upper value is specified and value is per turbine
+                        self.model.add_constraint(constr[0], lower=np.full(self.n_wt, constr[1]), upper=np.full(self.n_wt, constr[2]))
                     # Use the assembled Jacobian.
 #                    self.model.cost_comp.post_constraints.options['assembled_jac_type'] = 'csc'
 #                    self.model.cost_comp.post_constraints.linear_solver.assemble_jac = True
@@ -508,6 +516,7 @@ class ProblemComponent(ExplicitComponent):
         self.additional_inputs = additional_inputs
 
     def setup(self):
+        missing_in_problem_exceptions = ['penalty']
         missing_in_problem = (set([c[0] for c in self.parent.indeps._indep_external]) -
                               set([c[0] for c in self.problem.indeps._indep_external]))
         self.missing_attrs = []
@@ -515,7 +524,8 @@ class ProblemComponent(ExplicitComponent):
             self.add_input(name, val=val, **{k: kwargs[k] for k in ['units']})
             self.missing_attrs.append(name)
             if name in missing_in_problem:
-                self.problem.indeps.add_output(name, val, **kwargs)
+                if name not in missing_in_problem_exceptions:
+                    self.problem.indeps.add_output(name, val, **kwargs)
         self.problem._setup_status = 0  # redo initial setup
         self.problem.setup()
 
