@@ -8,6 +8,7 @@ from topfarm.easy_drivers import EasyScipyOptimizeDriver
 from topfarm.plotting import NoPlot, XYPlotComp
 from topfarm.tests import npt
 
+
 boundary = [(0, 0), (6, 0), (6, -10), (0, -10)]  # turbine boundaries
 initial = np.array([[6, 0], [6, -8], [1, 1], [-1, -8]])  # initial turbine layouts
 optimal_with_constraints = np.array([[2.5, -3], [6, -7], [4.5, -3], [3, -7]])  # optimal turbine layout
@@ -21,7 +22,8 @@ def get_tf(cost_comp, plot_comp=NoPlot()):
         cost_comp=cost_comp,
         plot_comp=plot_comp,
         constraints=[SpacingConstraint(min_spacing), XYBoundaryConstraint(boundary)],
-        driver=EasyScipyOptimizeDriver(disp=False))
+        driver=EasyScipyOptimizeDriver(disp=False),
+        expected_cost=1e-1)
 
 
 def cost(x, y):
@@ -43,7 +45,7 @@ def aep_gradients(x, y):
 
 
 def test_CostModelComponent():
-    tf = get_tf(CostModelComponent(['x', 'y'], 4, cost, gradients),)
+    tf = get_tf(CostModelComponent(['x', 'y'], 4, cost, gradients))
     tf.optimize()
     np.testing.assert_array_almost_equal(tf.turbine_positions[:, :2], optimal_with_constraints, 5)
 

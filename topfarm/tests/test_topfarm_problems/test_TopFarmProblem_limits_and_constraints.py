@@ -5,6 +5,7 @@ from topfarm.drivers.random_search_driver import RandomizeTurbinePosition
 from topfarm.constraint_components.spacing import SpacingConstraint
 from topfarm.constraint_components.boundary import XYBoundaryConstraint
 import numpy as np
+import scipy
 
 
 def test_TopFarmProblem():
@@ -66,9 +67,14 @@ def test_TopFarmProblemXYBoundaryConstraint():
     npt.assert_array_almost_equal(state['y'], xy3tb.optimal[:, 1])
 
     desvars = tf.driver._designvars
-    for xy in 'xy':
-        for lu in ['lower', 'upper']:
-            npt.assert_equal(desvars['indeps.' + xy][lu], np.nan)
+    if tuple(map(int, scipy.__version__.split("."))) < (1, 5, 0):
+        for xy in 'xy':
+            for lu in ['lower', 'upper']:
+                npt.assert_equal(desvars['indeps.' + xy][lu], np.nan)
+    else:
+        for i, xy in enumerate('xy'):
+            for lu, func in zip(['lower', 'upper'], (np.min, np.max)):
+                npt.assert_equal(desvars['indeps.' + xy][lu], func(xy3tb.boundary[:, i]))
 
 
 def test_TopFarmProblemXYBoundaryConstraintPolygon():

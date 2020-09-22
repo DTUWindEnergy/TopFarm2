@@ -7,6 +7,7 @@ import pytest
 import topfarm
 import matplotlib.pyplot as plt
 import sys
+from topfarm.easy_drivers import EasyDriverBase
 
 
 def get_main_modules():
@@ -42,11 +43,15 @@ def test_main(module):
         pass
 
     try:
+        EasyDriverBase.max_iter = 1
         with mock.patch.object(module, "__name__", "__main__"):
             with mock.patch.object(module, "print", no_print):
                 getattr(module, 'main')()
     except Exception as e:
         raise type(e)(str(e) + ' in %s.main' % module.__name__).with_traceback(sys.exc_info()[2])
+    finally:
+        EasyDriverBase.max_iter = None
+        plt.close()
 
 
 if __name__ == '__main__':

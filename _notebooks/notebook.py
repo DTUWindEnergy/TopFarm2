@@ -6,7 +6,6 @@ import urllib
 import ssl
 import traceback
 import sys
-from unittest import mock
 
 
 class Notebook():

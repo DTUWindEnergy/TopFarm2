@@ -1,6 +1,6 @@
 """Example: optimizing a layout with constraints
 
-This example uses a dummy cost function to optimize turbine types. 
+This example uses a dummy cost function to optimize turbine types.
 """
 import numpy as np
 import os
@@ -26,7 +26,7 @@ def main():
             import matplotlib.pyplot as plt
             plt.gcf()
             plot_comp = TurbineTypePlotComponent(
-                turbine_type_names=["Turbine %d" % i for i in range(10)],
+                turbine_type_names=["Turbine %d" % i for i in range(5)],
                 plot_initial=False,
                 delay=0.1, legendloc=0)
             plot = True
@@ -36,15 +36,17 @@ def main():
 
         # create the wind farm
         tf = TopFarmProblem(
-            design_vars={'type': ([0, 0], 0, 9)},
+            design_vars={'type': ([0, 0], 0, 4)},
             cost_comp=DummyCost(optimal_types, ['type']),
             plot_comp=plot_comp,
-            driver=FullFactorialGenerator(10))
+            driver=FullFactorialGenerator(5),
+            ext_vars={'x': positions[:, 0], 'y': positions[:, 1]},
+        )
 
         # ===============================================================================
         # #  Run the optimization
         # ===============================================================================
-        state = {'x': positions[:, 0], 'y': positions[:, 1]}
+        state = {}
         cost, state, recorder = tf.optimize(state)
 
         # ===============================================================================

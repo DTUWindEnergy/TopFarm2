@@ -5,10 +5,12 @@ from topfarm.drivers.random_search_driver import RandomSearchDriver
 import sys
 import numpy as np
 import openmdao
+import scipy
 
 
 class EasyDriverBase():
     expected_cost = 1
+    max_iter = None
 
     def get_desvar_kwargs(self, model, desvar_name, desvar_values):
         if len(desvar_values) == 4:
@@ -24,7 +26,7 @@ class EasyDriverBase():
 
 class EasyScipyOptimizeDriver(ScipyOptimizeDriver, EasyDriverBase):
 
-    def __init__(self, optimizer='SLSQP', maxiter=200, tol=1e-6, disp=True, **kwargs):
+    def __init__(self, optimizer='SLSQP', maxiter=200, tol=1e-8, disp=True, **kwargs):
         """
         Parameters
         ----------
@@ -38,16 +40,17 @@ class EasyScipyOptimizeDriver(ScipyOptimizeDriver, EasyDriverBase):
             Set to False to prevent printing of Scipy convergence messages
         """
         ScipyOptimizeDriver.__init__(self)
-        self.options.update({'optimizer': optimizer, 'maxiter': maxiter, 'tol': tol, 'disp': disp})
+        self.options.update({'optimizer': optimizer, 'maxiter': self.max_iter or maxiter, 'tol': tol, 'disp': disp})
         if kwargs:
             self.options.update(kwargs)
 
     def get_desvar_kwargs(self, model, desvar_name, desvar_values):
         kwargs = super().get_desvar_kwargs(model, desvar_name, desvar_values)
-        if self.options['optimizer'] == 'SLSQP':
+        if self.options['optimizer'] == 'SLSQP' and tuple([int(v) for v in scipy.__version__.split(".")]) < (1, 5, 0):
             # Upper and lower disturbs SLSQP when running with constraints. Add limits as constraints
             model.add_constraint(desvar_name, kwargs.get('lower', None), kwargs.get('upper', None))
             kwargs = {'lower': np.nan, 'upper': np.nan}  # Default +/- sys.float_info.max does not work for SLSQP
+
             ref0 = 0
             ref1 = 1
             # TODO: Check if the following improves performance
@@ -134,7 +137,8 @@ except ModuleNotFoundError:
 
 
 class EasySimpleGADriver(SimpleGADriver, EasyDriverBase):
-    def __init__(self, max_gen=100, pop_size=25, Pm=None, Pc=.5, elitism=True, bits={}, debug_print=[], run_parallel=False, random_state=None):
+    def __init__(self, max_gen=100, pop_size=25, Pm=None, Pc=.5, elitism=True,
+                 bits={}, debug_print=[], run_parallel=False, random_state=None):
         """SimpleGA driver with optional arguments
 
         Parameters
@@ -161,7 +165,7 @@ class EasySimpleGADriver(SimpleGADriver, EasyDriverBase):
         run_parallel : bool
             Set to True to execute the points in a generation in parallel.
         """
-        SimpleGADriver.__init__(self, max_gen=max_gen, pop_size=pop_size, Pm=Pm, Pc=Pc, elitism=elitism,
+        SimpleGADriver.__init__(self, max_gen=self.max_iter or max_gen, pop_size=pop_size, Pm=Pm, Pc=Pc, elitism=elitism,
                                 bits=bits, debug_print=debug_print, run_parallel=run_parallel)
         self.supports['inequality_constraints'] = False
         self.supports['equality_constraints'] = False
@@ -184,4 +188,4 @@ class EasyRandomSearchDriver(RandomSearchDriver, EasyDriverBase):
         disp : bool
         """
         RandomSearchDriver.__init__(self, randomize_func=randomize_func,
-                                    max_iter=max_iter, max_time=max_time, disp=disp, run_parallel=run_parallel)
+                                    max_iter=self.max_iter or max_iter, max_time=max_time, disp=disp, run_parallel=run_parallel)

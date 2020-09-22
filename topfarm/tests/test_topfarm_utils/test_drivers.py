@@ -5,7 +5,7 @@ import numpy as np
 from topfarm.cost_models.dummy import DummyCost
 from topfarm.drivers.random_search_driver import RandomizeTurbinePosition_Circle, RandomizeTurbinePosition_Square,\
     RandomizeTurbineTypeAndPosition, RandomizeTurbinePosition_Normal,\
-    RandomizeAllUniform, RandomizeAllRelativeMaxStep
+    RandomizeAllUniform, RandomizeAllRelativeMaxStep, RandomizeNUniform
 from topfarm.easy_drivers import EasyScipyOptimizeDriver, EasySimpleGADriver, EasyRandomSearchDriver, EasyPyOptSparseSNOPT, EasyPyOptSparseIPOPT
 from topfarm.plotting import NoPlot
 from topfarm.tests import uta, npt
@@ -31,7 +31,8 @@ def topfarm_generator_scalable():
         class DummyCostScaled(DummyCost):
             def cost(self, **kwargs):
                 opt = self.optimal_state
-                return np.sum([(kwargs[n] - opt[:, i])**2 for i, n in enumerate(self.input_keys)]) * cost_scale + cost_offset
+                return np.sum([(kwargs[n] - opt[:, i])**2 for i, n in enumerate(self.input_keys)]) * \
+                    cost_scale + cost_offset
 
             def grad(self, **kwargs):
                 opt = self.optimal_state
@@ -94,7 +95,7 @@ def test_optimizers(driver, tol, topfarm_generator_scalable):
 
 
 @pytest.mark.parametrize('driver,tol,N', [
-    (EasyScipyOptimizeDriver(disp=False), 1e-4, 29),
+    (EasyScipyOptimizeDriver(disp=False), 1e-4, 30),
     (EasyPyOptSparseSNOPT(), 1e-4, 39),
     # COBYLA no longer works with scaling.
     # See issue on Github: https://github.com/OpenMDAO/OpenMDAO/issues/942
@@ -234,4 +235,18 @@ def test_random_search_driver_RandomizeAllRelativeMaxStep(topfarm_generator):
     assert tb_pos[1][0] < 6 + tol  # check within border
 
     np.testing.assert_array_almost_equal(tb_pos, [[3, -3], [6, -7], [4, -3]], -int(np.log10(tol)))
+    np.testing.assert_array_equal(np.round(state['type']), [1, 2, 3])
+
+
+def test_random_search_NUniform():
+    np.random.seed(1)
+
+    tf = TopFarmProblem(
+        {'type': ([0, 2, 3], 0, 3)},
+        cost_comp=DummyCost(desired, ['x', 'y', 'type']),
+        driver=EasyRandomSearchDriver(RandomizeNUniform(1, ['type']), max_iter=20),
+        ext_vars={'x': [1, 6, 6], 'y': [1, 0, -8]}
+
+    )
+    cost, state, recorder = tf.optimize()
     np.testing.assert_array_equal(np.round(state['type']), [1, 2, 3])

@@ -1,7 +1,21 @@
 from numpy import argmin, array, sqrt
+import sys
+from scipy.sparse import csr_matrix
+from scipy.sparse.csgraph import minimum_spanning_tree
+import numpy as np
+from numpy import newaxis as na
+
+
+def mst(x, y):
+    d_ij = np.hypot(x - x[:, na], y - y[:, na])
+    Tcsr = minimum_spanning_tree(d_ij)
+    sp = (Tcsr.toarray())
+    return {tuple(i): sp[tuple(i)] for i in np.argwhere(sp)}
 
 
 def spanning_tree(X, Y):
+    sys.stderr.write("spanning_tree() is deprecated; use mst instead\n")
+
     """
     Calculate a minimum spanning tree distance for a layout.
     Minimum spanning tree heuristic algorithm from Topfarm0.
@@ -71,9 +85,9 @@ def spanning_tree(X, Y):
     while len(islands) > 1:
         # Look for the closest turbine that is not in the first island
         dist_list = array([[dist(i_wt, j_wt), i_wt, j_wt]
-                          for i_wt in islands[0]
-                          for j_wt in turblist
-                          if j_wt not in islands[0]])
+                           for i_wt in islands[0]
+                           for j_wt in turblist
+                           if j_wt not in islands[0]])
         amin = argmin(dist_list[:, 0])
         i_wt = int(dist_list[amin, 1])
         j_wt = int(dist_list[amin, 2])

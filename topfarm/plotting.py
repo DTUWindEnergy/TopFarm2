@@ -171,19 +171,15 @@ class XYPlotComp(ExplicitComponent):
                 return
 
             # find limits
-
-            if (topfarm.x_key in self.problem.design_vars and
-                    isinstance(self.problem.design_vars[topfarm.x_key], tuple) and
-                    len(self.problem.design_vars[topfarm.x_key]) == 4):
-                min_x, max_x = self.problem.design_vars[topfarm.x_key][1:-1]
-            else:
-                min_x, max_x = min(inputs[topfarm.x_key]), max(inputs[topfarm.x_key])
-            if (topfarm.y_key in self.problem.design_vars and
-                    isinstance(self.problem.design_vars[topfarm.y_key], tuple) and
-                    len(self.problem.design_vars[topfarm.y_key]) == 4):
-                min_y, max_y = self.problem.design_vars[topfarm.y_key][1:-1]
-            else:
-                min_y, max_y = min(inputs[topfarm.y_key]), max(inputs[topfarm.y_key])
+            def get_lim(key):
+                if (key in self.problem.design_vars and
+                        isinstance(self.problem.design_vars[key], tuple) and
+                        len(self.problem.design_vars[key]) == 4):
+                    return np.min(self.problem.design_vars[key][1]), np.max(np.min(self.problem.design_vars[key][2]))
+                else:
+                    return min(inputs[key]), max(inputs[key])
+            min_x, max_x = get_lim(topfarm.x_key)
+            min_y, max_y = get_lim(topfarm.y_key)
 
             self.init_plot(np.array([[min_x, min_y], [max_x, max_y]]))
 

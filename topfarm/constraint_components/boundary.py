@@ -63,14 +63,6 @@ class XYBoundaryConstraint(Constraint):
     def setup_as_penalty(self, problem):
         self._setup(problem)
 
-#        def setup():
-#            self._cost_comp.add_input('boundaryDistances', val=self.boundary_comp.zeros)
-#
-#        def penalty(inputs):
-#            return -np.minimum(inputs['boundaryDistances'], 0).sum()
-#
-#        self._setup_as_penalty(problem, 'xy_bound_comp', self.boundary_comp, setup, penalty)
-
 
 class CircleBoundaryConstraint(Constraint):
     def __init__(self, center, radius):
@@ -112,8 +104,6 @@ class CircleBoundaryConstraint(Constraint):
         n_wt = problem.n_wt
         self.boundary_comp = self.get_comp(n_wt)
         self.set_design_var_limits(problem.design_vars)
-        # t = np.linspace(0, 2 * np.pi, 100)
-        # problem.xy_boundary = self.center + np.array([np.cos(t), np.sin(t)]).T * self.radius
         problem.indeps.add_output('xy_boundary', self.boundary_comp.xy_boundary)
         problem.model.pre_constraints.add_subsystem('xy_bound_comp', self.boundary_comp, promotes=['*'])
 
@@ -123,14 +113,6 @@ class CircleBoundaryConstraint(Constraint):
 
     def setup_as_penalty(self, problem, penalty=1e10):
         self._setup(problem)
-
-#        def setup():
-#            self._cost_comp.add_input('boundaryDistances', val=self.boundary_comp.zeros)
-#
-#        def penalty(inputs):
-#            return -np.minimum(inputs['boundaryDistances'], 0).sum()
-#
-#        self._setup_as_penalty(problem, 'xy_bound_comp', self.boundary_comp, setup, penalty)
 
 
 class BoundaryBaseComp(ConstraintComponent):

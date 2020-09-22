@@ -5,22 +5,21 @@ layout that is subject to constraints. The optimization pushes the wind turbine
 locations to specified locations in the farm.
 """
 import os
-import warnings
 
 from matplotlib.patches import Polygon
-
-import matplotlib.pyplot as plt
 import numpy as np
+from py_wake.deficit_models.gcl import GCL
+from py_wake.deficit_models.noj import NOJ
+from py_wake.examples.data.hornsrev1 import V80
+from py_wake.site._site import UniformWeibullSite
 from topfarm._topfarm import TopFarmProblem
 from topfarm.constraint_components.boundary import XYBoundaryConstraint
 from topfarm.constraint_components.spacing import SpacingConstraint
-from topfarm.cost_models.fused_wake_wrappers import FusedWakeGCLWakeModel, \
-    FusedWakeNOJWakeModel
-from topfarm.cost_models.utils.aep_calculator import AEPCalculator
-from topfarm.cost_models.utils.wind_resource import WindResource
+from topfarm.cost_models.py_wake_wrapper import PyWakeAEPCostModelComponent
 from topfarm.easy_drivers import EasyScipyOptimizeDriver
-from topfarm.tests import test_files
 from topfarm.plotting import XYPlotComp, NoPlot
+from topfarm.cost_models.dummy import DummyCost
+from py_wake.wind_farm_models.wind_farm_model import WindFarmModel
 
 
 def main():
@@ -28,16 +27,12 @@ def main():
         try:
             import matplotlib.pyplot as plt
             plt.gcf()
-            plot_comp = XYPlotComp()
+            plot_comp = XYPlotComp
             plot = True
         except RuntimeError:
-            plot_comp = NoPlot()
+            plot_comp = NoPlot
             plot = False
         # ------------------------ INPUTS ------------------------
-
-        # paths to input files
-        test_files_dir = os.path.dirname(test_files.__file__) + "/"  # file locations
-        wf_path = test_files_dir + 'wind_farms/3tb.yml'  # path to wind farm
 
         # ------------------------ DEFINE WIND RESOURCE ------------------------
         # wind resource info (wdir frequency, weibull a and k)
@@ -47,8 +42,8 @@ def main():
              10.51499, 11.39895, 11.68746, 11.63732, 10.08803]
         k = [2.392578, 2.447266, 2.412109, 2.591797, 2.755859, 2.595703, 2.583984,
              2.548828, 2.470703, 2.607422, 2.626953, 2.326172]
-
-        wind_res = WindResource(f, a, k, np.zeros_like(k))
+        site = UniformWeibullSite(p_wd=f, a=a, k=k, ti=0.075)
+        wt = V80()
 
         # ------------------------ setup problem ____---------------------------
         rot_diam = 80.0  # rotor diameter [m]
@@ -60,42 +55,35 @@ def main():
 
         # ------------------------ OPTIMIZATION ------------------------
 
-        def get_tf(wake_model):
+        def get_tf(windFarmModel):
             return TopFarmProblem(
                 design_vars=dict(zip('xy', init_pos.T)),
-                cost_comp=AEPCalculator(wind_res, wake_model,
-                                        wdir=np.arange(0, 360, 12)
-                                        ).get_TopFarm_cost_component(),
+                cost_comp=PyWakeAEPCostModelComponent(windFarmModel, n_wt=3, ws=10, wd=np.arange(0, 360, 12)),
                 constraints=[SpacingConstraint(min_spacing),
                              XYBoundaryConstraint(boundary)],
                 driver=EasyScipyOptimizeDriver(),
-                plot_comp=plot_comp)
+                plot_comp=plot_comp())
 
-        with warnings.catch_warnings():
-            warnings.filterwarnings('ignore')  # temporarily disable fusedwake warnings
+        # GCL: define the wake model and optimization problem
+        tf_gcl = get_tf(GCL(site, wt))
 
-            # GCL: define the wake model and optimization problem
-            wake_mod_gcl = FusedWakeGCLWakeModel(wf_path)
-            tf_gcl = get_tf(wake_mod_gcl)
+        # NOJ: define the wake model and optimization problem
+        tf_noj = get_tf(NOJ(site, wt))
 
-            # NOJ: define the wake model and optimization problem
-            wake_mod_noj = FusedWakeNOJWakeModel(wf_path)
-            tf_noj = get_tf(wake_mod_noj)
+        # run the optimization
+        cost_gcl, state_gcl, recorder_gcl = tf_gcl.optimize()
+        cost_noj, state_noj, recorder_noj = tf_noj.optimize()
 
-            # run the optimization
-            cost_gcl, state_gcl, recorder_gcl = tf_gcl.optimize()
-            cost_noj, state_noj, recorder_noj = tf_noj.optimize()
+        # ------------------------ POST-PROCESS ------------------------
 
-            # ------------------------ POST-PROCESS ------------------------
+        # get the optimized locations
+        opt_gcl = tf_gcl.turbine_positions
+        opt_noj = tf_noj.turbine_positions
 
-            # get the optimized locations
-            opt_gcl = tf_gcl.turbine_positions
-            opt_noj = tf_noj.turbine_positions
-
-            # create the array of costs for easier printing
-            costs = np.diag([cost_gcl, cost_noj])
-            costs[0, 1] = tf_noj.evaluate(state_gcl)[0]  # noj cost of gcl locs
-            costs[1, 0] = tf_gcl.evaluate(state_noj)[0]  # gcl cost of noj locs
+        # create the array of costs for easier printing
+        costs = np.diag([cost_gcl, cost_noj])
+        costs[0, 1] = tf_noj.evaluate(state_gcl)[0]  # noj cost of gcl locs
+        costs[1, 0] = tf_gcl.evaluate(state_noj)[0]  # gcl cost of noj locs
 
         # ------------------------ PRINT STATS ------------------------
 
@@ -112,7 +100,6 @@ def main():
         print(f'             ({loc_diffs[0]:.2f}%)     ({loc_diffs[1]:.2f}%)')
 
         # ------------------------ PLOT (if possible) ------------------------
-
         if plot:
 
             # initialize the figure and axes
@@ -140,10 +127,6 @@ def main():
             # save the png
             folder, file = os.path.split(__file__)
             fig.savefig(folder + "/figures/" + file.replace('.py', '.png'))
-
-
-#        except RuntimeError:
-#            pass
 
 
 main()

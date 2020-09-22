@@ -186,7 +186,6 @@ class RandomSearchDriver(Driver):
                 else:
                     if obj_value_x1 < 1e10:
                         n_iter += 1
-
                 if not success or obj_value_x1 > obj_value_x0:
                     obj_value_x1, success = self.objective_callback(x0, record=True)
         return False

@@ -37,6 +37,7 @@ from topfarm.constraint_components.spacing import SpacingComp
 from topfarm.constraint_components.boundary import BoundaryBaseComp
 from topfarm.constraint_components.penalty_component import PenaltyComponent, PostPenaltyComponent
 from topfarm.cost_models.aggregated_cost import AggregatedCost
+from topfarm.cost_models.cost_model_wrappers import CostModelComponent
 
 
 class TopFarmBaseGroup(Group):
@@ -194,8 +195,8 @@ class TopFarmProblem(Problem):
             self.n_wt = 0
 
         constraints_as_penalty = ((not self.driver.supports['inequality_constraints'] or
-                                  isinstance(self.driver, SimpleGADriver) or
-                                  isinstance(self.driver, EasySimpleGADriver)) and
+                                   isinstance(self.driver, SimpleGADriver) or
+                                   isinstance(self.driver, EasySimpleGADriver)) and
                                   len(constraints) + len(post_constraints) > 0)
 
         if len(constraints) > 0:
@@ -211,9 +212,8 @@ class TopFarmProblem(Problem):
             penalty_comp = PenaltyComponent(constraints, constraints_as_penalty)
             self.model.add_subsystem('penalty_comp', penalty_comp, promotes=['*'])
         else:
-            if hasattr(self.cost_comp, 'problem'):
-                if not hasattr(self.cost_comp.problem, 'penalty_comp'):
-                    self.indeps.add_output('penalty', val=0.0)
+            if isinstance(self.cost_comp, CostModelComponent):
+                self.indeps.add_output('penalty', val=0.0)
 
         self.model.constraint_components = [constr.constraintComponent for constr in constraints]
 
@@ -257,7 +257,10 @@ class TopFarmProblem(Problem):
                     elif len(constr) == 2:  # assuming only name and upper value is specified and value is per turbine
                         self.model.add_constraint(constr[0], upper=np.full(self.n_wt, constr[1]))
                     elif len(constr) == 3:  # assuming only name, lower and upper value is specified and value is per turbine
-                        self.model.add_constraint(constr[0], lower=np.full(self.n_wt, constr[1]), upper=np.full(self.n_wt, constr[2]))
+                        self.model.add_constraint(
+                            constr[0], lower=np.full(
+                                self.n_wt, constr[1]), upper=np.full(
+                                self.n_wt, constr[2]))
                     # Use the assembled Jacobian.
 #                    self.model.cost_comp.post_constraints.options['assembled_jac_type'] = 'csc'
 #                    self.model.cost_comp.post_constraints.linear_solver.assemble_jac = True

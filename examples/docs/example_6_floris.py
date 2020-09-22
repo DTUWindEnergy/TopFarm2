@@ -1,5 +1,5 @@
 from topfarm.tests.test_files.example_data.floris.NREL5MW import NREL5MWREF, ct_curve, power_curve, cp_curve_spline, cp_curve, Amalia1Site
-from py_wake.wake_models.noj import NOJ
+from py_wake.deficit_models.noj import NOJ
 from py_wake.aep_calculator import AEPCalculator
 import matplotlib.pyplot as plt
 import numpy as np
@@ -43,7 +43,7 @@ def main():
                     #####################################
                     topfarm.x_key = 'turbineX'
                     topfarm.y_key = 'turbineY'
-                    turbineX = np.array([1164.7, 947.2,  1682.4, 1464.9, 1982.6, 2200.1])
+                    turbineX = np.array([1164.7, 947.2, 1682.4, 1464.9, 1982.6, 2200.1])
                     turbineY = np.array([1024.7, 1335.3, 1387.2, 1697.8, 2060.3, 1749.7])
                     f = np.array([3.597152, 3.948682, 5.167395, 7.000154, 8.364547, 6.43485,
                                   8.643194, 11.77051, 15.15757, 14.73792, 10.01205, 5.165975])
