@@ -40,7 +40,34 @@ class EasyScipyOptimizeDriver(ScipyOptimizeDriver, EasyDriverBase):
             Set to False to prevent printing of Scipy convergence messages
         """
         ScipyOptimizeDriver.__init__(self)
-        self.options.update({'optimizer': optimizer, 'maxiter': self.max_iter or maxiter, 'tol': tol, 'disp': disp})
+        if optimizer == 'IPOPT':
+            try:
+                from ipopt.ipopt_wrapper import minimize_ipopt
+            except ImportError:
+                raise ImportError("""Cannot import ipopt wrapper. Please install cyipopt, e.g. via conda
+Windows: conda install -c pycalphad cyipopt
+Linux/OSX: conda install -c conda-forge cyipopt
+                """)
+
+            def fmt_option(v):
+                if isinstance(v, str):
+                    return v.encode()
+                else:
+                    return v
+            ipopt_options = {k: fmt_option(v) for k, v in kwargs.items()}
+
+            def minimize_ipopt_wrapper(*args, maxiter=200, disp=True, **kwargs):
+                from ipopt.ipopt_wrapper import minimize_ipopt
+                ipopt_options.update({'max_iter': maxiter, 'print_level': int(disp)})
+                return minimize_ipopt(*args, options=ipopt_options, **kwargs)
+            kwargs = {}
+            from openmdao.drivers import scipy_optimizer
+            for lst in [scipy_optimizer._optimizers, scipy_optimizer._gradient_optimizers, scipy_optimizer._bounds_optimizers,
+                        scipy_optimizer._all_optimizers, scipy_optimizer._constraint_optimizers, scipy_optimizer._constraint_grad_optimizers]:
+                lst.add(minimize_ipopt_wrapper)
+            optimizer = minimize_ipopt_wrapper
+
+        self.options.update({'optimizer': optimizer, 'maxiter': maxiter, 'tol': tol, 'disp': disp})
         if kwargs:
             self.options.update(kwargs)
 
@@ -72,6 +99,45 @@ class EasyScipyOptimizeDriver(ScipyOptimizeDriver, EasyDriverBase):
     @property
     def supports_expected_cost(self):
         return not (openmdao.__version__ == '2.6.0' and self.options['optimizer'] == 'COBYLA')
+
+    def _get_name(self):
+        """Override to add str"""
+        return "ScipyOptimize_" + str(self.options['optimizer'])
+
+
+class EasyIPOPTScipyOptimizeDriver(EasyScipyOptimizeDriver):
+    def __init__(self, maxiter=200, tol=1e-8, disp=True,
+                 max_cpu_time=1e6,  # : Maximum number of CPU seconds.
+                 # A limit on CPU seconds that Ipopt can use to solve one problem. If
+                 # during the convergence check this limit is exceeded, Ipopt will
+                 # terminate with a corresponding error message. The valid range for this
+                 # real option is 0 < max_cpu_time and its default value is 10+06.
+                 mu_strategy='monotone',  # : Update strategy for barrier parameter.
+                 # Determines which barrier parameter update strategy is to be used. The default value for this string option is "monotone".
+                 # Possible values:
+                 # - monotone: use the monotone (Fiacco-McCormick) strategy
+                 # - adaptive: use the adaptive update strategy
+                 acceptable_tol=1e-6,  # : "Acceptable" convergence tolerance (relative).
+                 # Determines which (scaled) overall optimality error is considered to be
+                 # "acceptable". There are two levels of termination criteria. If the usual
+                 # "desired" tolerances (see tol, dual_inf_tol etc) are satisfied at an
+                 # iteration, the algorithm immediately terminates with a success message.
+                 # On the other hand, if the algorithm encounters "acceptable_iter" many
+                 # iterations in a row that are considered "acceptable", it will terminate
+                 # before the desired convergence tolerance is met. This is useful in cases
+                 # where the algorithm might not be able to achieve the "desired" level of
+                 # accuracy. The valid range for this real option is 0 < acceptable_tol and
+                 # its default value is 10-06.
+
+                 # All options (https://coin-or.github.io/Ipopt/OPTIONS.html) can be specified via kwargs
+                 # The argument type must be correct (str, float or int)
+                 **kwargs
+                 ):
+        EasyScipyOptimizeDriver.__init__(self, optimizer='IPOPT', maxiter=maxiter, tol=tol, disp=disp,
+                                         max_cpu_time=float(max_cpu_time),
+                                         mu_strategy=mu_strategy,
+                                         acceptable_tol=acceptable_tol,
+                                         ** kwargs)
 
 
 try:

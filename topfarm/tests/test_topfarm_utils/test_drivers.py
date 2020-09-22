@@ -2,11 +2,12 @@ import pytest
 
 import numpy as np
 
-from topfarm.cost_models.dummy import DummyCost
+from topfarm.cost_models.dummy import DummyCost, DummyCostPlotComp
 from topfarm.drivers.random_search_driver import RandomizeTurbinePosition_Circle, RandomizeTurbinePosition_Square,\
     RandomizeTurbineTypeAndPosition, RandomizeTurbinePosition_Normal,\
     RandomizeAllUniform, RandomizeAllRelativeMaxStep, RandomizeNUniform
-from topfarm.easy_drivers import EasyScipyOptimizeDriver, EasySimpleGADriver, EasyRandomSearchDriver, EasyPyOptSparseSNOPT, EasyPyOptSparseIPOPT
+from topfarm.easy_drivers import EasyScipyOptimizeDriver, EasySimpleGADriver, EasyRandomSearchDriver, EasyPyOptSparseSNOPT, EasyPyOptSparseIPOPT,\
+    EasyIPOPTScipyOptimizeDriver
 from topfarm.plotting import NoPlot
 from topfarm.tests import uta, npt
 from topfarm.constraint_components.spacing import SpacingConstraint
@@ -67,6 +68,12 @@ def topfarm_generator():
     return _topfarm_obj
 
 
+try:
+    easyIPOPTScipyOptimizeDriver = EasyIPOPTScipyOptimizeDriver(maxiter=1000)
+except ImportError:
+    easyIPOPTScipyOptimizeDriver = None
+
+
 @pytest.mark.parametrize('driver,tol', [
     (EasyScipyOptimizeDriver(disp=False), 1e-4),
     (EasyScipyOptimizeDriver(tol=1e-3, disp=False), 1e-2),
@@ -75,10 +82,12 @@ def topfarm_generator():
     (EasySimpleGADriver(max_gen=10, pop_size=100, bits={'x': [12] * 3, 'y':[12] * 3}, random_state=1), 1e-1),
     (EasyPyOptSparseIPOPT(), 1e-4),
     (EasyPyOptSparseSNOPT(), 1e-4),
+    (easyIPOPTScipyOptimizeDriver, 1e-4)
 ][:])
 def test_optimizers(driver, tol, topfarm_generator_scalable):
-    if driver.__class__.__name__ == "PyOptSparseMissingDriver":
+    if driver is None or driver.__class__.__name__ == "PyOptSparseMissingDriver":
         pytest.xfail("Driver missing")
+
     tf = topfarm_generator_scalable(driver)
     tf.evaluate()
     cost, _, recorder = tf.optimize({'x': [6., 6., 1.], 'y': [-.01, -8., 1.]})
