@@ -1,12 +1,13 @@
 import numpy as np
 from topfarm.cost_models.cost_model_wrappers import CostModelComponent,\
-    AEPCostModelComponent
+    AEPCostModelComponent, AEPMaxLoadCostModelComponent
 from topfarm.constraint_components.spacing import SpacingConstraint
-from topfarm.constraint_components.boundary import XYBoundaryConstraint
+from topfarm.constraint_components.boundary import XYBoundaryConstraint, CircleBoundaryComp, CircleBoundaryConstraint
 from topfarm import TopFarmProblem
-from topfarm.easy_drivers import EasyScipyOptimizeDriver
+from topfarm.easy_drivers import EasyScipyOptimizeDriver, EasySimpleGADriver
 from topfarm.plotting import NoPlot, XYPlotComp
 from topfarm.tests import npt
+from topfarm.tests.test_files import xy3tb
 
 
 boundary = [(0, 0), (6, 0), (6, -10), (0, -10)]  # turbine boundaries
@@ -93,3 +94,39 @@ def testCostModelComponentAdditionalOutput():
     _, state, _ = tf.optimize()
     npt.assert_array_almost_equal(tf.turbine_positions[:, :2], optimal_with_constraints, 5)
     npt.assert_equal(sum(state['x']), state['add_out'])
+
+
+def test_AEPMaxLoadCostModelComponent_as_penalty():
+    tf = xy3tb.get_tf(
+        design_vars={'x': ([0]), 'y': ([0])},
+        cost_comp=AEPMaxLoadCostModelComponent(
+            input_keys='xy', n_wt=1,
+            aep_load_function=lambda x, y: (-np.sin(np.hypot(x, y)), np.hypot(x, y)),
+            max_loads=3),
+        constraints=[],
+        driver=EasySimpleGADriver(),
+        plot_comp=None)
+
+    # check normal result that satisfies the penalty
+    assert tf.evaluate({'x': np.pi / 2})[0] == 1
+    # check penalized result if capacity constraint is not satisfied
+    for x, y in [(4, 0), (0, 4)]:
+        assert tf.evaluate({'x': x, 'y': y})[0] == 1e10 + 1
+
+
+def test_AEPMaxLoadCostModelComponent_constraint():
+
+    tf = TopFarmProblem(
+        design_vars={'x': ([1]), 'y': (.1, 0, 2.5)},
+        # design_vars={'x': ([2.9], [1], [3])},
+        cost_comp=AEPMaxLoadCostModelComponent(
+            input_keys='xy', n_wt=1,
+            aep_load_function=lambda x, y: (np.hypot(x, y), x),
+            max_loads=3),
+        constraints=[CircleBoundaryConstraint((0, 0), 7)],
+    )
+
+    tf.evaluate()
+    cost, state, recorder = tf.optimize()
+    npt.assert_allclose(state['x'], 3)  # constrained by max_loads
+    npt.assert_allclose(state['y'], 2.5)  # constrained by design var lim

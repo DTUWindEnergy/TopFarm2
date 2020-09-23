@@ -38,6 +38,7 @@ from topfarm.constraint_components.boundary import BoundaryBaseComp
 from topfarm.constraint_components.penalty_component import PenaltyComponent, PostPenaltyComponent
 from topfarm.cost_models.aggregated_cost import AggregatedCost
 from topfarm.cost_models.cost_model_wrappers import CostModelComponent
+from topfarm.constraint_components.post_constraint import PostConstraint
 
 
 class TopFarmBaseGroup(Group):
@@ -194,6 +195,14 @@ class TopFarmProblem(Problem):
         else:
             self.n_wt = 0
 
+        # add external signals before constraints
+        for k, v in ext_vars.items():
+            self.indeps.add_output(k, v)
+        self.ext_vars = ext_vars
+
+        if cost_comp and isinstance(cost_comp, PostConstraint):
+            post_constraints = post_constraints + [cost_comp]
+
         constraints_as_penalty = ((not self.driver.supports['inequality_constraints'] or
                                    isinstance(self.driver, SimpleGADriver) or
                                    isinstance(self.driver, EasySimpleGADriver)) and
@@ -212,7 +221,7 @@ class TopFarmProblem(Problem):
             penalty_comp = PenaltyComponent(constraints, constraints_as_penalty)
             self.model.add_subsystem('penalty_comp', penalty_comp, promotes=['*'])
         else:
-            if isinstance(self.cost_comp, CostModelComponent):
+            if isinstance(self.cost_comp, (CostModelComponent, TopFarmGroup)):
                 self.indeps.add_output('penalty', val=0.0)
 
         self.model.constraint_components = [constr.constraintComponent for constr in constraints]
@@ -223,10 +232,6 @@ class TopFarmProblem(Problem):
             else:
                 kwargs = EasyDriverBase.get_desvar_kwargs(None, self.model, k, v)
             self.model.add_design_var(k, **kwargs)
-
-        for k, v in ext_vars.items():
-            self.indeps.add_output(k, v)
-        self.ext_vars = ext_vars
 
         if cost_comp:
             self.model.add_subsystem('cost_comp', cost_comp, promotes=['*'])
@@ -257,10 +262,10 @@ class TopFarmProblem(Problem):
                     elif len(constr) == 2:  # assuming only name and upper value is specified and value is per turbine
                         self.model.add_constraint(constr[0], upper=np.full(self.n_wt, constr[1]))
                     elif len(constr) == 3:  # assuming only name, lower and upper value is specified and value is per turbine
+                        lower = None if constr[1] is None else np.full(self.n_wt, constr[1])
+                        upper = None if constr[2] is None else np.full(self.n_wt, constr[2])
                         self.model.add_constraint(
-                            constr[0], lower=np.full(
-                                self.n_wt, constr[1]), upper=np.full(
-                                self.n_wt, constr[2]))
+                            constr[0], lower=lower, upper=upper)
                     # Use the assembled Jacobian.
 #                    self.model.cost_comp.post_constraints.options['assembled_jac_type'] = 'csc'
 #                    self.model.cost_comp.post_constraints.linear_solver.assemble_jac = True

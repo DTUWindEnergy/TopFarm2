@@ -2,6 +2,7 @@ from openmdao.core.explicitcomponent import ExplicitComponent
 import numpy as np
 import time
 from _collections import defaultdict
+from topfarm.constraint_components.post_constraint import PostConstraint
 
 
 class CostModelComponent(ExplicitComponent):
@@ -157,9 +158,28 @@ class CostModelComponent(ExplicitComponent):
 
 class AEPCostModelComponent(CostModelComponent):
     def __init__(self, input_keys, n_wt, cost_function, cost_gradient_function=None,
-                 output_unit="", additional_input=[], additional_output=[], max_eval=None, objective=True):
+                 output_unit="", additional_input=[], additional_output=[], max_eval=None, **kwargs):
         CostModelComponent.__init__(self, input_keys, n_wt, cost_function,
                                     cost_gradient_function=cost_gradient_function,
                                     output_key="AEP", output_unit=output_unit,
                                     additional_input=additional_input, additional_output=additional_output,
-                                    max_eval=max_eval, objective=objective, income_model=True)
+                                    max_eval=max_eval, income_model=True, **kwargs)
+
+
+class AEPMaxLoadCostModelComponent(AEPCostModelComponent, PostConstraint):
+    def __init__(self, input_keys, n_wt, aep_load_function, max_loads, **kwargs):
+        self.max_loads = max_loads
+
+        def cost_function(**kwargs):
+            aep, load, additional_output = (aep_load_function(**kwargs) + ({},))[:3]
+            additional_output['loads'] = load
+            return aep, additional_output
+        additional_output = kwargs.get('additional_output', []) + ['loads']
+        AEPCostModelComponent.__init__(self, input_keys, n_wt, cost_function=cost_function,
+                                       additional_output=additional_output, **kwargs)
+        PostConstraint.__init__(self, 'loads', upper=max_loads)
+
+    def setup(self):
+        AEPCostModelComponent.setup(self)
+        input_keys = list([(i, i[0])[isinstance(i, tuple)] for i in self.input_keys])
+        self.declare_partials('loads', input_keys, method='fd')

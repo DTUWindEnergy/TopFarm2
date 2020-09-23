@@ -12,6 +12,10 @@ class Constraint(ABC):
     def setup_as_penalty(self):
         pass
 
+    @property
+    def constraintComponent(self):
+        return self.comp
+
 
 class ConstraintComponent(ExplicitComponent, ABC):
     def __init__(self, **kwargs):
