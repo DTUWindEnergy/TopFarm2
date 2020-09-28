@@ -3,6 +3,7 @@ import json
 import pprint
 import shutil
 from _notebooks.notebook import Notebook
+from topfarm.easy_drivers import EasyDriverBase
 
 
 # def get_cells(nb):
@@ -65,12 +66,12 @@ try:
     import topfarm
 except ModuleNotFoundError:
     !pip install topfarm"""
-        if not name=='loads':
+        if not name == 'loads':
             nb.insert_code_cell(2, code)
         nb.save(dst_path + name + ".ipynb")
 
 
-def check_notebooks():
+def check_notebooks(notebooks=None):
     import matplotlib.pyplot as plt
 
     def no_show(*args, **kwargs):
@@ -78,14 +79,21 @@ def check_notebooks():
     plt.show = no_show  # disable plt show that requires the user to close the plot
 
     path = os.path.dirname(__file__) + "/elements/"
-    for f in [f for f in os.listdir(path) if f.endswith('.ipynb')]:
+    if notebooks is None:
+        notebooks = [f for f in os.listdir(path) if f.endswith('.ipynb')]
+    else:
+        notebooks = [f + '.ipynb' for f in notebooks]
+    for f in notebooks:
         nb = Notebook(path + f)
         nb.check_code()
         nb.check_links()
 
 
 if __name__ == '__main__':
-    check_notebooks()
-    # make_tutorials()
-    make_doc_notebooks(['constraints', 'cost_models', 'drivers', 'loads', 'problems', 'roads_and_cables'])
+
+    notebooks = ['constraints', 'cost_models', 'drivers', 'loads', 'problems', 'roads_and_cables']
+    notebooks.remove('roads_and_cables')
+    notebooks.remove('loads')
+    check_notebooks(notebooks)
+    make_doc_notebooks(notebooks)
     print('Done')

@@ -58,7 +58,7 @@ Linux/OSX: conda install -c conda-forge cyipopt
 
             def minimize_ipopt_wrapper(*args, maxiter=200, disp=True, **kwargs):
                 from ipopt.ipopt_wrapper import minimize_ipopt
-                ipopt_options.update({'max_iter': maxiter, 'print_level': int(disp)})
+                ipopt_options.update({'max_iter': self.max_iter or maxiter, 'print_level': int(disp)})
                 return minimize_ipopt(*args, options=ipopt_options, **kwargs)
             kwargs = {}
             from openmdao.drivers import scipy_optimizer
@@ -67,7 +67,7 @@ Linux/OSX: conda install -c conda-forge cyipopt
                 lst.add(minimize_ipopt_wrapper)
             optimizer = minimize_ipopt_wrapper
 
-        self.options.update({'optimizer': optimizer, 'maxiter': maxiter, 'tol': tol, 'disp': disp})
+        self.options.update({'optimizer': optimizer, 'maxiter': self.max_iter or maxiter, 'tol': tol, 'disp': disp})
         if kwargs:
             self.options.update(kwargs)
 
@@ -133,7 +133,7 @@ class EasyIPOPTScipyOptimizeDriver(EasyScipyOptimizeDriver):
                  # The argument type must be correct (str, float or int)
                  **kwargs
                  ):
-        EasyScipyOptimizeDriver.__init__(self, optimizer='IPOPT', maxiter=maxiter, tol=tol, disp=disp,
+        EasyScipyOptimizeDriver.__init__(self, optimizer='IPOPT', maxiter=self.max_iter or maxiter, tol=tol, disp=disp,
                                          max_cpu_time=float(max_cpu_time),
                                          mu_strategy=mu_strategy,
                                          acceptable_tol=acceptable_tol,
@@ -182,7 +182,7 @@ try:
                 'Difference interval': difference_interval,
                 'Hessian full memory': None,
                 'Function precision': function_precision,
-                'Major iterations limit': major_iteration_limit,
+                'Major iterations limit': self.max_iter or major_iteration_limit,
                 'Print file': Print_file,
                 'Summary file': Summary_file,
                 'Major step limit': 2.0})
