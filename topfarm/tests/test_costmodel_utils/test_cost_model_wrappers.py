@@ -114,6 +114,24 @@ def test_AEPMaxLoadCostModelComponent_as_penalty():
         assert tf.evaluate({'x': x, 'y': y})[0] == 1e10 + 1
 
 
+def test_AEPMaxLoadCostModelComponent_as_penalty_multi_wt():
+    tf = xy3tb.get_tf(
+        design_vars={'x': ([0, 1]), 'y': ([0, 0])},
+        cost_comp=AEPMaxLoadCostModelComponent(
+            input_keys='xy', n_wt=2,
+            aep_load_function=lambda x, y: (-np.sin(np.hypot(x, y)).sum(), np.hypot(x, y)),
+            max_loads=[3, 3]),
+        constraints=[],
+        driver=EasySimpleGADriver(),
+        plot_comp=None)
+
+    # check normal result that satisfies the penalty
+    assert tf.evaluate({'x': [np.pi / 2, -np.pi / 2]})[0] == 2
+    # check penalized result if capacity constraint is not satisfied
+    for x, y in [([4, 0], [0, 0]), ([0, 0], [4, 0]), ([4, 4], [0, 0])]:
+        assert tf.evaluate({'x': x, 'y': y})[0] == 1e10 + 1
+
+
 def test_AEPMaxLoadCostModelComponent_constraint():
 
     tf = TopFarmProblem(

@@ -31,7 +31,7 @@ class PostPenaltyComponent(ExplicitComponent):
 
     def setup(self):
         for comp in self.post_constraint_lst:
-            self.add_input(comp[0], val=0.0)
+            self.add_input(comp[0], val=np.zeros(max([len(np.atleast_1d(c)) for c in comp[1:]])))
         self.add_output('post_penalty', val=0.0)
 
     def compute(self, inputs, outputs):
@@ -41,12 +41,12 @@ class PostPenaltyComponent(ExplicitComponent):
                 return inputs[key]
             else:
                 lower, upper = post_constraint[1:]
-                if lower is not None and upper is not None:
-                    return np.max([lower - inputs[key], inputs[key] - upper], 0)
-                elif upper is not None:
-                    return inputs[key] - upper
-                else:
-                    return lower - inputs[key]
+                pen = 0
+                if lower is not None:
+                    pen = max(pen, np.max(lower - inputs[key]))
+                if upper is not None:
+                    pen = max(pen, np.max(inputs[key] - upper))
+                return pen
         if self.as_penalty:
             penalty = np.sum([get_penalty(pc) for pc in self.post_constraint_lst])
         else:
