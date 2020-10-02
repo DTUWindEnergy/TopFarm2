@@ -1,4 +1,3 @@
-
 """TOPFARM OpenMDAO Problem.
 
 This module contains the OpenMDAO problem that can be used for
@@ -487,9 +486,9 @@ class TopFarmProblem(Problem):
         return np.array([self[k] for k in [topfarm.x_key, topfarm.y_key]]).T
 
     def smart_start(self, XX, YY, ZZ, radius=None):
-        assert XX.shape == YY.shape
         if len(XX.shape) == 1:
             XX, YY = np.meshgrid(XX, YY)
+        assert XX.shape == YY.shape
         ZZ_is_func = hasattr(ZZ, '__call__')
         spacing_comp_lst = [c for c in self.model.constraint_components if isinstance(c, SpacingComp)]
         if len(spacing_comp_lst) == 1:
