@@ -1,7 +1,9 @@
 import numpy as np
+import matplotlib.pyplot as plt
+from numpy import newaxis as na
 
 
-def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None):
+def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, n_random=0, plot=False):
     """Selects the a number of gridpoints (N_WT) in the grid defined by x and y,
     where ZZ has the maximum value, while chosen points spacing (min_space)
     is respected.
@@ -19,6 +21,8 @@ def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None):
         number of wind turbines
     min_space: float
         minimum space between turbines
+    n_random : integer
+        select by random one of the <n_random> best points
 
     Returns
     -------
@@ -34,46 +38,56 @@ def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None):
         arr = np.array([XX.flatten(), YY.flatten()])
     else:
         arr = np.array([XX.flatten(), YY.flatten(), ZZ.flatten()])
+
+    # set radius to None(faster) if if grid resolution > radius
     if radius is not None and (np.diff(np.sort(np.unique(arr[0]))).min() > radius and
                                (np.diff(np.sort(np.unique(arr[1]))).min() > radius)):
         radius = None
-
     xs, ys = [], []
-    for _ in range(N_WT):
-        try:
-            if ZZ_is_func:
-                z = ZZ(arr[0], arr[1], xs, ys)
-                ind = np.where(z == z.max())[0]
-                if radius is None or len(ind) == len(z):
-                    max_ind = ind[np.random.randint(len(ind))]
-                else:
-                    x, y = arr
-                    z_rotor = np.array([np.mean(z[(x[i] - x)**2 + (y[i] - y)**2 < radius**2]) for i in ind])
-                    ind = ind[np.where(z_rotor == z_rotor.max())[0]]
-                    max_ind = ind[np.random.randint(len(ind))]
-            else:
-                z = arr[2]
-                ind = np.where(z == z.max())[0]
-                max_ind = ind[np.random.randint(len(ind))]
+    for i in range(N_WT):
+        if arr.shape[1] == 0:
+            raise Exception('No feasible positions for wt %d' % i)
 
-            x0 = arr[0][max_ind]
-            y0 = arr[1][max_ind]
-            xs.append(x0)
-            ys.append(y0)
-            index = np.where((arr[0] - x0)**2 + (arr[1] - y0)**2 >= min_space**2)[0]
-            arr = arr[:, index]
-            import os
+        if ZZ_is_func:
+            z = ZZ(arr[0], arr[1], xs, ys)
+        else:
+            z = arr[2]
 
-        except ValueError:
-            xs.append(np.nan)
-            ys.append(np.nan)
-            print('Could not respect the spacing constraint')
+        if radius is not None:
+            # average over the rotor area, i.e. all points within one radius from the point
+            x, y = arr
+            z = np.array([np.mean(z[ind]) for ind in np.hypot((x - x[:, na]), (y - y[:, na])) < radius])
+
+        if n_random <= 1:
+            # pick one of the optimal points
+            next_ind = np.random.choice(np.where(z == z.max())[0])
+        else:
+            # pick one of the <n_random> best points
+            next_ind = np.random.choice(np.argsort(z)[-(n_random):])
+
+        x0 = arr[0][next_ind]
+        y0 = arr[1][next_ind]
+        xs.append(x0)
+        ys.append(y0)
+
+        if plot:
+            plt.figure()
+            c = plt.scatter(arr[0], arr[1], c=z)
+            plt.colorbar(c)
+            plt.plot(xs, ys, '2k', ms=10)
+            plt.plot(xs[-1], ys[-1], '2r', ms=10)
+            plt.axis('equal')
+            plt.show()
+
+        # Remove all point within min_space from the newly added wt
+        index = np.where((arr[0] - x0)**2 + (arr[1] - y0)**2 >= min_space**2)[0]
+        arr = arr[:, index]
+
     return xs, ys
 
 
 def main():
     if __name__ == '__main__':
-        import matplotlib.pyplot as plt
         N_WT = 30
         min_space = 2.1
 

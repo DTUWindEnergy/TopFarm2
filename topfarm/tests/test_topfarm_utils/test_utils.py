@@ -15,20 +15,23 @@ from py_wake.site._site import UniformSite
 import pytest
 
 
-def tests_smart_start():
-    xs_ref = [1.6, 14.1, 1.6, 7.9, 14.1, 7.9, 19.9, 19.9, 7.8,
-              5.8, 14.2, 5.8, 1.5, 16.2, 16.2, 1.6, 3.7, 14.1, 7.9, 3.7]
-    ys_ref = [1.6, 1.6, 7.9, 1.6, 7.9, 7.9, 1.6, 7.9, 5.8, 7.8, 5.8, 1.5, 5.8, 7.8, 1.5, 3.7, 1.6, 3.7, 3.7, 7.9]
-
+def egg_tray_map():
     x = np.arange(0, 20, 0.1)
     y = np.arange(0, 10, 0.1)
     YY, XX = np.meshgrid(y, x)
     val = np.sin(XX) + np.sin(YY)
+    return XX, YY, val
+
+
+def tests_smart_start():
+    xs_ref = [1.6, 14.1, 1.6, 7.9, 14.1, 7.9, 19.9, 19.9, 7.8, 5.8, 14.2,
+              5.8, 1.5, 16.2, 16.2, 1.6, 3.7, 14.1, 7.9, 3.7]
+    ys_ref = [1.6, 1.6, 7.9, 1.6, 7.9, 7.9, 1.6, 7.9, 5.8, 7.8, 5.8, 1.5, 5.8, 7.8, 1.5, 3.7, 1.6, 3.7, 3.7, 7.9]
     N_WT = 20
     min_space = 2.1
     np.random.seed(0)
+    XX, YY, val = egg_tray_map()
     xs, ys = smart_start(XX, YY, val, N_WT, min_space)
-    npt.assert_array_almost_equal([xs, ys], [xs_ref, ys_ref])
 
     if 0:
         import matplotlib.pyplot as plt
@@ -42,29 +45,44 @@ def tests_smart_start():
 
         plt.axis('equal')
         plt.show()
+    npt.assert_array_almost_equal([xs, ys], [xs_ref, ys_ref])
 
 
-def tests_smart_start_no_feasible():
-    x = np.arange(0, 20, 0.1)
-    y = np.arange(0, 10, 0.1)
-    YY, XX = np.meshgrid(y, x)
-    val = np.sin(XX) + np.sin(YY)
+def tests_smart_start_random():
+    xs_ref = [14.3, 1.4, 1.5, 7.7, 13.9, 19.9, 7.9, 19.4, 8.2, 9.8, 3.5, 1.7,
+              16.1, 7.4, 3.6, 12.1, 10.0, 19.9, 5.7, 14.1]
+    ys_ref = [1.6, 1.6, 8.0, 1.5, 7.9, 7.8, 8.1, 1.3, 5.9, 1.6, 1.9, 5.9, 7.8, 3.6, 8.2, 1.9, 7.6, 3.5, 7.6, 3.7]
+
     N_WT = 20
-    min_space = 5.1
-
-    xs, ys = smart_start(XX, YY, val, N_WT, min_space)
+    min_space = 2.1
+    np.random.seed(0)
+    XX, YY, val = egg_tray_map()
+    np.random.seed(0)
+    xs, ys = smart_start(XX, YY, val, N_WT, min_space, n_random=100)
 
     if 0:
         import matplotlib.pyplot as plt
         plt.contourf(XX, YY, val, 100)
+        plt.plot(XX, YY, ',k')
         for i in range(N_WT):
             circle = plt.Circle((xs[i], ys[i]), min_space / 2, color='b', fill=False)
             plt.gcf().gca().add_artist(circle)
             plt.plot(xs[i], ys[i], 'rx')
+        print(np.round(xs, 1).tolist())
+        print(np.round(ys, 1).tolist())
+
         plt.axis('equal')
         plt.show()
-        print(xs)
-    assert np.isnan(xs).sum() == 12
+    npt.assert_array_almost_equal([xs, ys], [xs_ref, ys_ref])
+
+
+def tests_smart_start_no_feasible():
+    XX, YY, val = egg_tray_map()
+    N_WT = 20
+    min_space = 5.1
+
+    with pytest.raises(Exception, match="No feasible positions for wt 8"):
+        xs, ys = smart_start(XX, YY, val, N_WT, min_space)
 
 
 @pytest.mark.parametrize('seed,radius,resolution,tol', [(1, 500, 10, 5),
@@ -94,7 +112,7 @@ def test_smart_start_aep_map(seed, radius, resolution, tol):
     y = np.arange(-radius, radius, resolution)
     XX, YY = np.meshgrid(x, y)
 
-    tf.smart_start(XX, YY, aep_comp.get_aep4smart_start(wd=wd_lst, ws=ws_lst), radius=40)
+    tf.smart_start(XX, YY, aep_comp.get_aep4smart_start(wd=wd_lst, ws=ws_lst), radius=40, plot=0)
     tf.evaluate()
 
     if 0:
