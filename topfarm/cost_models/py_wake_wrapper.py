@@ -70,8 +70,8 @@ class PyWakeAEPCostModelComponent(AEPCostModelComponent):
                                        max_eval=max_eval, **kwargs)
 
     def get_aep4smart_start(self, ws=[6, 8, 10, 12, 14], wd=np.arange(360)):
-        def aep4smart_start(X, Y, wt_x, wt_y):
-            sim_res = self.windFarmModel(wt_x, wt_y, wd=wd, ws=ws)
+        def aep4smart_start(X, Y, wt_x, wt_y, type=0):
+            sim_res = self.windFarmModel(wt_x, wt_y, type=type, wd=wd, ws=ws)
             x = np.sort(np.unique(X))
             y = np.sort(np.unique(Y))
             aep_map = sim_res.flow_map(HorizontalGrid(x, y)).aep_xy()
