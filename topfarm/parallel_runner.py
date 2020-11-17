@@ -45,6 +45,7 @@ class ParallelRunner():
         seq_lst = [state_lst[i1:i2] for i1, i2 in zip(indexes[:-1], indexes[1:])]
 
         results = self.pool.map(seq_runner, seq_lst)
+        results = [r for r_seq in results for r in r_seq]
         best = results[np.argmin([r[0] for r in results])]
         return best, results
 
@@ -63,8 +64,8 @@ def get_InitialXYZOptimizationProblem(driver):
 
 
 def seq_runner_example(lst):
-    print("%d cases executed by thread: %s" % (len(lst), threading.get_ident()))
-    return get_InitialXYZOptimizationProblem(lst).optimize()
+    print("%d cases executed by thread: %s" % (len(lst), threading.current_thread().ident))
+    return [get_InitialXYZOptimizationProblem(lst).optimize()]
 # ===============================================================================
 #
 # ===============================================================================
@@ -83,7 +84,7 @@ def main():
 
         print("\nRun on one processor")
         # run sequential
-        cost, state, recorder = seq_runner_example(lst)
+        cost, state, recorder = seq_runner_example(lst)[0]
         print("Minimum cost: %.2f" % cost)
 
 

@@ -7,7 +7,7 @@ from topfarm.constraint_components.boundary import XYBoundaryConstraint
 from topfarm import TopFarmProblem
 
 
-@pytest.fixture("module")
+@pytest.fixture(scope="module")
 def parallelRunner():
     return ParallelRunner()
 
@@ -27,12 +27,12 @@ def lst():
 
 
 def seq_runner_example(lst):
-    return get_InitialXYZOptimizationProblem(lst).optimize()
+    return [get_InitialXYZOptimizationProblem(lst).optimize()]
 
 
 def test_parallel_run(lst, parallelRunner):
     # run sequential
-    s_cost, s_state, s_recorder = seq_runner_example(lst)
+    s_cost, s_state, s_recorder = seq_runner_example(lst)[0]
 
     # run in parallel
     (p_cost, p_state, p_recorder), results = parallelRunner(lst, seq_runner_example)

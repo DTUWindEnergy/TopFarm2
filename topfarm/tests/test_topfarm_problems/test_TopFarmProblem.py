@@ -227,7 +227,7 @@ def test_smart_start():
     except AssertionError:
         # wt2 and wt3 may switch
         npt.assert_array_almost_equal(tf.turbine_positions, np.array([ys_ref, xs_ref]).T)
-    if 1:
+    if 0:
         import matplotlib.pyplot as plt
         plt.contourf(XX, YY, ZZ, 100)
         for x, y in tf.turbine_positions:
