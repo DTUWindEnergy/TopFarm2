@@ -1,9 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from numpy import newaxis as na
+import multiprocessing
+import threading
+import time
 
 
-def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, n_random=0, plot=False):
+def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, n_random=0, plot=False, seed=None):
     """Selects the a number of gridpoints (N_WT) in the grid defined by x and y,
     where ZZ has the maximum value, while chosen points spacing (min_space)
     is respected.
@@ -44,6 +47,11 @@ def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, n_random=0, plot=False
                                (np.diff(np.sort(np.unique(arr[1]))).min() > radius)):
         radius = None
     xs, ys = [], []
+    if seed is None:
+        seed = np.uint32(int(time.time() + multiprocessing.current_process().ident + threading.get_ident()) % (2**31))
+        np.random.seed(seed)
+        seed = np.random.randint(0, 2**31)
+    np.random.seed(seed)
     for i in range(N_WT):
         if arr.shape[1] == 0:
             raise Exception('No feasible positions for wt %d' % i)

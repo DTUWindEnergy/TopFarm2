@@ -29,9 +29,9 @@ def tests_smart_start():
     ys_ref = [1.6, 1.6, 7.9, 1.6, 7.9, 7.9, 1.6, 7.9, 5.8, 7.8, 5.8, 1.5, 5.8, 7.8, 1.5, 3.7, 1.6, 3.7, 3.7, 7.9]
     N_WT = 20
     min_space = 2.1
-    np.random.seed(0)
+
     XX, YY, val = egg_tray_map()
-    xs, ys = smart_start(XX, YY, val, N_WT, min_space)
+    xs, ys = smart_start(XX, YY, val, N_WT, min_space, seed=0)
 
     if 0:
         import matplotlib.pyplot as plt
@@ -55,10 +55,9 @@ def tests_smart_start_random():
 
     N_WT = 20
     min_space = 2.1
-    np.random.seed(0)
     XX, YY, val = egg_tray_map()
     np.random.seed(0)
-    xs, ys = smart_start(XX, YY, val, N_WT, min_space, n_random=100)
+    xs, ys = smart_start(XX, YY, val, N_WT, min_space, n_random=100, seed=0)
 
     if 0:
         import matplotlib.pyplot as plt
@@ -90,7 +89,6 @@ def tests_smart_start_no_feasible():
 def test_smart_start_aep_map(seed, radius, resolution, tol):
     site = IEA37Site(16)
     n_wt = 4
-    np.random.seed(seed)
     x, y = site.initial_position[:n_wt].T
     wd_lst = np.arange(0, 360, 45)
     ws_lst = [10]
@@ -112,7 +110,7 @@ def test_smart_start_aep_map(seed, radius, resolution, tol):
     y = np.arange(-radius, radius, resolution)
     XX, YY = np.meshgrid(x, y)
 
-    tf.smart_start(XX, YY, aep_comp.get_aep4smart_start(wd=wd_lst, ws=ws_lst), radius=40, plot=0)
+    tf.smart_start(XX, YY, aep_comp.get_aep4smart_start(wd=wd_lst, ws=ws_lst), radius=40, plot=0, seed=seed)
     tf.evaluate()
 
     if 0:
@@ -133,7 +131,7 @@ def test_smart_start_aep_map(seed, radius, resolution, tol):
 def test_smart_start_aep_map_PyWakeAEP():
     site = IEA37Site(16)
     n_wt = 4
-    np.random.seed(1)
+
     x, y = site.initial_position[:n_wt].T
     wd_lst = np.arange(0, 360, 45)
     ws_lst = [10]
@@ -155,7 +153,7 @@ def test_smart_start_aep_map_PyWakeAEP():
     y = np.arange(-500, 500, 10)
     XX, YY = np.meshgrid(x, y)
 
-    tf.smart_start(XX, YY, aep.get_aep4smart_start(wd=wd_lst, ws=ws_lst), radius=40)
+    tf.smart_start(XX, YY, aep.get_aep4smart_start(wd=wd_lst, ws=ws_lst), radius=40, seed=1)
     tf.evaluate()
 
     if 0:
