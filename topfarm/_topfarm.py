@@ -485,7 +485,7 @@ class TopFarmProblem(Problem):
     def turbine_positions(self):
         return np.array([self[k] for k in [topfarm.x_key, topfarm.y_key]]).T
 
-    def smart_start(self, XX, YY, ZZ, radius=None, n_random=0, plot=False, seed=None):
+    def smart_start(self, XX, YY, ZZ, radius=None, random_pct=0, plot=False, seed=None):
         if len(XX.shape) == 1:
             XX, YY = np.meshgrid(XX, YY)
         assert XX.shape == YY.shape
@@ -509,7 +509,7 @@ class TopFarmProblem(Problem):
                 X, Y = X[mask], Y[mask]
                 if not ZZ_is_func:
                     Z = Z[mask]
-        x, y = smart_start(X, Y, Z, self.n_wt, min_spacing, radius, n_random, plot, seed=seed)
+        x, y = smart_start(X, Y, Z, self.n_wt, min_spacing, radius, random_pct, plot, seed=seed)
         self.update_state({topfarm.x_key: x, topfarm.y_key: y})
         return x, y
 

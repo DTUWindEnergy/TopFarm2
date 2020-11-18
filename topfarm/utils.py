@@ -6,7 +6,7 @@ import threading
 import time
 
 
-def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, n_random=0, plot=False, seed=None):
+def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, random_pct=0, plot=False, seed=None):
     """Selects the a number of gridpoints (N_WT) in the grid defined by x and y,
     where ZZ has the maximum value, while chosen points spacing (min_space)
     is respected.
@@ -24,8 +24,8 @@ def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, n_random=0, plot=False
         number of wind turbines
     min_space: float
         minimum space between turbines
-    n_random : integer
-        select by random one of the <n_random> best points
+    random_pct : float
+        select by random position of the <random_pct> best points
 
     Returns
     -------
@@ -36,6 +36,7 @@ def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, n_random=0, plot=False
     -----
     XX, YY and ZZ can be 1D or 2D, but must have same size
     """
+    assert 0 <= random_pct <= 100
     ZZ_is_func = hasattr(ZZ, '__call__')
     if ZZ_is_func:
         arr = np.array([XX.flatten(), YY.flatten()])
@@ -66,11 +67,12 @@ def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, n_random=0, plot=False
             x, y = arr
             z = np.array([np.mean(z[ind]) for ind in np.hypot((x - x[:, na]), (y - y[:, na])) < radius])
 
-        if n_random <= 1:
+        if random_pct == 0:
             # pick one of the optimal points
             next_ind = np.random.choice(np.where(z == z.max())[0])
         else:
-            # pick one of the <n_random> best points
+            # pick one of the <random_pct> best points
+            n_random = int(np.round(random_pct / 100 * len(z)))
             next_ind = np.random.choice(np.argsort(z)[-(n_random):])
 
         x0 = arr[0][next_ind]

@@ -49,15 +49,18 @@ def tests_smart_start():
 
 
 def tests_smart_start_random():
-    xs_ref = [14.3, 1.4, 1.5, 7.7, 13.9, 19.9, 7.9, 19.4, 8.2, 9.8, 3.5, 1.7,
-              16.1, 7.4, 3.6, 12.1, 10.0, 19.9, 5.7, 14.1]
-    ys_ref = [1.6, 1.6, 8.0, 1.5, 7.9, 7.8, 8.1, 1.3, 5.9, 1.6, 1.9, 5.9, 7.8, 3.6, 8.2, 1.9, 7.6, 3.5, 7.6, 3.7]
+    xs_ref = [1.7, 13.9, 1.4, 7.7, 14.4, 7.6, 19.7, 19.7, 8.7, 19.4, 15.8,
+              12.4, 7.7, 9.8, 14.1, 1.8, 9.7, 6.6, 13.6, 3.5]
+    ys_ref = [7.9, 1.4, 1.7, 1.3, 7.9, 8.4, 1.7, 8.7, 6.4, 6.6, 2.3, 7.1, 3.5, 1.6, 5.8, 5.8, 8.3, 6.5, 3.5, 1.4]
 
     N_WT = 20
     min_space = 2.1
     XX, YY, val = egg_tray_map()
     np.random.seed(0)
-    xs, ys = smart_start(XX, YY, val, N_WT, min_space, n_random=100, seed=0)
+
+    with pytest.raises(expected_exception=AssertionError):
+        xs, ys = smart_start(XX, YY, val, N_WT, min_space, random_pct=101, seed=0)
+    xs, ys = smart_start(XX, YY, val, N_WT, min_space, random_pct=1, seed=0)
 
     if 0:
         import matplotlib.pyplot as plt
