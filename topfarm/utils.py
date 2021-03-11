@@ -26,6 +26,8 @@ def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, random_pct=0, plot=Fal
         minimum space between turbines
     random_pct : float
         select by random position of the <random_pct> best points
+    plot : boolean
+        if True, each step is plotted in new figure
 
     Returns
     -------
@@ -49,7 +51,8 @@ def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, random_pct=0, plot=Fal
         radius = None
     xs, ys = [], []
     if seed is None:
-        seed = np.uint32(int(time.time() + multiprocessing.current_process().ident + threading.get_ident()) % (2**31))
+        seed = np.uint32(int((time.time() - int(time.time())) * 1e8 +
+                             multiprocessing.current_process().ident + threading.get_ident()) % (2**31))
         np.random.seed(seed)
         seed = np.random.randint(0, 2**31)
     np.random.seed(seed)

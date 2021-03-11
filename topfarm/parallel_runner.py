@@ -1,12 +1,8 @@
-import os
 import numpy as np
 import multiprocessing
-from topfarm.constraint_components.boundary_component import BoundaryComp
-from topfarm.cost_models.dummy import DummyCost
-from openmdao.drivers.doe_generators import UniformGenerator
-from topfarm.constraint_components.boundary import XYBoundaryConstraint
-from topfarm._topfarm import TopFarmProblem
 import threading
+from topfarm.tests.test_files import xy3tb
+from topfarm.easy_drivers import EasyScipyOptimizeDriver
 
 
 class ParallelRunner():
@@ -53,19 +49,18 @@ class ParallelRunner():
 # ===============================================================================
 # Example functions
 # ===============================================================================
-def get_InitialXYZOptimizationProblem(driver):
-    optimal = [(1, 0, 4),
-               (0, 1, 3)]
-    return TopFarmProblem(
-        design_vars={'x': [0, 2], 'y': [0, 2], 'z': ([0, 2], 3, 4)},
-        cost_comp=DummyCost(optimal, ['x', 'y', 'z']),
-        constraints=[XYBoundaryConstraint([(10, 6), (11, 8)], 'rectangle')],
-        driver=driver)
+def get_topfarm_problem(id, plot=False):
+    # setup topfarm problem with max 3 slsqp iterations
+    tf = xy3tb.get_tf(plot=plot, driver=EasyScipyOptimizeDriver(maxiter=3, disp=False))
+    # Shuffle position via smartstart, XX and YY is posible starting point coordinates
+    tf.smart_start(XX=np.linspace(0, 6, 10), YY=np.linspace(-10, 0, 10), random_pct=100)
+    return tf
 
 
-def seq_runner_example(lst):
-    print("%d cases executed by thread: %s" % (len(lst), threading.current_thread().ident))
-    return [get_InitialXYZOptimizationProblem(lst).optimize()]
+def seq_runner_example(id_lst):
+    print("%d cases executed by thread: %s" % (len(id_lst), threading.current_thread().ident))
+    # optimize for all elements in lst
+    return [get_topfarm_problem(id).optimize() for id in id_lst]
 # ===============================================================================
 #
 # ===============================================================================
@@ -73,19 +68,24 @@ def seq_runner_example(lst):
 
 def main():
     if __name__ == '__main__':
+        # make a list of 4 ids. Could as well be for sets of inputs
+        id_lst = np.arange(4)
 
-        lst = get_InitialXYZOptimizationProblem(driver=UniformGenerator(200)).get_DOE_list()
         print("Current thread: %s" % threading.get_ident())
-        print("\nRun on two processors")
-        # run in parallel
-        par_runner = ParallelRunner(2)
-        (cost, state, recorder), results = par_runner(lst, seq_runner_example)
-        print("Minimum cost: %.2f" % cost)
 
+        # optimize the 4 cases sequential
         print("\nRun on one processor")
-        # run sequential
-        cost, state, recorder = seq_runner_example(lst)[0]
-        print("Minimum cost: %.2f" % cost)
+        results = seq_runner_example(id_lst)
+        for i, r in zip(id_lst, results):
+            print("Id %d: %.2f" % (i, r[0]))
+
+        # optimize the four cases in parallel
+        print("\nRun on two processors")
+        par_runner = ParallelRunner(2)
+        (best_cost, best_state, best_recorder), results = par_runner(id_lst, seq_runner_example)
+        for i, r in zip(id_lst, results):
+            print("Id %d: %.2f" % (i, r[0]))
+        print("Minimum cost: %.2f" % best_cost)
 
 
 main()
