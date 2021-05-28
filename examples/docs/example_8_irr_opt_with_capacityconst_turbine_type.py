@@ -8,7 +8,7 @@ from topfarm.drivers.random_search_driver import RandomizeAllUniform
 from topfarm.plotting import TurbineTypePlotComponent, NoPlot
 from py_wake.wind_turbines import WindTurbines
 from topfarm.cost_models.cost_model_wrappers import CostModelComponent
-from py_wake.wind_turbines import cube_power, dummy_thrust
+# from py_wake.wind_turbines import cube_power, dummy_thrust
 from py_wake.deficit_models.noj import NOJ
 from topfarm.constraint_components.capacity import CapacityConstraint
 from py_wake.site._site import UniformWeibullSite
@@ -16,6 +16,32 @@ import topfarm
 
 import time
 
+def cube_power(ws_cut_in=3, ws_cut_out=25, ws_rated=12, power_rated=5000):
+    def power_func(ws):
+        ws = np.asarray(ws)
+        power = np.zeros_like(ws, dtype=np.float)
+        m = (ws >= ws_cut_in) & (ws < ws_rated)
+        power[m] = power_rated * ((ws[m] - ws_cut_in) / (ws_rated - ws_cut_in))**3
+        power[(ws >= ws_rated) & (ws <= ws_cut_out)] = power_rated
+        return power
+    return power_func
+
+
+def dummy_thrust(ws_cut_in=3, ws_cut_out=25, ws_rated=12, ct_rated=8 / 9):
+    # temporary thrust curve fix
+    def ct_func(ws):
+        ws = np.asarray(ws)
+        ct = np.zeros_like(ws, dtype=np.float)
+        if ct_rated > 0:
+            # ct = np.ones_like(ct)*ct_rated
+            m = (ws >= ws_cut_in) & (ws < ws_rated)
+            ct[m] = ct_rated
+            idx = (ws >= ws_rated) & (ws <= ws_cut_out)
+            # second order polynomial fit for above rated
+            ct[idx] = np.polyval(np.polyfit([ws_rated, (ws_rated + ws_cut_out) / 2,
+                                             ws_cut_out], [ct_rated, 0.4, 0.03], 2), ws[idx])
+        return ct
+    return ct_func
 
 # ----------- SELECT OBJECTIVE & TURN ON/OFF CONSTRAINT --------------
 #        obj = False  # objective AEP (True), IRR (False)
@@ -34,12 +60,12 @@ def main(obj=False, max_con_on=True):
         windTurbines = WindTurbines(names=['Ghost_T1', 'T2'],
                                     diameters=[40, 84],
                                     hub_heights=[70, hornsrev1.HornsrevV80().hub_height()],
-                                    ct_funcs=[dummy_thrust(ct_rated=0), hornsrev1.HornsrevV80()._ct],
+                                    ct_funcs=[dummy_thrust(ct_rated=0), hornsrev1.HornsrevV80().ct],
                                     power_funcs=[cube_power(power_rated=0), cube_power(power_rated=3000)],
                                     # hornsrev1.HornsrevV80()._power],
                                     power_unit='kW')
         Drotor_vector = windTurbines._diameters
-        power_rated_vec = np.array([pcurv(25) / 1000 for pcurv in windTurbines.power_funcs])
+        power_rated_vec = np.array([pcurv(25) / 1000 for pcurv in windTurbines._power_funcs])
         hub_height_vector = windTurbines._hub_heights
 
         x, y = np.meshgrid(range(-840, 840, 420), range(-840, 840, 420))

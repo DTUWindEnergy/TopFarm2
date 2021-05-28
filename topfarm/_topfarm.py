@@ -259,10 +259,18 @@ class TopFarmProblem(Problem):
                     if isinstance(constr[-1], dict):
                         self.model.add_constraint(str(constr[0]), **constr[-1])
                     elif len(constr) == 2:  # assuming only name and upper value is specified and value is per turbine
-                        self.model.add_constraint(constr[0], upper=np.full(self.n_wt, constr[1]))
-                    elif len(constr) == 3:  # assuming only name, lower and upper value is specified and value is per turbine
-                        lower = None if constr[1] is None else np.full(self.n_wt, constr[1])
-                        upper = None if constr[2] is None else np.full(self.n_wt, constr[2])
+                        if len(constr[1]) == 1:
+                            self.model.add_constraint(constr[0], upper=np.full(self.n_wt, constr[1]))
+                        else:
+                            self.model.add_constraint(constr[0], upper=constr[1])
+                    elif len(constr) == 3:  # four arguments are: key, lower, upper ,shape
+                        lower = None if constr[1] is None else constr[1]
+                        upper = None if constr[2] is None else constr[2]
+                        self.model.add_constraint(
+                            constr[0], lower=lower, upper=upper)
+                    elif len(constr) == 4:  # four arguments are: key, lower, upper ,shape
+                        lower = None if constr[1] is None else np.full(constr[3], constr[1])
+                        upper = None if constr[2] is None else np.full(constr[3], constr[2])
                         self.model.add_constraint(
                             constr[0], lower=lower, upper=upper)
                     # Use the assembled Jacobian.
@@ -271,6 +279,7 @@ class TopFarmProblem(Problem):
 
         aggr_comp = AggregatedCost(constraints_as_penalty, constraints, post_constraints)
         self.model.add_subsystem('aggr_comp', aggr_comp, promotes=['*'])
+        # print(expected_cost)
         self.model.add_objective('aggr_cost', scaler=1 / abs(expected_cost))
 
         if plot_comp and not isinstance(plot_comp, NoPlot):
