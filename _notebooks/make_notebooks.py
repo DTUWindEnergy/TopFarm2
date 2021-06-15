@@ -66,7 +66,7 @@ try:
     import topfarm
 except ModuleNotFoundError:
     !pip install topfarm"""
-        if not name == 'loads':
+        if not name in ['loads', 'wake_steering_and_loads', 'layout_and_loads']:
             nb.insert_code_cell(2, code)
         nb.save(dst_path + name + ".ipynb")
 
@@ -91,7 +91,8 @@ def check_notebooks(notebooks=None):
 
 if __name__ == '__main__':
 
-    notebooks = ['constraints', 'cost_models', 'drivers', 'loads', 'problems', 'roads_and_cables']
+    notebooks = ['constraints', 'cost_models', 'drivers', 'loads', 'problems',
+                 'roads_and_cables', 'wake_steering_and_loads', 'layout_and_loads']
     notebooks.remove('roads_and_cables')
     notebooks.remove('loads')
     check_notebooks(notebooks)

@@ -15,7 +15,8 @@ def get_notebooks():
 
 @pytest.mark.parametrize("notebook", get_notebooks())
 def test_notebooks(notebook):
-    if os.path.basename(notebook.filename) in ['loads.ipynb', 'roads_and_cables.ipynb']:
+    if os.path.basename(notebook.filename) in ['loads.ipynb', 'roads_and_cables.ipynb',
+                                               'wake_steering_and_loads.ipynb', 'layout_and_loads.ipynb']:
         pytest.xfail("Notebook, %s, has known issues" % notebook)
     import matplotlib.pyplot as plt
 

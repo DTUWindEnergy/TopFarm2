@@ -17,5 +17,7 @@ notebooks is `here on GitLab <https://gitlab.windenergy.dtu.dk/TOPFARM/TopFarm2/
     examples_nblinks/drivers_nb
     examples_nblinks/problems_nb
     examples_nblinks/cost_models_nb
-    examples_nblinks/loads_nb
     examples_nblinks/roads_and_cables_nb
+    examples_nblinks/wake_steering_and_loads_nb
+    examples_nblinks/layout_and_loads_nb
+

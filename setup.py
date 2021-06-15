@@ -37,5 +37,6 @@ setup(name='topfarm',
               'sphinx_rtd_theme',  # docs theme
               'scikit-learn',  # load surrogate
               'mock',  # replace variables during tests
+              'tensorflow',  # loads examples with surrogates
       ],
       zip_safe=True)

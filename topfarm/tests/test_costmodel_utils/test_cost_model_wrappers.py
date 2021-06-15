@@ -119,6 +119,7 @@ def test_AEPMaxLoadCostModelComponent_as_penalty_multi_wt():
         design_vars={'x': ([0, 1]), 'y': ([0, 0])},
         cost_comp=AEPMaxLoadCostModelComponent(
             input_keys='xy', n_wt=2,
+            output_keys=["AEP", ('loads', [3, 3])],
             aep_load_function=lambda x, y: (-np.sin(np.hypot(x, y)).sum(), np.hypot(x, y)),
             max_loads=[3, 3]),
         constraints=[],
