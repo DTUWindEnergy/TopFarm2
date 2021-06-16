@@ -117,4 +117,4 @@ def test_dtu_cm_npv():
         eco_eval.calculate_npv(rated_rpm_vector, rotor_diameter_vector, rated_power_vector,
                                hub_height_vector, water_depth_vector, aep_vector)
 
-        npt.assert_almost_equal(eco_eval.NPV, 0.0437686)  # [Euro]
+        npt.assert_almost_equal(eco_eval.NPV, 0.0724087)  # [Euro]

@@ -4,6 +4,7 @@ Implementation of Offshore Turbine Cost Model, ref. Soeren Oemann Lind, soli@dtu
 Structure based on 2017 turbine_cost.py by Arvydas Berzonskis, Goldwind
 """
 import numpy as np
+import numpy_financial as npf
 
 
 class economic_evaluation():
@@ -45,7 +46,7 @@ class economic_evaluation():
 
         self.calculate_cash_flow()
 
-        self.NPV = np.npv(self.discount_rate, self.CWF)
+        self.NPV = npf.npv(self.discount_rate, self.CWF)
 
         return self.NPV
 
@@ -74,7 +75,7 @@ class economic_evaluation():
 
         self.calculate_cash_flow()
 
-        self.IRR = 100 * np.irr(self.CWF)  # [%]
+        self.IRR = 100 * npf.irr(self.CWF)  # [%]
 
         return self.IRR
 
@@ -89,13 +90,10 @@ class economic_evaluation():
                 self.CWF.append(-self.project_costs_sums["DEVEX"] - self.project_costs_sums["CAPEX"])
 
             elif i == self.project_duration:
-                self.CWF.append(int(self.energy_price * sum(self.aep_vector) -
-                                    self.project_costs_sums["ABEX"] -
-                                    self.project_costs_sums["OPEX"]))
+                self.CWF.append(self.energy_price * sum(self.aep_vector) - self.project_costs_sums["ABEX"] - self.project_costs_sums["OPEX"])
 
             else:
-                self.CWF.append(int(self.energy_price * sum(self.aep_vector) -
-                                    self.project_costs_sums["OPEX"]))
+                self.CWF.append(self.energy_price * sum(self.aep_vector) - self.project_costs_sums["OPEX"])
 
     def calculate_expenditures(self, rated_rpm, rotor_diameter, rated_power,
                                hub_height, aep_array, water_depth, cabling_cost=None):

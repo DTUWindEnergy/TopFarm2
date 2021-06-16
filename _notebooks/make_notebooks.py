@@ -93,7 +93,7 @@ if __name__ == '__main__':
 
     notebooks = ['constraints', 'cost_models', 'drivers', 'loads', 'problems',
                  'roads_and_cables', 'wake_steering_and_loads', 'layout_and_loads']
-    notebooks.remove('roads_and_cables')
+    # notebooks.remove('roads_and_cables')
     notebooks.remove('loads')
     check_notebooks(notebooks)
     make_doc_notebooks(notebooks)

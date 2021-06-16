@@ -28,6 +28,7 @@ setup(name='topfarm',
       install_requires=[
               'matplotlib',  # for plotting
               'numpy',  # for numerical calculations
+              'numpy-financial',  # for irr calculations
               'openmdao==2.6',  # for optimization
               'pytest',  # for testing
               'pytest-cov',  # for calculating coverage
