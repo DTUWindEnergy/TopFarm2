@@ -61,11 +61,10 @@ def make_doc_notebooks(notebooks):
         t = '[Try this yourself](https://colab.research.google.com/github/DTUWindEnergy/TopFarm2/blob/master/docs/notebooks/%s.ipynb) (requires google account)'
         nb.insert_markdown_cell(1, t % name)
         code = """%%capture
-# Install Topfarm if needed
-try:
-    import topfarm
-except ModuleNotFoundError:
-    !pip install topfarm"""
+import importlib
+if not importlib.util.find_spec("topfarm"):
+    !pip install topfarm
+# Install Topfarm if needed"""
         if not name in ['loads', 'wake_steering_and_loads', 'layout_and_loads']:
             nb.insert_code_cell(2, code)
         nb.save(dst_path + name + ".ipynb")
@@ -92,8 +91,9 @@ def check_notebooks(notebooks=None):
 if __name__ == '__main__':
 
     notebooks = ['constraints', 'cost_models', 'drivers', 'loads', 'problems',
-                 'roads_and_cables', 'wake_steering_and_loads', 'layout_and_loads']
-    # notebooks.remove('roads_and_cables')
+                 'roads_and_cables', 'wake_steering_and_loads', 'layout_and_loads',
+                 'bathymetry',]
+    notebooks.remove('wake_steering_and_loads')
     notebooks.remove('loads')
     check_notebooks(notebooks)
     make_doc_notebooks(notebooks)

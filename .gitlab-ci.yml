@@ -8,6 +8,7 @@ test_topfarm:  # name the job what we like
   stage:  # build, test, deploy defined by default [2]
     test
   script:
+  - pip install --upgrade git+https://gitlab.windenergy.dtu.dk/TOPFARM/PyWake.git
   - pip install -e .
   - py.test
   tags:  # only runners with this tag can do the job [3]
@@ -31,9 +32,11 @@ test_topfarm_windows:  # name the job what we like
   stage:  # build, test, deploy defined by default [2]
     test
   script:  # runs on windows machine due to tag below
-  - source activate py36_openmdao26
+  - conda init powershell
+  - "if (test-path $PROFILE.CurrentUserAllHosts) { & $PROFILE.CurrentUserAllHosts}"
+  - conda activate py36_openmdao26
+  - pip install --upgrade git+https://gitlab.windenergy.dtu.dk/TOPFARM/PyWake.git
   - pip install -e .
-  - pip install --upgrade py_wake
   - python -m pytest --cov-report term-missing:skip-covered --cov=topfarm --cov-config .coveragerc --ignore=topfarm/cost_models/fuga/Colonel
   tags:  # tag for shared runner on windows machine
   - ANMH_old

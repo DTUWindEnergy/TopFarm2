@@ -8,6 +8,9 @@ of code. You can look at them in your web browser, or if you click on the
 "Try this yourself" link at the top of the page, you can run the notebook
 off of your personal Google account. Alternatively, the source code for the
 notebooks is `here on GitLab <https://gitlab.windenergy.dtu.dk/TOPFARM/TopFarm2/tree/master/docs/notebooks>`_.
+You can also launch them via Bider where no user account is required: 
+.. image:: https://mybinder.org/badge_logo.svg
+ :target: https://mybinder.org/v2/git/https%3A%2F%2Fgitlab.windenergy.dtu.dk%2FTOPFARM%2FTopFarm2.git/HEAD
 
 .. toctree::
     :caption: Examples
@@ -20,4 +23,5 @@ notebooks is `here on GitLab <https://gitlab.windenergy.dtu.dk/TOPFARM/TopFarm2/
     examples_nblinks/roads_and_cables_nb
     examples_nblinks/wake_steering_and_loads_nb
     examples_nblinks/layout_and_loads_nb
+    examples_nblinks/bathymetry_nb
 
