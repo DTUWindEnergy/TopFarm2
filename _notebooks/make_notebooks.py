@@ -61,10 +61,11 @@ def make_doc_notebooks(notebooks):
         t = '[Try this yourself](https://colab.research.google.com/github/DTUWindEnergy/TopFarm2/blob/master/docs/notebooks/%s.ipynb) (requires google account)'
         nb.insert_markdown_cell(1, t % name)
         code = """%%capture
+# Install Topfarm if needed
 import importlib
 if not importlib.util.find_spec("topfarm"):
     !pip install topfarm
-# Install Topfarm if needed"""
+"""
         if not name in ['loads', 'wake_steering_and_loads', 'layout_and_loads']:
             nb.insert_code_cell(2, code)
         nb.save(dst_path + name + ".ipynb")

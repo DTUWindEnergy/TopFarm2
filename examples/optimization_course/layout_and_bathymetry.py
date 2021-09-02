@@ -3,7 +3,8 @@ import matplotlib.pyplot as plt
 import time
 
 from topfarm.cost_models.cost_model_wrappers import CostModelComponent
-from topfarm.easy_drivers import EasyScipyOptimizeDriver
+from topfarm.easy_drivers import EasyScipyOptimizeDriver, EasyRandomSearchDriver
+from topfarm.drivers.random_search_driver import RandomizeTurbinePosition
 from topfarm import TopFarmProblem
 from topfarm.plotting import NoPlot, XYPlotComp
 from topfarm.constraint_components.boundary import XYBoundaryConstraint
@@ -46,9 +47,10 @@ cost_comp = CostModelComponent(input_keys=[('x', x_init),('y', y_init)],
 problem = TopFarmProblem(design_vars={'x': x_init, 'y': y_init},
                         constraints=[XYBoundaryConstraint(boundary),
                                       SpacingConstraint(min_spacing)],
-                           post_constraints=[('water_depth', {'lower': maximum_water_depth})],
+                           post_constraints=[('water_depth', {'lower': np.ones(n_wt) * maximum_water_depth})],
                           cost_comp=cost_comp,
-                          driver=EasyScipyOptimizeDriver(optimizer='SLSQP', maxiter=maxiter, tol=tol),
+                            driver=EasyScipyOptimizeDriver(optimizer='SLSQP', maxiter=maxiter, tol=tol),
+                           # driver=EasyRandomSearchDriver(RandomizeTurbinePosition()),
                           plot_comp=XYPlotComp(),
                           expected_cost=ec)
 
