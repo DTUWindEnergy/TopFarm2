@@ -1,5 +1,6 @@
 from openmdao.core.explicitcomponent import ExplicitComponent
 from openmdao.drivers.genetic_algorithm_driver import SimpleGADriver
+from topfarm.constraint_components.post_constraint import PostConstraint
 import numpy as np
 
 
@@ -34,6 +35,8 @@ class PostPenaltyComponent(ExplicitComponent):
             if isinstance(comp[1], dict):
                 # for key in comp[1]:
                 self.add_input(comp[0], val=comp[1][next(iter(comp[1]))])
+            elif isinstance(comp, PostConstraint):
+                self.add_input(comp.key, val=comp.upper)
             else:
                 self.add_input(comp[0], val=np.zeros(max([len(np.atleast_1d(c)) for c in comp[1:]])))
         self.add_output('post_penalty', val=0.0)
