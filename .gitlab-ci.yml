@@ -41,6 +41,17 @@ test_topfarm_windows:  # name the job what we like
   tags:  # tag for shared runner on windows machine
   - ANMH_old
 
+
+# ===== Trigger TriggerHub pipeline =====
+trigger_hub_test:
+  stage: test
+  variables:
+    TRIGGER_BRANCH: $CI_COMMIT_REF_NAME
+  trigger:
+    project: TOPFARMPrivate/triggerhub/topfarmtriggers
+    strategy: depend
+
+
 # ===== BUILD DOCS AND PUSH TO PUBLIC WEBSITE =====
 pages:  # "pages" is a job specifically for GitLab pages [1]
   stage:  # build, test, deploy defined by default [2]
