@@ -5,6 +5,7 @@ Created by Arvydas Berzonskis  Goldwind 2017 based on turbine_costsse_2015.py 20
 Copyright (c) NREL. All rights reserved.
 """
 import numpy as np
+import numpy_financial as npf
 import math
 import matplotlib.pyplot as plt
 from openmdao.core.explicitcomponent import ExplicitComponent
@@ -170,7 +171,7 @@ class economic_evaluation():
                 else:
                     self.CWF.append(int(0.1 * sum(aep_vector) - self.AOE))
 
-            self.IRR = 100 * np.irr(self.CWF)
+            self.IRR = 100 * npf.irr(self.CWF)
         return self.IRR
 
 
