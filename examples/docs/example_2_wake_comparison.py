@@ -58,7 +58,8 @@ def main():
         def get_tf(windFarmModel):
             return TopFarmProblem(
                 design_vars=dict(zip('xy', init_pos.T)),
-                cost_comp=PyWakeAEPCostModelComponent(windFarmModel, n_wt=3, ws=10, wd=np.arange(0, 360, 12)),
+                cost_comp=PyWakeAEPCostModelComponent(windFarmModel, n_wt=3, ws=10, wd=np.arange(0, 360, 12),
+                                                      grad_method=None),
                 constraints=[SpacingConstraint(min_spacing),
                              XYBoundaryConstraint(boundary)],
                 driver=EasyScipyOptimizeDriver(),

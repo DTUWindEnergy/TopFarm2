@@ -13,6 +13,7 @@ from scipy.interpolate.interpolate import RegularGridInterpolator
 import warnings
 from py_wake.flow_map import HorizontalGrid
 import xarray as xr
+from py_wake.utils.gradients import autograd
 
 
 class PyWakeAEP(AEPCalculator):
@@ -55,17 +56,32 @@ class PyWakeAEP(AEPCalculator):
 
 
 class PyWakeAEPCostModelComponent(AEPCostModelComponent):
-    def __init__(self, windFarmModel, n_wt, wd=None, ws=None, max_eval=None, **kwargs):
+    def __init__(self, windFarmModel, n_wt, wd=None, ws=None, max_eval=None, grad_method=autograd, **kwargs):
         self.windFarmModel = windFarmModel
+
+        def aep(**kwargs):
+            return self.windFarmModel.aep(x=kwargs[topfarm.x_key],
+                                          y=kwargs[topfarm.y_key],
+                                          h=kwargs.get(topfarm.z_key, None),
+                                          type=kwargs.get(topfarm.type_key, 0),
+                                          wd=wd, ws=ws)
+
+        if grad_method:
+            dAEPdxy = self.windFarmModel.dAEPdxy(grad_method)
+
+            def daep(**kwargs):
+                return dAEPdxy(x=kwargs[topfarm.x_key],
+                               y=kwargs[topfarm.y_key],
+                               h=kwargs.get(topfarm.z_key, None),
+                               type=kwargs.get(topfarm.type_key, 0),
+                               wd=wd, ws=ws)
+        else:
+            daep = None
         AEPCostModelComponent.__init__(self,
                                        input_keys=[topfarm.x_key, topfarm.y_key],
                                        n_wt=n_wt,
-                                       cost_function=lambda **kwargs: self.windFarmModel.aep(
-                                           x=kwargs[topfarm.x_key],
-                                           y=kwargs[topfarm.y_key],
-                                           h=kwargs.get(topfarm.z_key, None),
-                                           type=kwargs.get(topfarm.type_key, 0),
-                                           wd=wd, ws=ws),
+                                       cost_function=aep,
+                                       cost_gradient_function=daep,
                                        output_unit='GWh',
                                        max_eval=max_eval, **kwargs)
 
