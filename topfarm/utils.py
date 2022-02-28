@@ -99,6 +99,47 @@ def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, random_pct=0, plot=Fal
     return xs, ys
 
 
+def smooth_max(X, alpha, axis=0):
+    '''
+    Returns the smooth maximum of a matrix for positive values of alpha and smoth minimum for negative values of alpha
+    Parameters
+    ----------
+    X : ndarray
+        Matrix of which the smooth maximum is calculated.
+    alpha : float
+        smoothness parameter.
+    axis : int, optional
+        Axis along which the smooth maximum is calculated. The default is 0.
+
+    Returns
+    -------
+    ndarray
+        Matrix of smooth maximum values.
+
+    '''
+    return (X * np.exp(alpha * X)).sum(axis=axis) / np.exp(alpha * X).sum(axis=axis)
+
+
+def smooth_max_gradient(X, alpha, axis=0):
+    '''
+    Parameters
+    ----------
+    X : ndarray
+        Matrix of which the smooth maximum derivative is calculated.
+    alpha : float
+        smoothness parameter.
+    axis : int, optional
+        Axis along which the smooth maximum is calculated. The default is 0. The default is 0.
+
+    Returns
+    -------
+    ndarray
+        Matrix of smooth maximum derivatives.
+
+    '''
+    return np.exp(alpha * X) / np.expand_dims(np.exp(alpha * X).sum(axis=axis), axis) * (1 + alpha * (X - np.expand_dims(smooth_max(X, alpha, axis=axis), axis)))
+
+
 def main():
     if __name__ == '__main__':
         N_WT = 30

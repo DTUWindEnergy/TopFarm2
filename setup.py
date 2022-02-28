@@ -31,6 +31,7 @@ setup(name='topfarm',
               'numpy-financial',  # for irr calculations
               'openmdao==2.6',  # for optimization
               'pytest',  # for testing
+              'pycodestyle',  # for testing
               'pytest-cov',  # for calculating coverage
               'py_wake>=2',  # for calculating AEP
               'scipy',  # constraints
@@ -39,5 +40,6 @@ setup(name='topfarm',
               'scikit-learn',  # load surrogate
               'mock',  # replace variables during tests
               'tensorflow',  # loads examples with surrogates
+              'shapely', # for multiple polygon boundaries and exclusion zones
       ],
       zip_safe=True)

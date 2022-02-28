@@ -29,7 +29,9 @@ http://127.0.0.1:8888/?token=[token]
 Push image
 ----------
 docker login
-docker push dtuwindenergy/topfarm2
+docker tag dtuwindenergy/topfarm2:<version number>
+docker tag dtuwindenergy/topfarm2:latest
+docker push --all-tags dtuwindenergy/topfarm2
 
 
 Docker image with Fuga

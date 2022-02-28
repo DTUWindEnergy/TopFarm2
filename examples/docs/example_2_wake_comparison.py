@@ -18,8 +18,6 @@ from topfarm.constraint_components.spacing import SpacingConstraint
 from topfarm.cost_models.py_wake_wrapper import PyWakeAEPCostModelComponent
 from topfarm.easy_drivers import EasyScipyOptimizeDriver
 from topfarm.plotting import XYPlotComp, NoPlot
-from topfarm.cost_models.dummy import DummyCost
-from py_wake.wind_farm_models.wind_farm_model import WindFarmModel
 
 
 def main():
@@ -63,7 +61,9 @@ def main():
                 constraints=[SpacingConstraint(min_spacing),
                              XYBoundaryConstraint(boundary)],
                 driver=EasyScipyOptimizeDriver(),
-                plot_comp=plot_comp())
+                plot_comp=plot_comp(),
+                expected_cost = 1e-4,
+                )
 
         # GCL: define the wake model and optimization problem
         tf_gcl = get_tf(GCL(site, wt))
@@ -128,6 +128,5 @@ def main():
             # save the png
             folder, file = os.path.split(__file__)
             fig.savefig(folder + "/figures/" + file.replace('.py', '.png'))
-
 
 main()

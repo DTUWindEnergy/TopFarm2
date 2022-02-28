@@ -1,7 +1,7 @@
 # ==================================================================
 # Creating a simple docker image for TOPFARM testing and docs
 # ==================================================================
-FROM continuumio/anaconda3:latest
+FROM conda/miniconda3:latest
 MAINTAINER Jenni Rinker <rink@dtu.dk>
 ENV PATH="/opt/conda/bin:${PATH}"
 
@@ -14,7 +14,8 @@ RUN apt-get update && \
     apt-get install make && \
     apt-get install libgl1-mesa-glx -y && \
     apt-get install gcc gfortran -y && \
-	apt-get install -y texlive-latex-extra
+	apt-get install -y texlive-latex-extra && \
+	apt-get install -y git-all
 
 
 # use conda to update itself and install packages not in the
@@ -23,16 +24,16 @@ RUN conda update -y conda && \
     conda install -y sphinx_rtd_theme && \
     conda install -y pytest-cov && \
 	conda install -y mock && \
+	conda install -y shapely && \
     conda clean -y --all
 	
 # install mpi functionality. Note that you might need to increase the memory limit (from the factory default setting) for the docker engine to be able to install these packages.
-RUN conda install -c conda-forge openmpi
-RUN conda install -c conda-forge petsc4py 
-RUN conda install -c conda-forge mpi4py
+RUN conda install -c conda-forge openmpi && \
+	conda install -c conda-forge petsc4py && \
+	conda install -c conda-forge mpi4py
 
-# update pip then install openmdao, windio and fused-wake (nocache to save space)
+# update pip then install windio and fused-wake (nocache to save space)
 RUN pip install --upgrade pip && \
-    pip install --no-cache-dir openmdao==2.6 && \
     pip install --no-cache-dir git+https://github.com/FUSED-Wind/windIO.git && \
     pip install --no-cache-dir git+https://gitlab.windenergy.dtu.dk/TOPFARM/FUSED-Wake.git
 
@@ -57,4 +58,7 @@ RUN pip install --upgrade git+https://gitlab.windenergy.dtu.dk/TOPFARM/PlantEner
 	pip install git+https://github.com/vidartf/nbsphinx-link.git && \
 	pip install openturns && \
 	pip install tensorflow
+
+RUN	pip install --no-cache-dir openmdao==2.6 && \
+	pip install --no-cache-dir scikit-learn
 

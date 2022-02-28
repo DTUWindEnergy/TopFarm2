@@ -19,7 +19,7 @@ import time
 def cube_power(ws_cut_in=3, ws_cut_out=25, ws_rated=12, power_rated=5000):
     def power_func(ws):
         ws = np.asarray(ws)
-        power = np.zeros_like(ws, dtype=np.float)
+        power = np.zeros_like(ws, dtype=float)
         m = (ws >= ws_cut_in) & (ws < ws_rated)
         power[m] = power_rated * ((ws[m] - ws_cut_in) / (ws_rated - ws_cut_in))**3
         power[(ws >= ws_rated) & (ws <= ws_cut_out)] = power_rated
@@ -31,7 +31,7 @@ def dummy_thrust(ws_cut_in=3, ws_cut_out=25, ws_rated=12, ct_rated=8 / 9):
     # temporary thrust curve fix
     def ct_func(ws):
         ws = np.asarray(ws)
-        ct = np.zeros_like(ws, dtype=np.float)
+        ct = np.zeros_like(ws, dtype=float)
         if ct_rated > 0:
             # ct = np.ones_like(ct)*ct_rated
             m = (ws >= ws_cut_in) & (ws < ws_rated)
@@ -46,7 +46,7 @@ def dummy_thrust(ws_cut_in=3, ws_cut_out=25, ws_rated=12, ct_rated=8 / 9):
 # ----------- SELECT OBJECTIVE & TURN ON/OFF CONSTRAINT --------------
 #        obj = False  # objective AEP (True), IRR (False)
 #        max_con_on = False  # max installed capacity constraint ON (True), OFF (False)
-def main(obj=False, max_con_on=True):
+def main(obj=True, max_con_on=True):
     if __name__ == '__main__':
         start = time.time()
         try:
@@ -160,6 +160,6 @@ def main(obj=False, max_con_on=True):
                 plt.show()
 
 
-for ii in [True, False]:
+for ii in [True]:
     for jj in [True, False]:
         main(obj=ii, max_con_on=jj)

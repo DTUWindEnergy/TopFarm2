@@ -74,6 +74,9 @@ class CostModelComponent(ExplicitComponent):
         super().__init__(**kwargs)
         assert isinstance(n_wt, int), n_wt
         self.input_keys = list(input_keys)
+        self.input_keys_only = list([(i, i[0])[isinstance(i, tuple)] for i in self.input_keys])
+        self.additional_input = additional_input
+        self.all_input_keys = self.input_keys_only + list([(i, i[0])[isinstance(i, tuple)] for i in self.additional_input])
         self.cost_function = cost_function
         self.cost_gradient_function = cost_gradient_function
         self.n_wt = n_wt
@@ -82,7 +85,6 @@ class CostModelComponent(ExplicitComponent):
         self.output_keys = output_keys
         self.out_keys_only = list([(o, o[0])[isinstance(o, tuple)] for o in self.output_keys])
         self.output_unit = output_unit
-        self.additional_input = additional_input
         self.additional_output = [((x, np.zeros(self.n_wt)), x)[isinstance(x, tuple)] for x in additional_output]
         self.max_eval = max_eval or 1e100
         self.objective = objective
@@ -120,30 +122,22 @@ class CostModelComponent(ExplicitComponent):
         for key, val in self.additional_output:
             self.add_output(key, val=val)
 
-        input_keys = list([(i, i[0])[isinstance(i, tuple)] for i in self.input_keys])
-        self.inp_keys = input_keys + list([(i, i[0])[isinstance(i, tuple)] for i in self.additional_input])
-        self.input_keys = input_keys
-
         if self.cost_gradient_function:
             if self.objective:
-                self.declare_partials('cost', input_keys, method='exact')
-            # else:
+                self.declare_partials('cost', self.input_keys_only, method='exact')
             for o in self.out_keys_only:
-                self.declare_partials(o, input_keys, method='exact')
+                self.declare_partials(o, self.input_keys_only, method='exact')
         else:
             if self.step == {}:
                 if self.objective:
-                    self.declare_partials('cost', input_keys, method='fd')
-                # else:
+                    self.declare_partials('cost', self.input_keys_only, method='fd')
                 for o in self.out_keys_only:
-                    self.declare_partials(o, input_keys, method='fd')
+                    self.declare_partials(o, self.input_keys_only, method='fd')
             else:
-                for i in input_keys:
+                for i in self.input_keys_only:
                     if self.objective:
                         self.declare_partials('cost', i, step=self.step[i], method='fd')
-                    # else:
                     for o in self.out_keys_only:
-                        # self.declare_partials(o, input_keys, method='fd')
                         self.declare_partials(o, i, step=self.step[i], method='fd')
 
     @property
@@ -165,11 +159,11 @@ class CostModelComponent(ExplicitComponent):
             return
         t = time.time()
         if self.additional_output:
-            c, additional_output = self.cost_function(**{x: inputs[x] for x in self.inp_keys})
+            c, additional_output = self.cost_function(**{x: inputs[x] for x in self.all_input_keys})
             for k, v in additional_output.items():
                 outputs[k] = v
         else:
-            c = self.cost_function(**{x: inputs[x] for x in self.inp_keys})
+            c = self.cost_function(**{x: inputs[x] for x in self.all_input_keys})
         if not isinstance(c, list):
             c = [c]
         if self.objective:
@@ -187,7 +181,7 @@ class CostModelComponent(ExplicitComponent):
         t = time.time()
         if self.cost_gradient_function:
             for k, dCostdk in zip(self.input_keys,
-                                  self.cost_gradient_function(**{x: inputs[x] for x in self.inp_keys})):
+                                  self.cost_gradient_function(**{x: inputs[x] for x in self.all_input_keys})):
                 if dCostdk is not None:
                     if not isinstance(dCostdk, list):
                         dCostdk = [dCostdk]
