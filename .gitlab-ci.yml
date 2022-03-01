@@ -1,6 +1,5 @@
 # ===== DEFINE DEFAULT DOCKER IMAGE =====
-# dockerhub image generated using docker/Dockerfile_simple
-image: dtuwindenergy/topfarm2:latest
+image: continuumio/anaconda3:latest
 
 
 # ===== TEST TOPFARM =====
@@ -57,6 +56,14 @@ pages:  # "pages" is a job specifically for GitLab pages [1]
   stage:  # build, test, deploy defined by default [2]
     deploy
   script:  # use sphinx to build docs, move to public page
+  - apt-get update
+  - apt-get -y install make pandoc
+  - pip install --upgrade pip
+  - pip install pypandoc
+  - pip install sphinx --upgrade
+  - pip install nbsphinx --upgrade
+  - pip install sphinx_rtd_theme
+  - pip install git+https://github.com/vidartf/nbsphinx-link.git
   - pip install -e .
   - cd docs; make html
   - cd ../; mv docs/build/html public/
