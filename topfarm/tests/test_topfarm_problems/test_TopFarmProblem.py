@@ -162,12 +162,12 @@ def testTopFarmProblem_check_gradients(turbineXYZOptimizationProblem_generator):
 
 def testTopFarmProblem_check_gradients_Income(turbineXYZOptimizationProblem_generator):
     # Check that gradients check does not raise exception for correct gradients
-    cost_comp = CostModelComponent('xy', 4, income, income_gradients, income_model=True)
+    cost_comp = CostModelComponent('xy', 4, income, income_gradients, maximize=True)
     tf = turbineXYZOptimizationProblem_generator(None, cost_comp)
     tf.check_gradients(True)
 
     # Check that gradients check raises an exception for incorrect gradients
-    cost_comp = CostModelComponent('xy', 4, income, wrong_gradients, income_model=True)
+    cost_comp = CostModelComponent('xy', 4, income, wrong_gradients, maximize=True)
     tf = turbineXYZOptimizationProblem_generator(None, cost_comp)
     with pytest.raises(Warning, match="Mismatch between finite difference derivative of 'cost' wrt. 'y' and derivative computed in 'cost_comp' is"):
         tf.check_gradients()
@@ -175,7 +175,7 @@ def testTopFarmProblem_check_gradients_Income(turbineXYZOptimizationProblem_gene
 
 def testTopFarmProblem_evaluate_gradients(turbineXYZOptimizationProblem_generator):
     tf = turbineXYZOptimizationProblem_generator(gradients)
-    np.testing.assert_array_equal(tf.evaluate_gradients()['aggr_cost']['x'], [[-6., -14., -8., -6.]])
+    np.testing.assert_array_equal(tf.evaluate_gradients(disp=True)['aggr_cost']['x'], [[-6., -14., -8., -6.]])
 
 
 def testTopFarmProblem_as_component(turbineTypeOptimizationProblem):
@@ -221,7 +221,7 @@ def test_smart_start():
     min_spacing = 2.1
     tf = xy3tb.get_tf(constraints=[SpacingConstraint(min_spacing)])
 
-    tf.smart_start(XX, YY, ZZ, seed=0)
+    tf.smart_start(XX, YY, ZZ, seed=0, plot=True)
     try:
         npt.assert_array_almost_equal(tf.turbine_positions, np.array([xs_ref, ys_ref]).T)
     except AssertionError:
@@ -288,3 +288,13 @@ def test_smart_start_polygon_boundary():
         plt.axis('equal')
         plt.show()
     npt.assert_array_almost_equal(tf.turbine_positions, np.array([xs_ref, ys_ref]).T)
+
+
+def testTopFarmProblem_approx_totols():
+    tf = xy3tb.get_tf(approx_totals=True)
+    np.testing.assert_array_equal(tf.turbine_positions, xy3tb.initial)
+
+
+def testTopFarmProblem_expected_cost():
+    tf = xy3tb.get_tf(expected_cost=None)
+    np.testing.assert_array_equal(tf.turbine_positions, xy3tb.initial)

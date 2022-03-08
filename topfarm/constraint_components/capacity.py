@@ -49,7 +49,7 @@ class CapacityComp(ConstraintComponent):
         self.const_id = const_id
 
     def setup(self):
-        self.add_input(topfarm.type_key, np.zeros(self.n_wt, dtype=np.int))
+        self.add_input(topfarm.type_key, np.zeros(self.n_wt, dtype=int))
         self.add_output('penalty_' + self.const_id, val=0.0)
         self.add_output('totalcapacity', val=0.0,
                         desc='wind farm installed capacity')

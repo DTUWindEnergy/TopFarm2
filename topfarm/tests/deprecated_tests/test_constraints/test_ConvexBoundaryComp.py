@@ -9,7 +9,7 @@ import pytest
 
 
 def test_z_boundary():
-    optimal = [(0, 0, 0)]
+    optimal = [(0, 0, 0), (0, 0, 0)]
     tf = TurbineXYZOptimizationProblem(
         DummyCost(optimal, ['z']),
         optimal,

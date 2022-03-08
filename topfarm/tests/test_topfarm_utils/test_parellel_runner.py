@@ -27,7 +27,7 @@ def lst():
 
 
 def seq_runner_example(lst):
-    return [get_InitialXYZOptimizationProblem(lst).optimize()]
+    return [get_InitialXYZOptimizationProblem(lst).optimize(recorder_as_list=True)]
 
 
 def test_parallel_run(lst, parallelRunner):

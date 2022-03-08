@@ -173,8 +173,14 @@ class BoundaryBaseComp(ConstraintComponent):
 
     def plot(self, ax):
         """Plot boundary"""
-        ax.plot(self.xy_boundary[:, 0].tolist() + [self.xy_boundary[0, 0]],
-                self.xy_boundary[:, 1].tolist() + [self.xy_boundary[0, 1]], 'k')
+        if isinstance(self, MultiPolygonBoundaryComp):
+            colors = ['--k', 'k']
+            for bound, io in self.xy_multi_boundary:
+                ax.plot(np.asarray(bound)[:, 0].tolist() + [np.asarray(bound)[0, 0]],
+                        np.asarray(bound)[:, 1].tolist() + [np.asarray(bound)[0, 1]], colors[io])
+        else:
+            ax.plot(self.xy_boundary[:, 0].tolist() + [self.xy_boundary[0, 0]],
+                    self.xy_boundary[:, 1].tolist() + [self.xy_boundary[0, 1]], 'k')
 
 
 class ConvexBoundaryComp(BoundaryBaseComp):
@@ -300,7 +306,7 @@ class ConvexBoundaryComp(BoundaryBaseComp):
         return self.dfaceDistance_dx, self.dfaceDistance_dy
 
     def satisfy(self, state, pad=1.1):
-        x, y = [np.asarray(state[xyz], dtype=np.float) for xyz in [topfarm.x_key, topfarm.y_key]]
+        x, y = [np.asarray(state[xyz], dtype=float) for xyz in [topfarm.x_key, topfarm.y_key]]
         dist = self.distances(x, y)
         dist = np.where(dist < 0, np.minimum(dist, -.01), dist)
         dx, dy = self.gradients(x, y)  # independent of position
@@ -450,7 +456,7 @@ class PolygonBoundaryComp(BoundaryBaseComp):
         return np.diagflat(dx), np.diagflat(dy)
 
     def satisfy(self, state, pad=1.1):
-        x, y = [np.asarray(state[xy], dtype=np.float) for xy in [topfarm.x_key, topfarm.y_key]]
+        x, y = [np.asarray(state[xy], dtype=float) for xy in [topfarm.x_key, topfarm.y_key]]
         dist = self.distances(x, y)
         dx, dy = map(np.diag, self.gradients(x, y))
         m = dist < 0
@@ -714,54 +720,54 @@ class MultiPolygonBoundaryComp(PolygonBoundaryComp):
 
 
 def main():
-    import matplotlib.pyplot as plt
-    plt.close('all')
-    i1 = np.array([[2, 17], [6, 23], [16, 23], [26, 15], [19, 0], [14, 4], [4, 4]])
-    e1 = np.array([[0, 10], [20, 21], [22, 12], [10, 12], [9, 6], [2, 7]])
-    i2 = np.array([[12, 13], [14, 17], [18, 15], [17, 10], [15, 11]])
-    e2 = np.array([[5, 17], [5, 18], [8, 19], [8, 18]])
-    i3 = np.array([[5, 0], [5, 1], [10, 3], [10, 0]])
-    e3 = np.array([[6, -1], [6, 18], [7, 18], [7, -1]])
-    e4 = np.array([[15, 9], [15, 11], [20, 11], [20, 9]])
-    multi_boundary = [(i1, 'i'), (e1, 'e'), (i2, 'i'), (e2, 'e'), (i3, 'i'), (e3, 'e'), (e4, 'e')]
-    N_points = 50
-    xs = np.linspace(-1, 30, N_points)
-    ys = np.linspace(-1, 30, N_points)
-    y_grid, x_grid = np.meshgrid(xs, ys)
-    x = x_grid.ravel()
-    y = y_grid.ravel()
-    n_wt = len(x)
-    MPBC = MultiPolygonBoundaryComp(n_wt, multi_boundary)
-    distances = MPBC.distances(x, y)
-    delta = 1e-9
-    distances2 = MPBC.distances(x + delta, y)
-    dx_fd = (distances2 - distances) / delta
-    dx = np.diag(MPBC.gradients(x + delta / 2, y)[0])
+    if __name__ == '__main__':
+        import matplotlib.pyplot as plt
+        plt.close('all')
+        i1 = np.array([[2, 17], [6, 23], [16, 23], [26, 15], [19, 0], [14, 4], [4, 4]])
+        e1 = np.array([[0, 10], [20, 21], [22, 12], [10, 12], [9, 6], [2, 7]])
+        i2 = np.array([[12, 13], [14, 17], [18, 15], [17, 10], [15, 11]])
+        e2 = np.array([[5, 17], [5, 18], [8, 19], [8, 18]])
+        i3 = np.array([[5, 0], [5, 1], [10, 3], [10, 0]])
+        e3 = np.array([[6, -1], [6, 18], [7, 18], [7, -1]])
+        e4 = np.array([[15, 9], [15, 11], [20, 11], [20, 9]])
+        multi_boundary = [(i1, 'i'), (e1, 'e'), (i2, 'i'), (e2, 'e'), (i3, 'i'), (e3, 'e'), (e4, 'e')]
+        N_points = 50
+        xs = np.linspace(-1, 30, N_points)
+        ys = np.linspace(-1, 30, N_points)
+        y_grid, x_grid = np.meshgrid(xs, ys)
+        x = x_grid.ravel()
+        y = y_grid.ravel()
+        n_wt = len(x)
+        MPBC = MultiPolygonBoundaryComp(n_wt, multi_boundary)
+        distances = MPBC.distances(x, y)
+        delta = 1e-9
+        distances2 = MPBC.distances(x + delta, y)
+        dx_fd = (distances2 - distances) / delta
+        dx = np.diag(MPBC.gradients(x + delta / 2, y)[0])
 
-    plt.figure()
-    plt.plot(dx_fd, dx, '.')
+        plt.figure()
+        plt.plot(dx_fd, dx, '.')
 
-    plt.figure()
-    for n, bound in enumerate(MPBC.boundaries):
-        x_bound, y_bound = bound[0].T
-        x_bound = np.append(x_bound, x_bound[0])
-        y_bound = np.append(y_bound, y_bound[0])
-        line, = plt.plot(x_bound, y_bound, label=f'{n}')
-        plt.plot(x_bound[0], y_bound[0], color=line.get_color(), marker='o')
+        plt.figure()
+        for n, bound in enumerate(MPBC.boundaries):
+            x_bound, y_bound = bound[0].T
+            x_bound = np.append(x_bound, x_bound[0])
+            y_bound = np.append(y_bound, y_bound[0])
+            line, = plt.plot(x_bound, y_bound, label=f'{n}')
+            plt.plot(x_bound[0], y_bound[0], color=line.get_color(), marker='o')
 
-    plt.legend()
-    plt.grid()
-    plt.axis('square')
-    plt.contourf(x_grid, y_grid, distances.reshape(N_points, N_points), 50)
-    plt.colorbar()
+        plt.legend()
+        plt.grid()
+        plt.axis('square')
+        plt.contourf(x_grid, y_grid, distances.reshape(N_points, N_points), 50)
+        plt.colorbar()
 
-    plt.figure()
-    ax = plt.axes(projection='3d')
-    ax.contour3D(x.reshape(N_points, N_points), y.reshape(N_points, N_points), distances.reshape(N_points, N_points), 50)
-    ax.set_xlabel('x')
-    ax.set_ylabel('y')
-    ax.set_zlabel('z')
+        plt.figure()
+        ax = plt.axes(projection='3d')
+        ax.contour3D(x.reshape(N_points, N_points), y.reshape(N_points, N_points), distances.reshape(N_points, N_points), 50)
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
+        ax.set_zlabel('z')
 
 
-if __name__ == '__main__':
-    main()
+main()

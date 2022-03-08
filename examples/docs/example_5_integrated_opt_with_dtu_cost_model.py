@@ -1,5 +1,5 @@
 import numpy as np
-from openmdao.api import view_model
+from openmdao.api import n2
 from py_wake.examples.data.iea37._iea37 import IEA37_WindTurbines, IEA37Site
 from py_wake.aep_calculator import AEPCalculator
 from topfarm.cost_models.economic_models.dtu_wind_cm_main import economic_evaluation
@@ -54,18 +54,18 @@ def main():
             input_keys=['x', 'y'],
             n_wt=n_wt,
             cost_function=lambda x, y, **_: windFarmModel(x=x, y=y).aep().sum(['wd', 'ws']) * 10**6,
-            output_key="aep",
+            output_keys="aep",
             output_unit="kWh",
             objective=False,
-            output_val=np.zeros(n_wt))
+            output_vals=np.zeros(n_wt))
         irr_comp = CostModelComponent(
             input_keys=['aep'],
             n_wt=n_wt,
             cost_function=irr_func,
-            output_key="irr",
+            output_keys="irr",
             output_unit="%",
             objective=True,
-            income_model=True)
+            maximize=True)
         group = TopFarmGroup([aep_comp, irr_comp])
         problem = TopFarmProblem(
             design_vars=dict(zip('xy', site.initial_position.T)),
@@ -76,7 +76,7 @@ def main():
             plot_comp=plot_comp)
         cost, state, recorder = problem.optimize()
         #        problem.evaluate()
-#        view_model(problem, outfile='example_4_integrated_optimization_aep_and_irr_n2.html', show_browser=False)
+#        n2(problem, outfile='example_4_integrated_optimization_aep_and_irr_n2.html', show_browser=False)
 
 
 main()

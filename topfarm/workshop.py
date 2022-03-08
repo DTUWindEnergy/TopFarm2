@@ -41,9 +41,9 @@ def plot_result():
     ref_aep = 365.8015799324624
     duration_lst = []
     for i, name in enumerate(sorted(res_dict.keys())):
-        duration = np.array([res[0] for res in res_dict[name]], dtype=np.float)
+        duration = np.array([res[0] for res in res_dict[name]], dtype=float)
         duration_lst.extend(duration)
-        aep = np.array([res[1] for res in res_dict[name]], dtype=np.float)
+        aep = np.array([res[1] for res in res_dict[name]], dtype=float)
         marker = "v^<>.ospP*X"[i // 10]
         plt.plot(duration, (aep - ref_aep) / ref_aep * 100, '^', label=name, marker=marker)
     plt.plot([min(duration_lst), max(duration_lst)], [0, 0], 'gray')

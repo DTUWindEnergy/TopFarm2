@@ -3,7 +3,7 @@ from py_wake.deficit_models.noj import NOJ
 from py_wake.aep_calculator import AEPCalculator
 import matplotlib.pyplot as plt
 import numpy as np
-from openmdao.api import view_model, IndepVarComp
+from openmdao.api import n2, IndepVarComp
 from topfarm import TopFarmGroup, TopFarmProblem
 from topfarm.constraint_components.boundary import XYBoundaryConstraint
 from topfarm.cost_models.cost_model_wrappers import CostModelComponent, AEPCostModelComponent
@@ -70,7 +70,7 @@ def main():
                     def cost_func(AEP, **kwargs):
                         return AEP
                     cost_comp = CostModelComponent(input_keys=[('AEP', [0])], n_wt=n_wt, cost_function=cost_func,
-                                                   output_key="aep", output_unit="kWh", objective=True, income_model=True, input_units=['kW*h'])
+                                                   output_keys="aep", output_unit="kWh", objective=True, maximize=True, input_units=['kW*h'])
                     group = TopFarmGroup([aep_comp, cost_comp])
                     boundary = np.array([(900, 1000), (2300, 1000), (2300, 2100), (900, 2100)])  # turbine boundaries
                     prob = TopFarmProblem(
@@ -128,7 +128,7 @@ def main():
 
                 differentiable = True
                 prob = setup_prob(differentiable)
-    #            view_model(prob)
+    #            n2(prob)
                 cost_init, state_init = prob.evaluate()
                 tic = time.time()
                 cost, state, recorder = prob.optimize()

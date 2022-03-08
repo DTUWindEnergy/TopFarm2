@@ -7,7 +7,7 @@ from topfarm.cost_models.dummy import DummyCost, DummyCostPlotComp
 from topfarm.easy_drivers import EasyScipyOptimizeDriver
 from topfarm.plotting import NoPlot
 import time
-from openmdao.api import view_model
+from openmdao.api import n2
 
 
 
@@ -34,7 +34,7 @@ def main():
         comps = [CostModelComponent('xy', 4,
                                     cost_function=lambda x, y, i=i:wt_cost(i, x, y),
                                     objective=False,
-                                    output_key='cost%d' % i) for i in range(n_wt)]
+                                    output_keys='cost%d' % i) for i in range(n_wt)]
 
         def sum_map(**kwargs):
 
@@ -54,7 +54,7 @@ def main():
             plot_comp=NoPlot(),
             driver=EasyScipyOptimizeDriver()
         )
-#        view_model(tf)
+#        n2(tf)
         #print(tf.evaluate({'x': desired[:, 0], 'y': desired[:, 1]}))
         print(tf.evaluate({'x': optimal[:, 0], 'y': optimal[:, 1]}, disp=False))
         #print(tf.evaluate({'x': initial[:, 0], 'y': initial[:, 1]}))

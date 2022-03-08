@@ -107,18 +107,18 @@ def main(obj=True, max_con_on=True):
             input_keys=[topfarm.x_key, topfarm.y_key, topfarm.type_key, ('obj', obj)],
             n_wt=n_wt,
             cost_function=aep_func,
-            output_key="aep",
+            output_keys="aep",
             output_unit="GWh",
             objective=obj,
-            output_val=np.zeros(n_wt),
-            income_model=True)
+            output_vals=np.zeros(n_wt),
+            maximize=True)
         comps = [aep_comp]  # AEP component is always in the group
         if not obj:  # if objective is IRR initiate/add irr_comp
             irr_comp = CostModelComponent(
                 input_keys=[topfarm.type_key, 'aep'],
                 n_wt=n_wt,
                 cost_function=irr_func,
-                output_key="irr",
+                output_keys="irr",
                 output_unit="%",
                 objective=True)
             comps.append(irr_comp)
@@ -137,7 +137,7 @@ def main(obj=True, max_con_on=True):
                             ext_vars=ext_vars)
 
         cost, state, rec = tf.optimize()
-        # view_model(problem, outfile='ex5_n2.html', show_browser=False)
+        # n2(problem, outfile='ex5_n2.html', show_browser=False)
         end = time.time()
         print(end - start)
         # %%

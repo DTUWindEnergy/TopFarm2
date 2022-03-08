@@ -237,10 +237,10 @@ class TurbineTypePlotComponent(XYPlotComp):
 
     def setup(self):
         XYPlotComp.setup(self)
-        self.add_input(topfarm.type_key, np.zeros(self.n_wt, dtype=np.int))
+        self.add_input(topfarm.type_key, np.zeros(self.n_wt, dtype=int))
 
     def compute(self, inputs, outputs):
-        self.types = np.asarray(inputs[topfarm.type_key], dtype=np.int)
+        self.types = np.asarray(inputs[topfarm.type_key], dtype=int)
         XYPlotComp.compute(self, inputs, outputs)
 
     def init_plot(self, limits):

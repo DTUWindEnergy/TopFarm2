@@ -234,7 +234,7 @@ class ConvexBoundaryComp(BoundaryBaseComp):
 #         partials['boundaryDistances', topfarm.y_key] = dy
 
     def move_inside(self, turbineX, turbineY, turbineZ, pad=1.1):
-        x, y, z = [np.asarray(xyz, dtype=np.float) for xyz in [turbineX, turbineY, turbineZ]]
+        x, y, z = [np.asarray(xyz, dtype=float) for xyz in [turbineX, turbineY, turbineZ]]
         dist = self.distances(turbineX, turbineY)
         dx, dy = self.gradients(x, y)  # independent of position
         dx = dx[:self.nVertices, 0]
@@ -390,7 +390,7 @@ class PolygonBoundaryComp(BoundaryBaseComp):
         return np.diagflat(dx), np.diagflat(dy)
 
     def move_inside(self, turbineX, turbineY, turbineZ, pad=1.1):
-        x, y, z = [np.asarray(xyz, dtype=np.float) for xyz in [turbineX, turbineY, turbineZ]]
+        x, y, z = [np.asarray(xyz, dtype=float) for xyz in [turbineX, turbineY, turbineZ]]
         dist = self.distances(turbineX, turbineY)
         dx, dy = map(np.diag, self.gradients(x, y))
         m = dist < 0

@@ -206,7 +206,7 @@ def test_random_search_driver_randomize_all_uniform():
         input_keys=['x', 'y', 'type'],
         n_wt=2,
         cost_function=Cost(),
-        income_model=True)
+        maximize=True)
 
     tf = TopFarmProblem(
         {'x': ([1, 6], [0, 1], [5, 6]), 'y': ([-1., 0], -6, 0), 'type': ([3, 3], 3, 8)},

@@ -43,7 +43,7 @@ class CostModelComponent(ExplicitComponent):
         maximize : boolean
             If True: objective is maximised during optimization\n
             If False: Objective is minimized during optimization
-        output_val : float or array_like
+        output_vals : float or array_like
             Format of output
         input_units : list of str
             Units of the respective input_keys
@@ -58,14 +58,10 @@ class CostModelComponent(ExplicitComponent):
         if 'output_key' in kwargs:
             warnings.warn("""output_key is deprecated; use keyword output_keys instead""",
                           DeprecationWarning, stacklevel=2)
-            self.output_key = kwargs['output_key']
-            # if self.output_key not in output_keys:
-            output_keys = self.output_key
+            output_keys = [kwargs['output_key']]
             kwargs.pop('output_key')
         else:
             self.output_key = output_keys[0]
-        if isinstance(self.output_key, tuple):
-            self.output_key = self.output_key[0]
         if 'output_val' in kwargs:
             warnings.warn("""output_val is deprecated; use keyword output_vals instead""",
                           DeprecationWarning, stacklevel=2)
@@ -82,9 +78,14 @@ class CostModelComponent(ExplicitComponent):
         self.n_wt = n_wt
         if not isinstance(output_keys, list):
             output_keys = [output_keys]
+        if not isinstance(output_vals, list):
+            output_vals = [output_vals]
         self.output_keys = output_keys
         self.out_keys_only = list([(o, o[0])[isinstance(o, tuple)] for o in self.output_keys])
         self.output_unit = output_unit
+        self.output_key = output_keys[0]
+        if isinstance(self.output_key, tuple):
+            self.output_key = self.output_key[0]
         self.additional_output = [((x, np.zeros(self.n_wt)), x)[isinstance(x, tuple)] for x in additional_output]
         self.max_eval = max_eval or 1e100
         self.objective = objective

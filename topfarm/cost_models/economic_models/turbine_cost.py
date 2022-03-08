@@ -36,11 +36,11 @@ class economic_evaluation():
         aep_vector = np.array([[float(item)] for item in self.aep_array])
         if sum(aep_vector) > 0:
             # turbine_type_vector = [[item] for item in turbine_type_array]
-            machine_rating = np.array([[int(item)] for item in self.Power_rated_array])
-            rotor_diameter = np.array([[int(item)] for item in self.D_rotor_array])
-            hub_height = np.array([[int(item)] for item in self.hub_height_array])
+            machine_rating = np.array([int(item) for item in self.Power_rated_array])
+            rotor_diameter = np.array([int(item) for item in self.D_rotor_array])
+            hub_height = np.array([int(item) for item in self.hub_height_array])
             # weight_vector = [[float(item)] for item in weight_array]
-            aep_vector = np.array([[float(item)] for item in self.aep_array])
+            aep_vector = np.array([float(item) for item in self.aep_array])
 
         # def __init__(self, rotor_diameter, machine_rating, hub_height, aep_vector):
             # calculate the blade mass and cost
@@ -196,25 +196,25 @@ def main():
         print('Wind turbine configuration costs', Turbine.cost)
         print('IRR', Turbine.IRR)
 
-    #    fig,ax = plt.subplots()
-    #    ax.plot(Drotor_vector,economic_evaluation.cost)
-    #    ax.set(xlabel='Rotor diameter [m]', ylabel='Initial costs [$]')
+        #    fig,ax = plt.subplots()
+        #    ax.plot(Drotor_vector,economic_evaluation.cost)
+        #    ax.set(xlabel='Rotor diameter [m]', ylabel='Initial costs [$]')
 
         # just the cost bar lot
-        barplotvector = np.array([Turbine.blade_B_costs[0], Turbine.hub_cost[0], Turbine.pitch_system_cost[0], Turbine.nose_cone_cost[0],
-                                  Turbine.bearing_cost[0], Turbine.brake_and_coupling_cost[0], Turbine.generator_cost[0],
-                                  Turbine.variablespeed_electronics[0], Turbine.yaw_system_cost[0], Turbine.mainframe_cost[0],
-                                  Turbine.platform_railing_cost[0], Turbine.electrical_connection_cost[0],
-                                  Turbine.hydraulic_cooling_system_cost[0], Turbine.nacelle_cost[0], 35000,
-                                  Turbine.tower_cost[0], Turbine.foundation_cost[0], Turbine.trasport_cost[0], Turbine.roads_civil_cost_cost[0],
-                                  Turbine.assembly_and_installation_cost[0], Turbine.electrical_interface_cost[0]] / Turbine.cost[0])
+        barplotvector = np.asarray([Turbine.blade_B_costs[0], Turbine.hub_cost[0], Turbine.pitch_system_cost[0], Turbine.nose_cone_cost[0],
+                                    Turbine.bearing_cost[0], Turbine.brake_and_coupling_cost[0], Turbine.generator_cost[0],
+                                    Turbine.variablespeed_electronics[0], Turbine.yaw_system_cost[0], Turbine.mainframe_cost[0],
+                                    Turbine.platform_railing_cost[0], Turbine.electrical_connection_cost[0],
+                                    Turbine.hydraulic_cooling_system_cost[0], Turbine.nacelle_cost[0], 35000,
+                                    Turbine.tower_cost[0], Turbine.foundation_cost[0], Turbine.trasport_cost[0], Turbine.roads_civil_cost_cost[0],
+                                    Turbine.assembly_and_installation_cost[0], Turbine.electrical_interface_cost[0]] / Turbine.cost[0])
         N = 21
         ind = np.arange(N)  # the x locations for the groups
         width = 0.5       # the width of the bars
 
         plt.rcParams.update({'figure.autolayout': True})
         fig, ax = plt.subplots()
-        bar = ax.barh(ind, barplotvector, width, color='b')
+        ax.barh(ind, barplotvector, width, color='b')
 
         # add some text for labels, title and axes ticks
         ax.set_xlabel('Procentage of total costs [%]')

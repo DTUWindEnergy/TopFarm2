@@ -33,7 +33,7 @@ test_topfarm_windows:  # name the job what we like
   script:  # runs on windows machine due to tag below
   - conda init powershell
   - "if (test-path $PROFILE.CurrentUserAllHosts) { & $PROFILE.CurrentUserAllHosts}"
-  - conda activate py36_openmdao26
+  - conda activate om3
   - pip install --upgrade git+https://gitlab.windenergy.dtu.dk/TOPFARM/PyWake.git
   - pip install -e .
   - python -m pytest --cov-report term-missing:skip-covered --cov=topfarm --cov-config .coveragerc --ignore=topfarm/cost_models/fuga/Colonel

@@ -143,7 +143,7 @@ class SimpleGADriver(Driver):
         super(SimpleGADriver, self)._setup_driver(problem)
 
         model_mpi = None
-        comm = self._problem.comm
+        comm = self._problem().comm
         if self._concurrent_pop_size > 0:
             model_mpi = (self._concurrent_pop_size, self._concurrent_color)
         elif not self.options['run_parallel']:
@@ -201,7 +201,7 @@ class SimpleGADriver(Driver):
         boolean
             Failure flag; True if failed to converge, False is successful.
         """
-        model = self._problem.model
+        model = self._problem().model
         ga = self._ga
 
         ga.elite = self.options['elitism']
@@ -222,7 +222,7 @@ class SimpleGADriver(Driver):
         lower_bound = np.empty((count, ))
         upper_bound = np.empty((count, ))
         outer_bound = np.full((count, ), np.inf)
-        bits = np.empty((count, ), dtype=np.int)
+        bits = np.empty((count, ), dtype=int)
         x0 = np.empty(count)
 
         desvar_vals = self.get_design_var_values()
@@ -354,7 +354,7 @@ class SimpleGADriver(Driver):
         int
             Case number, used for identification when run in parallel.
         """
-        model = self._problem.model
+        model = self._problem().model
         success = 1
 
         objs = self.get_objective_values()
@@ -727,7 +727,7 @@ class GeneticAlgorithm(object):
         -------
         ndarray
             New shuffled population.
-        ndarray(dtype=np.int)
+        ndarray(dtype=int)
             Index array that maps the shuffle from old to new.
         """
         temp = np.random.rand(self.npop)
@@ -790,6 +790,6 @@ class GeneticAlgorithm(object):
         interval = (vub - vlb) / (2**bits - 1)
         x = np.maximum(x, vlb)
         x = np.minimum(x, vub)
-        x = np.round((x - vlb) / interval).astype(np.int)
+        x = np.round((x - vlb) / interval).astype(int)
         byte_str = [("0" * b + bin(i)[2:])[-b:] for i, b in zip(x, bits)]
         return np.array([int(c) for s in byte_str for c in s])

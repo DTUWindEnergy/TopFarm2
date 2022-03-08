@@ -175,18 +175,20 @@ class TopFarmListRecorder(SqliteRecorder):
         filename, _ = self.recordid2filename(record_id)
         self.list_save(filename)
 
-    def list_save(self, filename):
+    def recorder2list(self):
         d = {'driver_iteration_dict': self.driver_iteration_dict,
              'iteration_coordinate_lst': self.iteration_coordinate_lst,
              '_abs2prom': self._abs2prom,
              '_prom2abs': self._prom2abs,
              '_abs2meta': self._abs2meta,
              }
+        return [self.__class__, d]
 
+    def list_save(self, filename):
         if os.path.dirname(filename) != "":
             os.makedirs(os.path.dirname(filename), exist_ok=True)
         with open(filename, 'wb') as fid:
-            pickle.dump([self.__class__, d], fid)
+            pickle.dump(self.recorder2list(), fid)
 
     def load_if_exists(self, record_id):
         self.filename = self.recordid2filename(record_id)[0]
@@ -215,13 +217,17 @@ class TopFarmListRecorder(SqliteRecorder):
         self.filename, self.load_case = filename, load_case
         return self
 
+    def list2recorder(self, cls, attributes):
+        assert self.__class__ == cls
+        self.__dict__.update(attributes)
+        return self
+
     def list_load(self, filename):
         if not filename or os.path.isfile(filename) is False:
             raise FileNotFoundError("No such file '%s'" % filename)
         with open(filename, 'rb') as fid:
             cls, attributes = pickle.load(fid)
-        assert self.__class__ == cls
-        self.__dict__.update(attributes)
+        self.list2recorder(cls, attributes)
         return self
 
     def keys(self):

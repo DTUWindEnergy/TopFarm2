@@ -92,7 +92,8 @@ Linux/OSX: conda install -c conda-forge cyipopt
             if len(desvar_values) == 4:
                 ref0 = np.min(desvar_values[1])
                 ref1 = np.max(desvar_values[2])
-                l, u = [lu * (ref1 - ref0) + ref0 for lu in [desvar_values[1], desvar_values[2]]]
+                # l, u = [lu * (ref1 - ref0) + ref0 for lu in [desvar_values[1], desvar_values[2]]]
+                l, u = desvar_values[1], desvar_values[2]
                 kwargs = {'ref0': ref0, 'ref': ref1, 'lower': l, 'upper': u}
         return kwargs
 

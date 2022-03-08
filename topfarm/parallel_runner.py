@@ -27,7 +27,7 @@ class ParallelRunner():
             function for sequential run. Interface must be:
             def f(lst):
                 tf = TopfarmProblem(...)
-                return tf.optimize()
+                return tf.optimize(recorder_as_list=True)
 
         Returns
         -------
@@ -37,7 +37,7 @@ class ParallelRunner():
             all results
         """
 
-        indexes = np.round(np.linspace(0, len(state_lst), self.pool._processes + 1)).astype(np.int)
+        indexes = np.round(np.linspace(0, len(state_lst), self.pool._processes + 1)).astype(int)
         seq_lst = [state_lst[i1:i2] for i1, i2 in zip(indexes[:-1], indexes[1:])]
 
         results = self.pool.map(seq_runner, seq_lst)
@@ -60,7 +60,7 @@ def get_topfarm_problem(id, plot=False):
 def seq_runner_example(id_lst):
     print("%d cases executed by thread: %s" % (len(id_lst), threading.current_thread().ident))
     # optimize for all elements in lst
-    return [get_topfarm_problem(id).optimize() for id in id_lst]
+    return [get_topfarm_problem(id).optimize(recorder_as_list=True) for id in id_lst]
 # ===============================================================================
 #
 # ===============================================================================

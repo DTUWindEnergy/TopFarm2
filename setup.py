@@ -29,7 +29,7 @@ setup(name='topfarm',
               'matplotlib',  # for plotting
               'numpy',  # for numerical calculations
               'numpy-financial',  # for irr calculations
-              'openmdao==2.6',  # for optimization
+              'openmdao==3.16',  # for optimization
               'pytest',  # for testing
               'pycodestyle',  # for testing
               'pytest-cov',  # for calculating coverage

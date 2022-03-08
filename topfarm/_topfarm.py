@@ -26,6 +26,7 @@ from openmdao.api import Problem, IndepVarComp, Group, ParallelGroup,\
     ExplicitComponent, ListGenerator, DOEDriver, SimpleGADriver
 from openmdao.drivers.doe_generators import DOEGenerator
 from openmdao.utils import mpi
+from openmdao.core.constants import _SetupStatus
 import topfarm
 from topfarm.recorders import NestedTopFarmListRecorder,\
     TopFarmListRecorder, split_record_id
@@ -235,21 +236,6 @@ class TopFarmProblem(Problem):
         if cost_comp:
             self.model.add_subsystem('cost_comp', cost_comp, promotes=['*'])
 
-            if expected_cost is None:
-                expected_cost = self.evaluate()[0]
-                self._setup_status = 0
-            if isinstance(driver, EasyDriverBase) and driver.supports_expected_cost is False:
-                expected_cost = 1
-            if isinstance(cost_comp, Group) and approx_totals:
-                cost_comp.approx_totals(**approx_totals)
-            # Use the assembled Jacobian.
-            if 'assembled_jac_type' in self.model.cost_comp.options:
-                self.model.cost_comp.options['assembled_jac_type'] = 'dense'
-                self.model.cost_comp.linear_solver.assemble_jac = True
-
-        else:
-            self.indeps.add_output('cost')
-
         if len(post_constraints) > 0:
             if constraints_as_penalty:
                 penalty_comp = PostPenaltyComponent(post_constraints, constraints_as_penalty)
@@ -279,7 +265,23 @@ class TopFarmProblem(Problem):
 
         aggr_comp = AggregatedCost(constraints_as_penalty, constraints, post_constraints)
         self.model.add_subsystem('aggr_comp', aggr_comp, promotes=['*'])
-        # print(expected_cost)
+        if cost_comp:
+            if expected_cost is None:
+                expected_cost = self.evaluate()[0]
+                if self._metadata:
+                    self._metadata['setup_status'] = 0
+            if isinstance(driver, EasyDriverBase) and driver.supports_expected_cost is False:
+                expected_cost = 1
+            if isinstance(cost_comp, Group) and approx_totals:
+                cost_comp.approx_totals(**approx_totals)
+            # Use the assembled Jacobian.
+            if 'assembled_jac_type' in self.model.cost_comp.options:
+                self.model.cost_comp.options['assembled_jac_type'] = 'dense'
+                self.model.cost_comp.linear_solver.assemble_jac = True
+
+        else:
+            self.indeps.add_output('cost')
+
         self.model.add_objective('aggr_cost', scaler=1 / abs(expected_cost))
 
         if plot_comp and not isinstance(plot_comp, NoPlot):
@@ -341,9 +343,11 @@ class TopFarmProblem(Problem):
                 topfarm.x_key: x, topfarm.y_key: y, 'c': c}
 
     def setup(self):
-        if self._setup_status == 0:
+        if not self._metadata:
             Problem.setup(self, check=True)
-        if self._setup_status < 2:
+        if self._metadata['setup_status'] == _SetupStatus.PRE_SETUP:
+            Problem.setup(self, check=True)
+        if self._metadata['setup_status'] < _SetupStatus.POST_FINAL_SETUP:
             with warnings.catch_warnings():
                 warnings.filterwarnings('error')
                 try:
@@ -404,7 +408,7 @@ class TopFarmProblem(Problem):
             print("Gradients evaluated in\t%.3fs" % (time.time() - t))
         return res
 
-    def optimize(self, state={}, disp=False):
+    def optimize(self, state={}, disp=False, recorder_as_list=False):
         """Run the optimization problem
 
         Parameters
@@ -415,12 +419,15 @@ class TopFarmProblem(Problem):
             The current state is used to unspecified variables
         disp : bool, optional
             if True, the time used for the optimization is printed
+        recorder_as_list : bool, optional
+            if True, returns multiprocessing friendly recorder as list of class and attributes
+            that can be pickled. Use TopFarmListRecorder().list2recorder to restore TopFarmListRecorder object
 
         Returns
         -------
         Optimized cost : float
         state : dict
-        recorder : TopFarmListRecorder or NestedTopFarmListRecorder
+        recorder : TopFarmListRecorder or NestedTopFarmListRecorder or [TopFarmListRecorder.__class__, attributes]
         """
         self.load_recorder()
         self.update_state(state)
@@ -454,7 +461,10 @@ class TopFarmProblem(Problem):
             best_case_index = int(np.argmin(costs))
             best_state = {k: self.recorder[k][best_case_index] for k in self.design_vars}
             self.evaluate(best_state)
-        return self.cost, copy.deepcopy(self.state), self.recorder
+        if recorder_as_list:
+            return self.cost, copy.deepcopy(self.state), self.recorder.recorder2list()
+        else:
+            return self.cost, copy.deepcopy(self.state), self.recorder
 
     def check_gradients(self, check_all=False, tol=1e-3):
         """Check gradient computations"""
@@ -535,16 +545,24 @@ class ProblemComponent(ExplicitComponent):
 
     def setup(self):
         missing_in_problem_exceptions = ['penalty']
-        missing_in_problem = (set([c[0] for c in self.parent.indeps._indep_external]) -
-                              set([c[0] for c in self.problem.indeps._indep_external]))
+        parent_temp = {}
+        parent_temp.update(self.parent.indeps._static_var_rel2meta)
+        parent_temp.update(self.parent.indeps._var_rel2meta)
+        problem_temp = {}
+        problem_temp.update(self.problem.indeps._static_var_rel2meta)
+        problem_temp.update(self.problem.indeps._var_rel2meta)
+        missing_in_problem = (set(parent_temp) -
+                              set(problem_temp))
+        indepsargs = ['val', 'units']
         self.missing_attrs = []
-        for name, val, kwargs in self.parent.indeps._indep_external:
-            self.add_input(name, val=val, **{k: kwargs[k] for k in ['units']})
+        for name, kwargs in parent_temp.items():
+            kwargs = {k: v for k, v in kwargs.items() if k in indepsargs}
+            self.add_input(name, **kwargs)
             self.missing_attrs.append(name)
             if name in missing_in_problem:
                 if name not in missing_in_problem_exceptions:
-                    self.problem.indeps.add_output(name, val, **kwargs)
-        self.problem._setup_status = 0  # redo initial setup
+                    self.problem.indeps.add_output(name, **kwargs)
+        self.problem._setup_status = 1  # 1 -- The `setup` method has been called, but vectors not initialized.
         self.problem.setup()
 
         self.add_output('cost', val=0.0)
@@ -578,7 +596,7 @@ def main():
         from topfarm.cost_models.dummy import DummyCost, DummyCostPlotComp
         from topfarm.constraint_components.spacing import SpacingConstraint
         from topfarm.constraint_components.boundary import XYBoundaryConstraint
-        from openmdao.api import view_model
+        from openmdao.api import n2
 
         initial = np.array([[6, 0], [6, -8], [1, 1]])  # initial turbine layouts
         optimal = np.array([[2.5, -3], [6, -7], [4.5, -3]])  # optimal turbine layouts

@@ -82,7 +82,7 @@ class TurbineTypeXYZOptimizationProblem(TurbineTypeOptimizationProblem, TurbineX
 #     @property
 #     def state(self):
 #         state = {k: self[k] for k in ['turbineX', 'turbineY', 'turbineZ']}
-#         state['turbineType'] = self['turbineType'].astype(np.int)
+#         state['turbineType'] = self['turbineType'].astype(int)
 #         state.update(TopFarmProblem.state.fget(self))
 #         return state
 

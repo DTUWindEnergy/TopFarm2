@@ -58,7 +58,7 @@ class RandomSearchDriver(Driver):
         super()._setup_driver(problem)
 
         model_mpi = None
-        comm = self._problem.comm
+        comm = self._problem().comm
         if not self.options['run_parallel']:
             comm = None
 
@@ -81,7 +81,7 @@ class RandomSearchDriver(Driver):
         boolean
             Failure flag; True if failed to converge, False is successful.
         """
-        model = self._problem.model
+        model = self._problem().model
 
         # Size design variables.
         desvars = self._designvars
@@ -210,7 +210,7 @@ class RandomSearchDriver(Driver):
         int
             Case number, used for identification when run in parallel.
         """
-        model = self._problem.model
+        model = self._problem().model
         success = 1
 
         for name in self._designvars:

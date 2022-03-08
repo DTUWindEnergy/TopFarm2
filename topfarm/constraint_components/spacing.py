@@ -128,7 +128,7 @@ class SpacingComp(ConstraintComponent):
             ax.add_artist(circle)
 
     def satisfy(self, state, n_iter=100, step_size=0.1):
-        x, y = [state[xy].astype(np.float) for xy in [topfarm.x_key, topfarm.y_key]]
+        x, y = [state[xy].astype(float) for xy in [topfarm.x_key, topfarm.y_key]]
         pair_i, pair_j = np.triu_indices(len(x), 1)
         for _ in range(n_iter):
             dist = self._compute(x, y)
