@@ -33,7 +33,7 @@ class XYBoundaryConstraint(Constraint):
             if np.ndim(boundary[0][0]) < 2:
                 self.multi_boundary = [(np.asarray(boundary), 1)]
             else:
-                self.multi_boundary = boundary
+                self.multi_boundary = [(np.asarray(bound), boolean) for bound, boolean in boundary]
                 boundary = boundary[0][0]
         self.boundary = np.asarray(boundary)
         self.boundary_type = boundary_type
@@ -56,9 +56,15 @@ class XYBoundaryConstraint(Constraint):
         return self.boundary_comp
 
     def set_design_var_limits(self, design_vars):
+        if hasattr(self, 'multi_boundary'):
+            bound_min = np.vstack([(bound[0]).min(0) for bound in self.multi_boundary]).min(0)
+            bound_max = np.vstack([(bound[0]).max(0) for bound in self.multi_boundary]).max(0)
+        else:
+            bound_min = self.boundary_comp.xy_boundary.min(0)
+            bound_max = self.boundary_comp.xy_boundary.max(0)
         for k, l, u in zip([topfarm.x_key, topfarm.y_key],
-                           self.boundary_comp.xy_boundary.min(0),
-                           self.boundary_comp.xy_boundary.max(0)):
+                           bound_min,
+                           bound_max):
             if k in design_vars:
                 if len(design_vars[k]) == 4:
                     design_vars[k] = (design_vars[k][0], np.maximum(design_vars[k][1], l),
@@ -175,7 +181,7 @@ class BoundaryBaseComp(ConstraintComponent):
         """Plot boundary"""
         if isinstance(self, MultiPolygonBoundaryComp):
             colors = ['--k', 'k']
-            for bound, io in self.xy_multi_boundary:
+            for bound, io in self.boundaries:
                 ax.plot(np.asarray(bound)[:, 0].tolist() + [np.asarray(bound)[0, 0]],
                         np.asarray(bound)[:, 1].tolist() + [np.asarray(bound)[0, 1]], colors[io])
         else:

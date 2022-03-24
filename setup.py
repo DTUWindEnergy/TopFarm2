@@ -41,5 +41,6 @@ setup(name='topfarm',
               'mock',  # replace variables during tests
               'tensorflow',  # loads examples with surrogates
               'shapely', # for multiple polygon boundaries and exclusion zones
-      ],
+              'memory_profiler',  # memory profiling
+              ],
       zip_safe=True)
