@@ -67,7 +67,10 @@ class PyWakeAEPCostModelComponent(AEPCostModelComponent):
                                           wd=wd, ws=ws)
 
         if grad_method:
-            dAEPdxy = self.windFarmModel.dAEPdxy(grad_method)
+            try:
+                dAEPdxy = self.windFarmModel.aep_gradients(gradient_method=grad_method, wrt_arg='xy')
+            except Exception:                # for backward compatibility
+                dAEPdxy = self.windFarmModel.dAEPdxy(grad_method)
 
             def daep(**kwargs):
                 return dAEPdxy(x=kwargs[topfarm.x_key],
