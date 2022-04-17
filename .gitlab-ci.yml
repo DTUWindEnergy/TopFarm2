@@ -4,6 +4,7 @@ image: continuumio/anaconda3:latest
 
 # ===== TEST TOPFARM =====
 test_topfarm:  # name the job what we like
+  image: continuumio/anaconda3
   stage:  # build, test, deploy defined by default [2]
     test
   script:
@@ -11,7 +12,7 @@ test_topfarm:  # name the job what we like
   - pip install -e .
   - py.test
   tags:  # only runners with this tag can do the job [3]
-  - python
+  - ci-ubuntu
 
   
 # ===== TEST TOPFARM =====
