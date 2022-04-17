@@ -72,20 +72,20 @@ class XYBoundaryConstraint(Constraint):
                 else:
                     design_vars[k] = (design_vars[k][0], l, u, design_vars[k][-1])
 
-    def _setup(self, problem):
+    def _setup(self, problem, group='pre_constraints'):
         n_wt = problem.n_wt
         self.boundary_comp = self.get_comp(n_wt)
         self.set_design_var_limits(problem.design_vars)
         # problem.xy_boundary = np.r_[self.boundary_comp.xy_boundary, self.boundary_comp.xy_boundary[:1]]
         problem.indeps.add_output('xy_boundary', self.boundary_comp.xy_boundary)
-        problem.model.pre_constraints.add_subsystem('xy_bound_comp', self.boundary_comp, promotes=['*'])
+        getattr(problem.model, group).add_subsystem('xy_bound_comp', self.boundary_comp, promotes=['*'])
 
-    def setup_as_constraint(self, problem):
-        self._setup(problem)
+    def setup_as_constraint(self, problem, group='pre_constraints'):
+        self._setup(problem, group=group)
         problem.model.add_constraint('boundaryDistances', lower=self.boundary_comp.zeros)
 
-    def setup_as_penalty(self, problem):
-        self._setup(problem)
+    def setup_as_penalty(self, problem, group='pre_constraints'):
+        self._setup(problem, group=group)
 
 
 class CircleBoundaryConstraint(Constraint):

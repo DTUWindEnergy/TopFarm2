@@ -39,6 +39,7 @@ from topfarm.constraint_components.penalty_component import PenaltyComponent, Po
 from topfarm.cost_models.aggregated_cost import AggregatedCost
 from topfarm.cost_models.cost_model_wrappers import CostModelComponent
 from topfarm.constraint_components.post_constraint import PostConstraint
+from topfarm.constraint_components import Constraint
 
 
 class TopFarmBaseGroup(Group):
@@ -77,7 +78,8 @@ class TopFarmProblem(Problem):
 
     def __init__(self, design_vars, cost_comp=None, driver=EasyScipyOptimizeDriver(),
                  constraints=[], plot_comp=NoPlot(), record_id=None,
-                 expected_cost=1, ext_vars={}, post_constraints=[], approx_totals=False, additional_recorders=None):
+                 expected_cost=1, ext_vars={}, post_constraints=[], approx_totals=False, additional_recorders=None,
+                 n_wt=0):
         """Initialize TopFarmProblem
 
         Parameters
@@ -188,12 +190,16 @@ class TopFarmProblem(Problem):
             v = design_vars[k]
             self.indeps.add_output(k, v[0], units=v[-1])
 
-        for k in [topfarm.x_key, topfarm.y_key, topfarm.type_key]:
-            if k in design_vars:
-                self.n_wt = len(design_vars[k][0])
-                break
+        self.n_wt = n_wt
+        if not n_wt:
+            for k in [topfarm.x_key, topfarm.y_key, topfarm.type_key]:
+                if k in design_vars:
+                    self.n_wt = len(design_vars[k][0])
+                    break
         else:
-            self.n_wt = 0
+            self.n_wt = n_wt
+        if self.n_wt == 0:
+            warnings.warn("Number of turbines is inferred as zero. Please specify number of turbines as 'n_wt' if applicable")
 
         # add external signals before constraints
         for k, v in ext_vars.items():
@@ -242,7 +248,18 @@ class TopFarmProblem(Problem):
                 self.model.add_subsystem('post_penalty_comp', penalty_comp, promotes=['*'])
             else:
                 for constr in post_constraints:
-                    if isinstance(constr[-1], dict):
+                    if isinstance(constr, Constraint):
+                        if 'post_constraints' not in self.model._subsystems_allprocs and 'post_constraints' not in self.model._static_subsystems_allprocs:
+                            self.model.add_subsystem('post_constraints', ParallelGroup(), promotes=['*'])
+                        if constraints_as_penalty:
+                            constr.setup_as_penalty(self, group='post_constraints')
+                        else:
+                            constr.setup_as_constraint(self, group='post_constraints')
+                            # Use the assembled Jacobian.
+                            self.model.post_constraints.options['assembled_jac_type'] = 'csc'
+                            self.model.post_constraints.linear_solver.assemble_jac = True
+
+                    elif isinstance(constr[-1], dict):
                         self.model.add_constraint(str(constr[0]), **constr[-1])
                     elif len(constr) == 2:  # assuming only name and upper value is specified and value is per turbine
                         if len(constr[1]) == 1:

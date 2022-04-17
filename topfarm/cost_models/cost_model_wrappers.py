@@ -181,7 +181,7 @@ class CostModelComponent(ExplicitComponent):
 
         t = time.time()
         if self.cost_gradient_function:
-            for k, dCostdk in zip(self.input_keys,
+            for k, dCostdk in zip(self.input_keys_only,
                                   self.cost_gradient_function(**{x: inputs[x] for x in self.all_input_keys})):
                 if dCostdk is not None:
                     if not isinstance(dCostdk, list):
