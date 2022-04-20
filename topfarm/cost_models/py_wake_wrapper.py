@@ -56,7 +56,7 @@ class PyWakeAEP(AEPCalculator):
 
 
 class PyWakeAEPCostModelComponent(AEPCostModelComponent):
-    def __init__(self, windFarmModel, n_wt, wd=None, ws=None, max_eval=None, grad_method=autograd, **kwargs):
+    def __init__(self, windFarmModel, n_wt, wd=None, ws=None, max_eval=None, grad_method=autograd, n_cpu=1, **kwargs):
         self.windFarmModel = windFarmModel
 
         def aep(**kwargs):
@@ -64,13 +64,17 @@ class PyWakeAEPCostModelComponent(AEPCostModelComponent):
                                           y=kwargs[topfarm.y_key],
                                           h=kwargs.get(topfarm.z_key, None),
                                           type=kwargs.get(topfarm.type_key, 0),
-                                          wd=wd, ws=ws)
+                                          wd=wd, ws=ws,
+                                          n_cpu=n_cpu)
 
         if grad_method:
-            try:
-                dAEPdxy = self.windFarmModel.aep_gradients(gradient_method=grad_method, wrt_arg=['x', 'y'])
-            except Exception:                # for backward compatibility
+            if hasattr(self.windFarmModel, 'dAEPdxy'):
+                # for backward compatibility
                 dAEPdxy = self.windFarmModel.dAEPdxy(grad_method)
+            else:
+                def dAEPdxy(**kwargs):
+                    return self.windFarmModel.aep_gradients(
+                        gradient_method=grad_method, wrt_arg=['x', 'y'], n_cpu=n_cpu, **kwargs)
 
             def daep(**kwargs):
                 return dAEPdxy(x=kwargs[topfarm.x_key],
