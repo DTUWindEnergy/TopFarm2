@@ -8,8 +8,11 @@ test_topfarm:  # name the job what we like
   stage:  # build, test, deploy defined by default [2]
     test
   script:
+  - conda install mongodb
+  - conda install -c conda-forge ffmpeg
   - pip install --upgrade git+https://gitlab.windenergy.dtu.dk/TOPFARM/PyWake.git
   - pip install -e .
+  - mkdir -p /data/db
   - py.test
   tags:  # only runners with this tag can do the job [3]
   - ci-ubuntu
@@ -35,6 +38,7 @@ test_topfarm_windows:  # name the job what we like
   - conda init powershell
   - "if (test-path $PROFILE.CurrentUserAllHosts) { & $PROFILE.CurrentUserAllHosts}"
   - conda activate om3
+  - conda install -c conda-forge ffmpeg
   - pip install --upgrade git+https://gitlab.windenergy.dtu.dk/TOPFARM/PyWake.git
   - pip install -e .
   - python -m pytest --cov-report term-missing:skip-covered --cov=topfarm --cov-config .coveragerc --ignore=topfarm/cost_models/fuga/Colonel

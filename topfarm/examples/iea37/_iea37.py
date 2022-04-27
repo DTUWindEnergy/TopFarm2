@@ -51,3 +51,21 @@ def get_iea37_cost(n_wt=9):
     wind_turbines = IEA37_WindTurbines()
     wake_model = IEA37SimpleBastankhahGaussian(site, wind_turbines)
     return PyWakeAEPCostModelComponent(wake_model, n_wt, wd=wd)
+
+
+if __name__ == '__main__':
+    from topfarm import TopFarmProblem
+    from topfarm import EasyRandomSearchDriver
+    from topfarm.drivers.random_search_driver import RandomizeTurbinePosition_Circle
+    from topfarm.plotting import XYPlotComp
+    n_wt = 16
+    x, y = get_iea37_initial(n_wt).T * 0.99999  # make sure the turbines numerically are inside the boundary for random search driver
+    constr = get_iea37_constraints(n_wt)
+    cost = get_iea37_cost(n_wt)
+    driver = EasyRandomSearchDriver(RandomizeTurbinePosition_Circle(max_step=300), max_iter=10, max_time=10)
+    problem = TopFarmProblem({'x': x, 'y': y},
+                             cost_comp=cost,
+                             constraints=constr,
+                             driver=driver,
+                             plot_comp=XYPlotComp())
+    problem.evaluate()

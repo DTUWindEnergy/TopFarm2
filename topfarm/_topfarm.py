@@ -30,6 +30,7 @@ from openmdao.core.constants import _SetupStatus
 import topfarm
 from topfarm.recorders import NestedTopFarmListRecorder,\
     TopFarmListRecorder, split_record_id
+from topfarm.mongo_recorder import MongoRecorder
 from topfarm.plotting import NoPlot
 from topfarm.easy_drivers import EasyScipyOptimizeDriver, EasySimpleGADriver, EasyDriverBase
 from topfarm.utils import smart_start
@@ -78,7 +79,8 @@ class TopFarmProblem(Problem):
 
     def __init__(self, design_vars, cost_comp=None, driver=EasyScipyOptimizeDriver(),
                  constraints=[], plot_comp=NoPlot(), record_id=None,
-                 expected_cost=1, ext_vars={}, post_constraints=[], approx_totals=False, additional_recorders=None,
+                 expected_cost=1, ext_vars={}, post_constraints=[], approx_totals=False,
+                 recorder=None, additional_recorders=None,
                  n_wt=0):
         """Initialize TopFarmProblem
 
@@ -137,6 +139,7 @@ class TopFarmProblem(Problem):
             If True, approximates the total derivative of the cost_comp group,
             skipping the partial ones. If it is a dictionary, it's elements
             are passed to the approx_totals function of an OpenMDAO Group.
+        recorder : Main recorder
         additional_recorders: list(Recorder) or None
             A list of additional recorders to be added to the problem
 
@@ -150,6 +153,7 @@ class TopFarmProblem(Problem):
             from openmdao.utils.mpi import FakeComm
             comm = FakeComm()
 
+        self.main_recorder = recorder
         self._additional_recorders = additional_recorders
 
         Problem.__init__(self, comm=comm)
@@ -343,7 +347,9 @@ class TopFarmProblem(Problem):
                 pass
 
     def load_recorder(self):
-        if hasattr(self.cost_comp, 'problem'):
+        if self.main_recorder:
+            self.recorder = self.main_recorder
+        elif hasattr(self.cost_comp, 'problem'):
             self.recorder = NestedTopFarmListRecorder(self.cost_comp, self.record_id)
         else:
             self.recorder = TopFarmListRecorder(self.record_id)

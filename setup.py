@@ -34,6 +34,7 @@ setup(name='topfarm',
               'pycodestyle',  # for testing
               'pytest-cov',  # for calculating coverage
               'py_wake>=2',  # for calculating AEP
+              'pymongo', # for mongo_recorder
               'scipy',  # constraints
               'sphinx',  # generating documentation
               'sphinx_rtd_theme',  # docs theme
