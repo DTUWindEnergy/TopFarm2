@@ -24,4 +24,5 @@ You can also `launch them via Binder <https://mybinder.org/v2/git/https%3A%2F%2F
     examples_nblinks/layout_and_loads_nb
     examples_nblinks/bathymetry_nb
     examples_nblinks/exclusion_zones_nb
+    examples_nblinks/mongodb_nb
 

@@ -94,18 +94,33 @@ def clean_keys(o):
 
 
 class RemoteMongo():
-    def __init__(self, port=27017, ip='localhost', password=None, username=None, db_name='database'):
+    def __init__(self, uri=None, host=None, port=27017, ip='localhost', password=None, user=None, db_name='database', uri_type=None, **kwargs):
+        self.host = host
         self.port = port
         self.ip = ip
-        self.username = username
+        self.uri = uri
+        self.user = user
         self.password = password
         self.db_name = db_name
+        self.uri_type = uri_type
+        self.kwargs = kwargs
 
     def open(self):
-        self.client = MongoClient(f'mongodb://{self.ip}:{self.port}',
-                                  username=self.username,
-                                  password=self.password,
-                                  authSource='database_str')
+        if self.uri:
+            uri = self.uri
+            self.kwargs.update({'host': uri})
+        elif self.host:
+            if not self.uri_type:
+                uri = f"mongodb://{self.user}:{self.password}@{self.host}"
+            elif self.uri_type == 'srv':
+                uri = f"mongodb+srv://{self.user}:{self.password}@{self.host}"
+        else:
+            self.kwargs.update({'host': f'mongodb://{self.ip}:{self.port}',
+                                'username': self.user,
+                                'password': self.password,
+                                'authSource': 'database_str'})
+
+        self.client = MongoClient(**self.kwargs)
         self.db = self.client[self.db_name]
         return self.client
 
@@ -143,8 +158,8 @@ class MongoRecorder(CaseRecorder):
         Flag indicating whether to record on this processor when running in parallel.
     """
 
-    def __init__(self, ip='localhost', port=27017, record_viewer_data=True, ssh_tunnel=False,
-                 db_name='database', case_id=None, clean_up=False, with_mpi=False):
+    def __init__(self, uri=None, host=None, ip='localhost', port=27017, user=None, password=None, uri_type=None, record_viewer_data=True, ssh_tunnel=False,
+                 db_name='database', case_id=None, clean_up=False, with_mpi=False, client_args={}):
         """
         Initialize the MongoRecorder.
 
@@ -159,6 +174,12 @@ class MongoRecorder(CaseRecorder):
         """
         self._ip = ip
         self._port = port
+        self._host = host
+        self._uri = uri
+        self._user = user
+        self._password = password
+        self._uri_type = uri_type
+        self._client_args = client_args
         self.case_id = case_id
         self.db_name = db_name
         self.ssh_tunnel = ssh_tunnel
@@ -258,7 +279,7 @@ class MongoRecorder(CaseRecorder):
             print('Warning: SSH database access not available in this Topfarm version!')
             # return EC_Mongo()
         else:
-            client = RemoteMongo(port=self._port, ip=self._ip, db_name=self.db_name)
+            client = RemoteMongo(uri=self._uri, host=self._host, port=self._port, ip=self._ip, user=self._user, password=self._password, db_name=self.db_name, uri_type=self._uri_type, **self._client_args)
             return client
 
     def exists(self):
