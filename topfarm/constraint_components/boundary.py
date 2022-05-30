@@ -10,7 +10,7 @@ import warnings
 
 
 class XYBoundaryConstraint(Constraint):
-    def __init__(self, boundary, boundary_type='convex_hull', units=None):
+    def __init__(self, boundary, boundary_type='convex_hull', units=None, relaxation=False):
         """Initialize XYBoundaryConstraint
 
         Parameters
@@ -33,19 +33,20 @@ class XYBoundaryConstraint(Constraint):
             if np.ndim(boundary[0][0]) < 2:
                 self.multi_boundary = [(np.asarray(boundary), 1)]
             else:
-                self.multi_boundary = [(np.asarray(bound), boolean) for bound, boolean in boundary]
+                self.multi_boundary = boundary
                 boundary = boundary[0][0]
         self.boundary = np.asarray(boundary)
         self.boundary_type = boundary_type
         self.const_id = 'xyboundary_comp_{}_{}'.format(boundary_type, int(self.boundary.sum()))
         self.units = units
+        self.relaxation = relaxation
 
     def get_comp(self, n_wt):
         if not hasattr(self, 'boundary_comp'):
             if self.boundary_type == 'polygon':
-                self.boundary_comp = PolygonBoundaryComp(n_wt, self.boundary, self.const_id, self.units)
+                self.boundary_comp = PolygonBoundaryComp(n_wt, self.boundary, self.const_id, self.units, self.relaxation)
             elif self.boundary_type == 'multi_polygon':
-                self.boundary_comp = MultiPolygonBoundaryComp(n_wt, self.multi_boundary, self.const_id, self.units)
+                self.boundary_comp = MultiPolygonBoundaryComp(n_wt, self.multi_boundary, self.const_id, self.units, self.relaxation)
             else:
                 self.boundary_comp = ConvexBoundaryComp(
                     n_wt, self.boundary, self.boundary_type, self.const_id, self.units)
@@ -56,15 +57,9 @@ class XYBoundaryConstraint(Constraint):
         return self.boundary_comp
 
     def set_design_var_limits(self, design_vars):
-        if hasattr(self, 'multi_boundary'):
-            bound_min = np.vstack([(bound[0]).min(0) for bound in self.multi_boundary]).min(0)
-            bound_max = np.vstack([(bound[0]).max(0) for bound in self.multi_boundary]).max(0)
-        else:
-            bound_min = self.boundary_comp.xy_boundary.min(0)
-            bound_max = self.boundary_comp.xy_boundary.max(0)
         for k, l, u in zip([topfarm.x_key, topfarm.y_key],
-                           bound_min,
-                           bound_max):
+                           self.boundary_comp.xy_boundary.min(0),
+                           self.boundary_comp.xy_boundary.max(0)):
             if k in design_vars:
                 if len(design_vars[k]) == 4:
                     design_vars[k] = (design_vars[k][0], np.maximum(design_vars[k][1], l),
@@ -75,6 +70,7 @@ class XYBoundaryConstraint(Constraint):
     def _setup(self, problem, group='pre_constraints'):
         n_wt = problem.n_wt
         self.boundary_comp = self.get_comp(n_wt)
+        self.boundary_comp.problem = problem
         self.set_design_var_limits(problem.design_vars)
         # problem.xy_boundary = np.r_[self.boundary_comp.xy_boundary, self.boundary_comp.xy_boundary[:1]]
         problem.indeps.add_output('xy_boundary', self.boundary_comp.xy_boundary)
@@ -140,12 +136,13 @@ class CircleBoundaryConstraint(Constraint):
 
 
 class BoundaryBaseComp(ConstraintComponent):
-    def __init__(self, n_wt, xy_boundary=None, const_id=None, units=None, **kwargs):
+    def __init__(self, n_wt, xy_boundary=None, const_id=None, units=None, relaxation=False, **kwargs):
         super().__init__(**kwargs)
         self.n_wt = n_wt
         self.xy_boundary = np.array(xy_boundary)
         self.const_id = const_id
         self.units = units
+        self.relaxation = relaxation
         if np.any(self.xy_boundary[0] != self.xy_boundary[-1]):
             self.xy_boundary = np.r_[self.xy_boundary, self.xy_boundary[:1]]
 
@@ -155,13 +152,17 @@ class BoundaryBaseComp(ConstraintComponent):
                        desc='x coordinates of turbines in global ref. frame', units=self.units)
         self.add_input(topfarm.y_key, np.zeros(self.n_wt),
                        desc='y coordinates of turbines in global ref. frame', units=self.units)
+        if self.relaxation:
+            self.add_input('time', 0)
         self.add_output('penalty_' + self.const_id, val=0.0)
         # Explicitly size output array
         # (vector with positive elements if turbines outside of hull)
         self.add_output('boundaryDistances', self.zeros,
                         desc="signed perpendicular distances from each turbine to each face CCW; + is inside")
-
         self.declare_partials('boundaryDistances', [topfarm.x_key, topfarm.y_key])
+        if self.relaxation:
+            self.declare_partials('boundaryDistances', 'time')
+
         # self.declare_partials('boundaryDistances', ['boundaryVertices', 'boundaryNormals'], method='fd')
 
     def compute(self, inputs, outputs):
@@ -172,16 +173,21 @@ class BoundaryBaseComp(ConstraintComponent):
 
     def compute_partials(self, inputs, partials):
         # return Jacobian dict
-        dx, dy = self.gradients(**{xy: inputs[k] for xy, k in zip('xy', [topfarm.x_key, topfarm.y_key])})
+        if not self.relaxation:
+            dx, dy = self.gradients(**{xy: inputs[k] for xy, k in zip('xy', [topfarm.x_key, topfarm.y_key])})
+        else:
+            dx, dy, dt = self.gradients(**{xy: inputs[k] for xy, k in zip('xy', [topfarm.x_key, topfarm.y_key])})
 
         partials['boundaryDistances', topfarm.x_key] = dx
         partials['boundaryDistances', topfarm.y_key] = dy
+        if self.relaxation:
+            partials['boundaryDistances', 'time'] = dt
 
     def plot(self, ax):
         """Plot boundary"""
         if isinstance(self, MultiPolygonBoundaryComp):
             colors = ['--k', 'k']
-            for bound, io in self.boundaries:
+            for bound, io in self.xy_multi_boundary:
                 ax.plot(np.asarray(bound)[:, 0].tolist() + [np.asarray(bound)[0, 0]],
                         np.asarray(bound)[:, 1].tolist() + [np.asarray(bound)[0, 1]], colors[io])
         else:
@@ -335,16 +341,17 @@ class ConvexBoundaryComp(BoundaryBaseComp):
 
 
 class PolygonBoundaryComp(BoundaryBaseComp):
-    def __init__(self, n_wt, xy_boundary, const_id=None, units=None):
+    def __init__(self, n_wt, xy_boundary, const_id=None, units=None, relaxation=False):
 
         self.nTurbines = n_wt
         self.const_id = const_id
         self.zeros = np.zeros(self.nTurbines)
         self.units = units
         self.boundary_properties = self.get_boundary_properties(xy_boundary)
-        BoundaryBaseComp.__init__(self, n_wt, xy_boundary=self.boundary_properties[0], const_id=const_id, units=units)
+        BoundaryBaseComp.__init__(self, n_wt, xy_boundary=self.boundary_properties[0], const_id=const_id, units=units, relaxation=relaxation)
         self._cache_input = None
         self._cache_output = None
+        self.relaxation = relaxation
 
     def get_boundary_properties(self, xy_boundary):
         vertices = np.array(xy_boundary)
@@ -503,7 +510,7 @@ class CircleBoundaryComp(PolygonBoundaryComp):
 
 
 class MultiPolygonBoundaryComp(PolygonBoundaryComp):
-    def __init__(self, n_wt, xy_multi_boundary, const_id=None, units=None, method='nearest'):
+    def __init__(self, n_wt, xy_multi_boundary, const_id=None, units=None, relaxation=False, method='nearest'):
         '''
 
 
@@ -527,7 +534,7 @@ class MultiPolygonBoundaryComp(PolygonBoundaryComp):
 
         '''
         self.xy_multi_boundary = xy_multi_boundary
-        PolygonBoundaryComp.__init__(self, n_wt, xy_boundary=xy_multi_boundary[0][0], const_id=const_id, units=units)
+        PolygonBoundaryComp.__init__(self, n_wt, xy_boundary=xy_multi_boundary[0][0], const_id=const_id, units=units, relaxation=relaxation)
         self.bounds_poly = [Polygon(x) for x, _ in xy_multi_boundary]
         self.types_bool = [1 if x in ['i', 'include', True, 1, None] else 0 for _, x in xy_multi_boundary]
         self.boundaries = self._calc_resulting_polygons()
@@ -536,6 +543,7 @@ class MultiPolygonBoundaryComp(PolygonBoundaryComp):
         self.n_edges_tot = np.sum(self.n_edges)
         self.start_at = np.cumsum(self.n_edges) - self.n_edges
         self.end_at = self.start_at + self.n_edges
+        self.relaxation = relaxation
         self.method = method
 
     def _calc_resulting_polygons(self):
@@ -681,7 +689,7 @@ class MultiPolygonBoundaryComp(PolygonBoundaryComp):
             Jacobian of the distance matrix D_ij with respect to x and y.
 
         '''
-        if np.all(np.array([x, y]) == self._cache_input):
+        if np.all(np.array([x, y]) == self._cache_input) & (not self.relaxation):
             return self._cache_output
         Dist_ij = np.zeros((len(x), self.n_edges_tot))
         dDdk_ijk = np.zeros((len(x), self.n_edges_tot, 2))
@@ -703,8 +711,22 @@ class MultiPolygonBoundaryComp(PolygonBoundaryComp):
         self._cache_output = [Dist_ij, dDdk_ijk, sign_i]
         return self._cache_output
 
+    def sign(self, Dist_ij):
+        return np.sign(Dist_ij[np.arange(Dist_ij.shape[0]), np.argmin(abs(Dist_ij), axis=1)])
+
+    def calc_relaxation(self):
+        '''
+        The tupple relaxation contains a first term for the penalty constant
+        and a second term for the n first iterations to apply relaxation.
+        '''
+        iteration_no = self.problem.cost_comp.n_grad_eval + 1
+        return max(0, self.relaxation[0] * (self.relaxation[1] - iteration_no))
+
     def distances(self, x, y):
         Dist_ij, _, sign_i = self.calc_distance_and_gradients(x, y)
+        if self.relaxation:
+            Dist_ij += self.calc_relaxation()
+            sign_i = self.sign(Dist_ij)
         if self.method == 'smooth_min':
             return smooth_max(np.abs(Dist_ij), self.alpha, axis=1) * sign_i
         elif self.method == 'nearest':
@@ -716,13 +738,22 @@ class MultiPolygonBoundaryComp(PolygonBoundaryComp):
             dS/dk = dS/dD * dD/dk
             where S is smooth maximum, D is distance to edge and k is the spacial dimension
         '''
-        Dist_ij, dDdk_ijk, sign_i = self.calc_distance_and_gradients(x, y)
+        Dist_ij, dDdk_ijk, _ = self.calc_distance_and_gradients(x, y)
+        if self.relaxation:
+            Dist_ij += self.calc_relaxation()
+            # sign_i = self.sign(Dist_ij)
+            dDdt = -self.relaxation[1]
         if self.method == 'smooth_min':
             dSdDist_ij = smooth_max_gradient(np.abs(Dist_ij), self.alpha, axis=1)
             dSdkx_i, dSdky_i = (dSdDist_ij[:, :, na] * dDdk_ijk).sum(axis=1).T
         elif self.method == 'nearest':
             dSdkx_i, dSdky_i = dDdk_ijk[np.arange(x.size), np.argmin(np.abs(Dist_ij), axis=1), :].T
-        return np.diagflat(dSdkx_i), np.diagflat(dSdky_i)
+
+        if self.relaxation:
+            gradients = np.diagflat(dSdkx_i), np.diagflat(dSdky_i), np.ones(self.n_wt) * dDdt
+        else:
+            gradients = np.diagflat(dSdkx_i), np.diagflat(dSdky_i)
+        return gradients
 
 
 def main():
