@@ -33,7 +33,7 @@ class XYBoundaryConstraint(Constraint):
             if np.ndim(boundary[0][0]) < 2:
                 self.multi_boundary = [(np.asarray(boundary), 1)]
             else:
-                self.multi_boundary = boundary
+                self.multi_boundary = [(np.asarray(bound), boolean) for bound, boolean in boundary]
                 boundary = boundary[0][0]
         self.boundary = np.asarray(boundary)
         self.boundary_type = boundary_type
@@ -57,9 +57,13 @@ class XYBoundaryConstraint(Constraint):
         return self.boundary_comp
 
     def set_design_var_limits(self, design_vars):
-        for k, l, u in zip([topfarm.x_key, topfarm.y_key],
-                           self.boundary_comp.xy_boundary.min(0),
-                           self.boundary_comp.xy_boundary.max(0)):
+        if hasattr(self, 'multi_boundary'):
+            bound_min = np.vstack([(bound[0]).min(0) for bound in self.multi_boundary]).min(0)
+            bound_max = np.vstack([(bound[0]).max(0) for bound in self.multi_boundary]).max(0)
+        else:
+            bound_min = self.boundary_comp.xy_boundary.min(0)
+            bound_max = self.boundary_comp.xy_boundary.max(0)
+        for k, l, u in zip([topfarm.x_key, topfarm.y_key], bound_min, bound_max):
             if k in design_vars:
                 if len(design_vars[k]) == 4:
                     design_vars[k] = (design_vars[k][0], np.maximum(design_vars[k][1], l),
@@ -187,7 +191,7 @@ class BoundaryBaseComp(ConstraintComponent):
         """Plot boundary"""
         if isinstance(self, MultiPolygonBoundaryComp):
             colors = ['--k', 'k']
-            for bound, io in self.xy_multi_boundary:
+            for bound, io in self.boundaries:
                 ax.plot(np.asarray(bound)[:, 0].tolist() + [np.asarray(bound)[0, 0]],
                         np.asarray(bound)[:, 1].tolist() + [np.asarray(bound)[0, 1]], colors[io])
         else:
@@ -668,6 +672,9 @@ class MultiPolygonBoundaryComp(PolygonBoundaryComp):
 
         return D_ij, dDdx_ij, dDdy_ij
 
+    def sign(self, Dist_ij):
+        return np.sign(Dist_ij[np.arange(Dist_ij.shape[0]), np.argmin(abs(Dist_ij), axis=1)])
+
     def calc_distance_and_gradients(self, x, y):
         '''
 
@@ -705,14 +712,11 @@ class MultiPolygonBoundaryComp(PolygonBoundaryComp):
             dDdk_ijk[:, sa:ea, 0] = ddist_dX
             dDdk_ijk[:, sa:ea, 1] = ddist_dY
 
-        sign_i = np.sign(Dist_ij[np.arange(Dist_ij.shape[0]), np.argmin(abs(Dist_ij), axis=1)])
+        sign_i = self.sign(Dist_ij)
         self.alpha = - 1600 / np.max(np.abs(Dist_ij))
         self._cache_input = np.array([x, y])
         self._cache_output = [Dist_ij, dDdk_ijk, sign_i]
         return self._cache_output
-
-    def sign(self, Dist_ij):
-        return np.sign(Dist_ij[np.arange(Dist_ij.shape[0]), np.argmin(abs(Dist_ij), axis=1)])
 
     def calc_relaxation(self):
         '''
