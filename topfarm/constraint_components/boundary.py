@@ -297,23 +297,17 @@ class ConvexBoundaryComp(BoundaryBaseComp):
         unit_normals = self.unit_normals
         # initialize array to hold distances from each point to each face
         face_distance = np.zeros([nPoints, nVertices])
+        from numpy import newaxis as na
 
-        # loop through points and find distances to each face
-        for i in range(0, nPoints):
+        # define the vector from the point of interest to the first point of the face
+        PA = (vertices[:, na] - points[na])
 
-            # determine if point is inside or outside of each face, and distances from each face
-            for j in range(0, nVertices):
-
-                # define the vector from the point of interest to the first point of the face
-                pa = np.array([vertices[j, 0] - points[i, 0], vertices[j, 1] - points[i, 1]])
-
-                # find perpendicular distances from point to current surface (vector projection)
-                d_vec = np.vdot(pa, unit_normals[j]) * unit_normals[j]
-
-                # calculate the sign of perpendicular distances from point to current face (+ is inside, - is outside)
-                face_distance[i, j] = np.vdot(d_vec, unit_normals[j])
-        # print (face_distance)
-        return face_distance
+        # find perpendicular distances from point to current surface (vector projection)
+        dist = np.sum(PA * unit_normals[:, na], 2)
+        # calculate the sign of perpendicular distances from point to current face (+ is inside, - is outside)
+        d_vec = dist[:, :, na] * unit_normals[:, na]
+        face_distance = np.sum(d_vec * unit_normals[:, na], 2)
+        return face_distance.T
 
     def distances(self, x, y):
         return self.calculate_distance_to_boundary(np.array([x, y]).T)
@@ -384,7 +378,8 @@ class PolygonBoundaryComp(BoundaryBaseComp):
         dEdgeDist_dy = dx / length
         edge_vect_j = np.array([x2 - x1, y2 - y1])
         edge_vect_len_j = np.linalg.norm(edge_vect_j, axis=0)
-        return (xy_boundary, x1, y1, x2, y2, dEdgeDist_dx, dEdgeDist_dy, edge_unit_vec, dx, xy1_vec, xy2_vec, edge_vect_j, edge_vect_len_j)
+        return (xy_boundary, x1, y1, x2, y2, dEdgeDist_dx, dEdgeDist_dy,
+                edge_unit_vec, dx, xy1_vec, xy2_vec, edge_vect_j, edge_vect_len_j)
 
     def _calc_distance_and_gradients(self, x, y, boundary_properties=None):
         """
@@ -640,7 +635,8 @@ class MultiPolygonBoundaryComp(PolygonBoundaryComp):
         turns_left_ij = np.broadcast_to(np.cross(np.roll(edge_vect_j, 1, axis=1), edge_vect_j, axis=0) > 0, shape_ij)
         turns_right_ij = np.logical_not(turns_left_ij)
 
-        De_ij = np.abs((x2[na, :] - x1[na, :]) * (y1[na, :] - y[:, na]) - (x1[na, :] - x[:, na]) * (y2[na, :] - y1[na, :])) / np.sqrt((x2[na, :] - x1[na, :]) ** 2 + (y2[na, :] - y1[na, :]) ** 2)
+        De_ij = np.abs((x2[na, :] - x1[na, :]) * (y1[na, :] - y[:, na]) - (x1[na, :] - x[:, na]) *
+                       (y2[na, :] - y1[na, :])) / np.sqrt((x2[na, :] - x1[na, :]) ** 2 + (y2[na, :] - y1[na, :]) ** 2)
         Dp_ij = np.sqrt((x[:, na] - x1[na, :]) ** 2 + (y[:, na] - y1[na, :]) ** 2)
 
         D_ij[overlapping_ij] = De_ij[overlapping_ij]
@@ -658,17 +654,20 @@ class MultiPolygonBoundaryComp(PolygonBoundaryComp):
         D_ij[before_ij & turns_left_ij] *= -1
         D_ij[after_ij & np.roll(turns_left_ij, -1, axis=1)] *= -1
         D_ij[before_ij & turns_right_ij & np.roll(outside_edge_ij, 1, axis=1) & outside_edge_ij] *= -1
-        D_ij[after_ij & np.roll(turns_right_ij, -1, axis=1) & np.roll(outside_edge_ij, -1, axis=1) & outside_edge_ij] *= -1
+        D_ij[after_ij & np.roll(turns_right_ij, -1, axis=1) &
+             np.roll(outside_edge_ij, -1, axis=1) & outside_edge_ij] *= -1
 
         dDdx_ij[before_ij & turns_left_ij] *= -1
         dDdx_ij[after_ij & np.roll(turns_left_ij, -1, axis=1)] *= -1
         dDdx_ij[before_ij & turns_right_ij & np.roll(outside_edge_ij, 1, axis=1) & outside_edge_ij] *= -1
-        dDdx_ij[after_ij & np.roll(turns_right_ij, -1, axis=1) & np.roll(outside_edge_ij, -1, axis=1) & outside_edge_ij] *= -1
+        dDdx_ij[after_ij & np.roll(turns_right_ij, -1, axis=1) &
+                np.roll(outside_edge_ij, -1, axis=1) & outside_edge_ij] *= -1
 
         dDdy_ij[before_ij & turns_left_ij] *= -1
         dDdy_ij[after_ij & np.roll(turns_left_ij, -1, axis=1)] *= -1
         dDdy_ij[before_ij & turns_right_ij & np.roll(outside_edge_ij, 1, axis=1) & outside_edge_ij] *= -1
-        dDdy_ij[after_ij & np.roll(turns_right_ij, -1, axis=1) & np.roll(outside_edge_ij, -1, axis=1) & outside_edge_ij] *= -1
+        dDdy_ij[after_ij & np.roll(turns_right_ij, -1, axis=1) &
+                np.roll(outside_edge_ij, -1, axis=1) & outside_edge_ij] *= -1
 
         return D_ij, dDdx_ij, dDdy_ij
 
@@ -805,7 +804,11 @@ def main():
 
         plt.figure()
         ax = plt.axes(projection='3d')
-        ax.contour3D(x.reshape(N_points, N_points), y.reshape(N_points, N_points), distances.reshape(N_points, N_points), 50)
+        ax.contour3D(
+            x.reshape(
+                N_points, N_points), y.reshape(
+                N_points, N_points), distances.reshape(
+                N_points, N_points), 50)
         ax.set_xlabel('x')
         ax.set_ylabel('y')
         ax.set_zlabel('z')

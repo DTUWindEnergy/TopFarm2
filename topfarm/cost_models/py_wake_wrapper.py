@@ -11,7 +11,7 @@ import topfarm
 import numpy as np
 from scipy.interpolate.interpolate import RegularGridInterpolator
 import warnings
-from py_wake.flow_map import HorizontalGrid
+from py_wake.flow_map import HorizontalGrid, Points, XYGrid
 import xarray as xr
 from py_wake.utils.gradients import autograd
 
@@ -58,6 +58,7 @@ class PyWakeAEP(AEPCalculator):
 class PyWakeAEPCostModelComponent(AEPCostModelComponent):
     def __init__(self, windFarmModel, n_wt, wd=None, ws=None, max_eval=None, grad_method=autograd, n_cpu=1, **kwargs):
         self.windFarmModel = windFarmModel
+        self.n_cpu = n_cpu
 
         def aep(**kwargs):
             return self.windFarmModel.aep(x=kwargs[topfarm.x_key],
@@ -94,13 +95,9 @@ class PyWakeAEPCostModelComponent(AEPCostModelComponent):
 
     def get_aep4smart_start(self, ws=[6, 8, 10, 12, 14], wd=np.arange(360)):
         def aep4smart_start(X, Y, wt_x, wt_y, type=0):
-            sim_res = self.windFarmModel(wt_x, wt_y, type=type, wd=wd, ws=ws)
-            x = np.sort(np.unique(X))
-            y = np.sort(np.unique(Y))
-            aep_map = sim_res.flow_map(HorizontalGrid(x, y)).aep_xy()
-            if isinstance(aep_map, xr.DataArray):
-                aep_map = aep_map.values[:, :, 0]
-            return RegularGridInterpolator((y, x), aep_map)(np.array([Y, X]).T)
+            sim_res = self.windFarmModel(wt_x, wt_y, type=type, wd=wd, ws=ws, n_cpu=self.n_cpu)
+            H = np.full(X.shape, self.windFarmModel.windTurbines.hub_height())
+            return sim_res.aep_map(Points(X, Y, H), n_cpu=self.n_cpu).values
         return aep4smart_start
 
 

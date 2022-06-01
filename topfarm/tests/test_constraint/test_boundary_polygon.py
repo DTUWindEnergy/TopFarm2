@@ -72,6 +72,25 @@ def testMultiPolygon():
     plot_comp.show()
 
 
+def test_calculate_distance_to_boundary():
+    import matplotlib.pyplot as plt
+    boundary = np.array([(0, 0), (10, 0), (20, 10), (20, 20), (0, 20)])
+    points = np.array([(2, 10), (10, 21), (14, 6)])
+
+    boundary_constr = XYBoundaryConstraint(boundary, 'convex_hull').get_comp(10)
+    import numpy.testing as npt
+    if 0:
+        plt.plot(*boundary.T, )
+        plt.plot(*points.T, '.')
+        plt.axis('equal')
+        plt.grid()
+        plt.show()
+    npt.assert_array_almost_equal(boundary_constr.calculate_distance_to_boundary(points),
+                                  [[18., 10., 2., 10., 12.72792206],
+                                   [10., -1., 10., 21., 14.8492424],
+                                   [6., 14., 14., 6., 1.41421356]])
+
+
 def testDistanceRelaxation():
     boundary = [([(0, 0), (5, 0), (5, 2), (3, 2), (3, 1), (2, 1), (2, 2), (0, 2), (0, 0)], 1),
                 ([(3.5, 0.5), (4.5, 0.5), (4.5, 1.5), (3.5, 1.5)], 1),

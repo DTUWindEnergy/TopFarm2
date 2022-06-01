@@ -4,6 +4,7 @@ from numpy import newaxis as na
 import multiprocessing
 import threading
 import time
+from tqdm import tqdm
 
 
 def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, random_pct=0, plot=False, seed=None):
@@ -56,12 +57,15 @@ def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, random_pct=0, plot=Fal
         np.random.seed(seed)
         seed = np.random.randint(0, 2**31)
     np.random.seed(seed)
-    for i in range(N_WT):
+    for i in tqdm(range(N_WT), desc='Smartstart'):
         if arr.shape[1] == 0:
             raise Exception('No feasible positions for wt %d' % i)
 
         if ZZ_is_func:
-            z = ZZ(arr[0], arr[1], xs, ys)
+            if random_pct < 100:
+                z = ZZ(arr[0], arr[1], xs, ys)
+            else:
+                z = np.zeros_like(arr[0])
         else:
             z = arr[2]
 
@@ -137,7 +141,8 @@ def smooth_max_gradient(X, alpha, axis=0):
         Matrix of smooth maximum derivatives.
 
     '''
-    return np.exp(alpha * X) / np.expand_dims(np.exp(alpha * X).sum(axis=axis), axis) * (1 + alpha * (X - np.expand_dims(smooth_max(X, alpha, axis=axis), axis)))
+    return np.exp(alpha * X) / np.expand_dims(np.exp(alpha * X).sum(axis=axis), axis) * \
+        (1 + alpha * (X - np.expand_dims(smooth_max(X, alpha, axis=axis), axis)))
 
 
 def main():
