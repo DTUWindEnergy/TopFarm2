@@ -233,6 +233,11 @@ class TopFarmListRecorder(SqliteRecorder):
     def keys(self):
         return list(self.driver_iteration_dict)
 
+    @property
+    def time(self):
+        t = self['timestamp']
+        return t - t[0]
+
 
 class NestedTopFarmListRecorder(TopFarmListRecorder):
     def __init__(self, nested_comp, record_id=None):

@@ -99,6 +99,8 @@ def test_ListRecorder():
     with pytest.raises(KeyError, match="missing"):
         recorder.get('missing')
 
+    npt.assert_array_equal(recorder.time, recorder['timestamp'] - recorder['timestamp'][0])
+
 
 def test_TopFarmListRecorderAnimation(tf_generator):
     try:
