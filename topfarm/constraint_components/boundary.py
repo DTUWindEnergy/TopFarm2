@@ -5,7 +5,7 @@ from topfarm.constraint_components import Constraint, ConstraintComponent
 from topfarm.utils import smooth_max, smooth_max_gradient
 import topfarm
 from shapely.geometry import Polygon, MultiPolygon
-from shapely.ops import cascaded_union
+from shapely.ops import unary_union
 import warnings
 
 
@@ -509,7 +509,8 @@ class CircleBoundaryComp(PolygonBoundaryComp):
 
 
 class MultiPolygonBoundaryComp(PolygonBoundaryComp):
-    def __init__(self, n_wt, xy_multi_boundary, const_id=None, units=None, relaxation=False, method='nearest'):
+    def __init__(self, n_wt, xy_multi_boundary, const_id=None, units=None, relaxation=False, method='nearest',
+                 simplify_geometry=False):
         '''
 
 
@@ -526,7 +527,8 @@ class MultiPolygonBoundaryComp(PolygonBoundaryComp):
         method : {'nearest' or 'smooth_min'}, optional
             'nearest' calculate the distance to the nearest edge or point'smooth_min'
             calculates the weighted minimum distance to all edges/points. The default is 'nearest'.
-
+        simplify : float or dict
+            if float, simplification tolerance. if dict, shapely.simplify keyword arguments
         Returns
         -------
         None.
@@ -536,19 +538,42 @@ class MultiPolygonBoundaryComp(PolygonBoundaryComp):
         PolygonBoundaryComp.__init__(self, n_wt, xy_boundary=xy_multi_boundary[0][0], const_id=const_id, units=units, relaxation=relaxation)
         self.bounds_poly = [Polygon(x) for x, _ in xy_multi_boundary]
         self.types_bool = [1 if x in ['i', 'include', True, 1, None] else 0 for _, x in xy_multi_boundary]
-        self.boundaries = self._calc_resulting_polygons()
+        self._setup_boundaries()
+        self.relaxation = relaxation
+        self.method = method
+        if simplify_geometry:
+            self.simplify(simplify_geometry)
+
+    def simplify(self, simplify_geometry):
+        if isinstance(simplify_geometry, dict):
+            self.bounds_poly = [rp.simplify(**simplify_geometry) for rp in self.bounds_poly]
+        else:
+            self.bounds_poly = [rp.simplify(simplify_geometry) for rp in self.bounds_poly]
+        self._setup_boundaries()
+
+    def _setup_boundaries(self):
+        self.res_poly = self._calc_resulting_polygons(self.bounds_poly)
+        self.boundaries = self._poly_to_bound(self.res_poly)
         self.boundary_properties_list = [self.get_boundary_properties(bound) for bound, _ in self.boundaries]
         self.n_edges = np.asarray([len(bound) for bound, _ in self.boundaries])
         self.n_edges_tot = np.sum(self.n_edges)
         self.start_at = np.cumsum(self.n_edges) - self.n_edges
         self.end_at = self.start_at + self.n_edges
-        self.relaxation = relaxation
-        self.method = method
 
-    def _calc_resulting_polygons(self):
+    def _poly_to_bound(self, polygons):
+        boundaries = []
+        for bound in polygons:
+            x, y = bound.exterior.xy
+            boundaries.append((np.asarray([x, y]).T[:-1, :], 1))
+            for interior in bound.interiors:
+                x, y = interior.xy
+                boundaries.append((np.asarray([x, y]).T[:-1, :], 0))
+        return boundaries
+
+    def _calc_resulting_polygons(self, boundary_polygons):
         domain = []
-        for i in range(len(self.bounds_poly)):
-            b = self.bounds_poly[i]
+        for i in range(len(boundary_polygons)):
+            b = boundary_polygons[i]
             if len(domain) == 0:
                 if self.types_bool[i]:
                     domain.append(b)
@@ -560,7 +585,7 @@ class MultiPolygonBoundaryComp(PolygonBoundaryComp):
                     temp = []
                     for j, d in enumerate(domain):
                         if d.intersects(b):
-                            b = cascaded_union([d, b])
+                            b = unary_union([d, b])
                         else:
                             if d.contains(b):
                                 warnings.warn("Boundary is fully contained preceding polygon and will be ignored")
@@ -570,9 +595,11 @@ class MultiPolygonBoundaryComp(PolygonBoundaryComp):
                                 warnings.warn("Boundary is fully containing preceding polygon and will override it")
                                 pass
                             else:
-                                temp.append(d)
+                                if b.area > 1e-3:
+                                    temp.append(d)
                         if j == len(domain) - 1:
-                            temp.append(b)
+                            if b.area > 1e-3:
+                                temp.append(b)
                     domain = temp
                 else:
                     temp = []
@@ -582,7 +609,7 @@ class MultiPolygonBoundaryComp(PolygonBoundaryComp):
                             if isinstance(nonoverlap, type(Polygon())):
                                 temp.append(nonoverlap)
                             elif isinstance(nonoverlap, type(MultiPolygon())):
-                                for x in nonoverlap:
+                                for x in nonoverlap.geoms:
                                     if x.area > 1e-3:
                                         temp.append(x)
                         else:
@@ -592,18 +619,10 @@ class MultiPolygonBoundaryComp(PolygonBoundaryComp):
                             else:
                                 if d.contains(b):
                                     d = Polygon(d.exterior.coords, [b.exterior.coords])
-                                temp.append(d)
+                                if d.area > 1e-3:
+                                    temp.append(d)
                     domain = temp
-        self.res_poly = domain
-        boundaries = []
-        for bound in domain:
-            x, y = bound.exterior.xy
-            boundaries.append((np.asarray([x, y]).T[:-1, :], 1))
-            for interior in bound.interiors:
-                x, y = interior.xy
-                boundaries.append((np.asarray([x, y]).T[:-1, :], 0))
-
-        return boundaries
+        return domain
 
     def _calc_distance_and_gradients(self, x, y, boundary_properties):
         '''
@@ -812,6 +831,13 @@ def main():
         ax.set_xlabel('x')
         ax.set_ylabel('y')
         ax.set_zlabel('z')
+
+        if 0:
+            for smpl in [0, 1, 2, 3, 4, 5, 6, 7, 8]:
+                MPBC = MultiPolygonBoundaryComp(n_wt, multi_boundary, simplify_geometry=smpl)
+                plt.figure()
+                ax = plt.gca()
+                MPBC.plot(ax)
 
 
 main()

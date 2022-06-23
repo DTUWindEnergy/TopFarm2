@@ -1,8 +1,5 @@
-import unittest
-
 import numpy as np
 from topfarm.cost_models.dummy import DummyCost, DummyCostPlotComp
-from topfarm import TopFarm
 
 from topfarm.plotting import NoPlot
 from topfarm.easy_drivers import EasyScipyOptimizeDriver
@@ -11,12 +8,12 @@ from topfarm.constraint_components.boundary import XYBoundaryConstraint,\
 from topfarm._topfarm import TopFarmProblem
 
 
-def get_tf(initial, optimal, boundary, plot_comp=NoPlot()):
+def get_tf(initial, optimal, boundary, plot_comp=NoPlot(), boundary_type='polygon'):
     initial, optimal = map(np.array, [initial, optimal])
     return TopFarmProblem(
         {'x': initial[:, 0], 'y': initial[:, 1]},
         DummyCost(optimal),
-        constraints=[XYBoundaryConstraint(boundary, 'polygon')],
+        constraints=[XYBoundaryConstraint(boundary, boundary_type)],
         driver=EasyScipyOptimizeDriver(tol=1e-8, disp=False),
         plot_comp=plot_comp)
 
@@ -61,15 +58,43 @@ def testMultiPolygon():
                 ([(0.5, 0.5), (1.75, 0.5), (1.75, 1.5), (0.5, 1.5)], 0),
                 ([(0.75, 0.75), (1.25, 0.75), (1.25, 1.25), (0.75, 1.25)], 0),
                 ]
+    xy_bound_ref_ = np.array([[[0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                               [5., 5., 5., 5., 5., 5., 5., 5., 5., 5.],
+                               [5., 5., 5., 5., 5., 5., 5., 5., 5., 5.],
+                               [3., 3., 3., 3., 3., 3., 3., 3., 3., 3.],
+                               [3., 3., 3., 3., 3., 3., 3., 3., 3., 3.],
+                               [2., 2., 2., 2., 2., 2., 2., 2., 2., 2.],
+                               [2., 2., 2., 2., 2., 2., 2., 2., 2., 2.],
+                               [0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                               [0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]],
+
+                              [[0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                               [0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                               [2., 2., 2., 2., 2., 2., 2., 2., 2., 2.],
+                               [2., 2., 2., 2., 2., 2., 2., 2., 2., 2.],
+                               [1., 1., 1., 1., 1., 1., 1., 1., 1., 1.],
+                               [1., 1., 1., 1., 1., 1., 1., 1., 1., 1.],
+                               [2., 2., 2., 2., 2., 2., 2., 2., 2., 2.],
+                               [2., 2., 2., 2., 2., 2., 2., 2., 2., 2.],
+                               [0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]]]).T
+    bound_dist_ref = np.array([[5.00000000e-01, -0.00000000e+00],
+                               [5.00000000e-01, -0.00000000e+00],
+                               [4.44089210e-16, 8.88178420e-16],
+                               [-2.65765765e-01, 4.57207206e-01],
+                               [-4.25507089e-02, 6.16166344e-01],
+                               [0.00000000e+00, 9.87427871e-01],
+                               [0.00000000e+00, 9.91504055e-01],
+                               [7.95692918e-04, 9.99406616e-01],
+                               [0.00000000e+00, 9.99843063e-01],
+                               [0.00000000e+00, 9.99997428e-01]])
     plot_comp = NoPlot()  # DummyCostPlotComp(optimal)
     initial = [(-0, .1), (4, 1.5)][::-1]
-    tf = TopFarm(initial, DummyCost(optimal, inputs=['x', 'y']), 0,
-                 boundary=boundary, boundary_type='multi_polygon', plot_comp=plot_comp,
-                 driver=EasyScipyOptimizeDriver(tol=1e-8, disp=False))
+    tf = get_tf(initial, optimal, boundary, plot_comp, boundary_type='multi_polygon')
     tf.evaluate()
-    tf.optimize()
+    cost, state, recorder = tf.optimize()
+    np.testing.assert_array_almost_equal(recorder['xy_boundary'], xy_bound_ref_, 4)
+    np.testing.assert_array_almost_equal(recorder['boundaryDistances'], bound_dist_ref, 4)
     np.testing.assert_array_almost_equal(tf.turbine_positions[:, :2], optimal, 4)
-    plot_comp.show()
 
 
 def test_calculate_distance_to_boundary():

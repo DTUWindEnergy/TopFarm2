@@ -41,7 +41,7 @@ setup(name='topfarm',
               'scikit-learn',  # load surrogate
               'mock',  # replace variables during tests
               'tensorflow',  # loads examples with surrogates
-              'shapely', # for multiple polygon boundaries and exclusion zones
+              'shapely>=1.8.2', # for multiple polygon boundaries and exclusion zones
               'memory_profiler',  # memory profiling
               ],
       zip_safe=True)
