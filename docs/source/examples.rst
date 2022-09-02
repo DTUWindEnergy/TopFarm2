@@ -25,4 +25,5 @@ You can also `launch them via Binder <https://mybinder.org/v2/git/https%3A%2F%2F
     examples_nblinks/bathymetry_nb
     examples_nblinks/exclusion_zones_nb
     examples_nblinks/mongodb_nb
+    examples_nblinks/regular_grid_optimization_nb
 

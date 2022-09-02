@@ -33,7 +33,7 @@ from topfarm.recorders import NestedTopFarmListRecorder,\
 from topfarm.mongo_recorder import MongoRecorder
 from topfarm.plotting import NoPlot
 from topfarm.easy_drivers import EasyScipyOptimizeDriver, EasySimpleGADriver, EasyDriverBase
-from topfarm.utils import smart_start
+from topfarm.utils import smart_start, RegularGridComponent
 from topfarm.constraint_components.spacing import SpacingComp
 from topfarm.constraint_components.boundary import BoundaryBaseComp
 from topfarm.constraint_components.penalty_component import PenaltyComponent, PostPenaltyComponent
@@ -81,7 +81,7 @@ class TopFarmProblem(Problem):
                  constraints=[], plot_comp=NoPlot(), record_id=None,
                  expected_cost=1, ext_vars={}, post_constraints=[], approx_totals=False,
                  recorder=None, additional_recorders=None,
-                 n_wt=0):
+                 n_wt=0, additional_input={}):
         """Initialize TopFarmProblem
 
         Parameters
@@ -210,6 +210,8 @@ class TopFarmProblem(Problem):
             self.indeps.add_output(k, v)
         self.ext_vars = ext_vars
 
+        if 'sx' in design_vars:
+            self.model.add_subsystem('regular_grid_comp', RegularGridComponent(design_vars, n_wt, **additional_input), promotes=['*'])
         if cost_comp and isinstance(cost_comp, PostConstraint):
             post_constraints = post_constraints + [cost_comp]
 
