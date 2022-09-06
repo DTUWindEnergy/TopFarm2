@@ -11,7 +11,7 @@ class CostModelComponent(ExplicitComponent):
 
     def __init__(self, input_keys, n_wt, cost_function, cost_gradient_function=None,
                  output_keys=["Cost"], output_unit="", additional_input=[], additional_output=[], max_eval=None,
-                 objective=True, maximize=False, output_vals=[0.0], input_units=[], step={}, **kwargs):
+                 objective=True, maximize=False, output_vals=[0.0], input_units=[], step={}, use_penalty=True, **kwargs):
         """Initialize wrapper for pure-Python cost function
 
         Parameters
@@ -104,6 +104,7 @@ class CostModelComponent(ExplicitComponent):
         self.n_grad_eval = 0
         self.grad_time_sum = 0
         self.step = step
+        self.use_penalty = use_penalty
 
     def setup(self):
         for i, u in zip(self.input_keys + self.additional_input, self.input_units):
@@ -111,7 +112,8 @@ class CostModelComponent(ExplicitComponent):
                 self.add_input(i[0], val=i[1], units=u)
             else:
                 self.add_input(i, val=np.zeros(self.n_wt), units=u)
-        self.add_input('penalty', val=0.0)
+        if self.use_penalty:
+            self.add_input('penalty', val=0.0)
         if self.objective:
             self.add_output('cost', val=0.0)
             self.add_output('cost_comp_eval', val=0.0)
@@ -154,8 +156,9 @@ class CostModelComponent(ExplicitComponent):
 
     def compute(self, inputs, outputs):
         """Compute cost model"""
-        if inputs['penalty'] > 0:
-            return
+        if self.use_penalty:
+            if inputs['penalty'] > 0:
+                return
         if self.counter >= self.max_eval:
             return
         t = time.time()

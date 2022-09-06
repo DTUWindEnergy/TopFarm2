@@ -147,7 +147,7 @@ def smooth_max_gradient(X, alpha, axis=0):
         (1 + alpha * (X - np.expand_dims(smooth_max(X, alpha, axis=axis), axis)))
 
 
-def regular_generic_layout(n_wt, sx, sy, stagger, rotation, ratio=1.0):
+def regular_generic_layout(n_wt, sx, sy, stagger, rotation, x0=0, y0=0, ratio=1.0):
     '''
     Parameters
     ----------
@@ -188,10 +188,11 @@ def regular_generic_layout(n_wt, sx, sy, stagger, rotation, ratio=1.0):
     x, y = xm.ravel(), ym.ravel()
     x = np.hstack((x, x_grid[:rest]))
     y = np.hstack((y, (y[-n_col:-(n_col - rest)] + float(sy))))
-    return np.matmul(R, np.array([x, y]))
+    xy_grid = np.matmul(R, np.array([x, y]))
+    return xy_grid + np.asarray([x0, y0])[:, na]
 
 
-def regular_generic_layout_gradients(n_wt, sx, sy, stagger, rotation, ratio=1.0):
+def regular_generic_layout_gradients(n_wt, sx, sy, stagger, rotation, x0=0, y0=0, ratio=1.0):
     '''
     Parameters
     ----------
@@ -257,49 +258,7 @@ def regular_generic_layout_gradients(n_wt, sx, sy, stagger, rotation, ratio=1.0)
                      [np.cos(theta), -np.sin(theta)]])
     dx_dr, dy_dr = np.matmul(dRdr, np.array([x, y])) * np.pi / 180
 
-    return dx_dsx, dy_dsx, dx_dsy, dy_dsy, dx_dr, dy_dr
-
-
-class RegularGridComponent(ExplicitComponent):
-    def __init__(self, design_vars, n_wt, **additional_input):
-        super().__init__()
-        self.design_vars = design_vars
-        self.n_wt = n_wt
-        default_vals = {'n_wt': n_wt,
-                        'sx': None,
-                        'sy': None,
-                        'stagger': 0,
-                        'rotation': 0,
-                        'ratio': 1.0}
-        additional_vals = {k: v for k, v in additional_input.items() if k in default_vals}
-        self.default_dict = {**default_vals, **additional_vals}
-
-    def setup(self):
-        for k, v in self.design_vars.items():
-            if k in self.default_dict:
-                self.add_input(k, v[0], units=v[-1])
-                if k in ['sx', 'sy', 'rotation']:
-                    self.declare_partials(topfarm.x_key, k, method='exact')
-                    self.declare_partials(topfarm.y_key, k, method='exact')
-                else:
-                    self.declare_partials(topfarm.x_key, k, method='fd')
-                    self.declare_partials(topfarm.y_key, k, method='fd')
-        self.add_output(topfarm.x_key, val=np.zeros(self.n_wt))
-        self.add_output(topfarm.y_key, val=np.zeros(self.n_wt))
-
-    def compute(self, inputs, outputs):
-        x, y = regular_generic_layout(**{**self.default_dict, **dict(inputs)})
-        outputs[topfarm.x_key] = x
-        outputs[topfarm.y_key] = y
-
-    def compute_partials(self, inputs, J):
-        dx_dsx, dy_dsx, dx_dsy, dy_dsy, dx_dr, dy_dr = regular_generic_layout_gradients(**{**self.default_dict, **dict(inputs)})
-        J[topfarm.x_key, 'sx'] = dx_dsx
-        J[topfarm.x_key, 'sy'] = dx_dsy
-        J[topfarm.y_key, 'sx'] = dy_dsx
-        J[topfarm.y_key, 'sy'] = dy_dsy
-        J[topfarm.x_key, 'rotation'] = dx_dr
-        J[topfarm.y_key, 'rotation'] = dy_dr
+    return [dx_dsx, dy_dsx, dx_dsy, dy_dsy, dx_dr, dy_dr]
 
 
 def main():
@@ -325,20 +284,20 @@ def main():
         plt.show()
 
         plt.figure()
-        xy = regular_generic_layout(n_wt=100, sx=5, sy=4, stagger=2, rotation=35, ratio=1.25)
+        xy = regular_generic_layout(n_wt=100, sx=5, sy=4, stagger=2, rotation=35, ratio=1.25, x0=20, y0=40)
 
         dsx = 0.1
-        dxyx = regular_generic_layout(n_wt=100, sx=5 + dsx, sy=4, stagger=2, rotation=35, ratio=1.25)
+        dxyx = regular_generic_layout(n_wt=100, sx=5 + dsx, sy=4, stagger=2, rotation=35, ratio=1.25, x0=20, y0=40)
         dxy_dsx = (dxyx - xy) / dsx
         dx_dsx, dy_dsx = dxy_dsx
 
         dsy = 0.1
-        dxyy = regular_generic_layout(n_wt=100, sx=5, sy=4 + dsy, stagger=2, rotation=35, ratio=1.25)
+        dxyy = regular_generic_layout(n_wt=100, sx=5, sy=4 + dsy, stagger=2, rotation=35, ratio=1.25, x0=20, y0=40)
         dxy_dsy = (dxyy - xy) / dsy
         dx_dsy, dy_dsy = dxy_dsy
 
         dR = 0.1
-        dxyR = regular_generic_layout(n_wt=100, sx=5, sy=4, stagger=2, rotation=35 + dR, ratio=1.25)
+        dxyR = regular_generic_layout(n_wt=100, sx=5, sy=4, stagger=2, rotation=35 + dR, ratio=1.25, x0=20, y0=40)
         dxy_dR = (dxyR - xy) / dR
         dx_dR, dy_dR = dxy_dR
 
@@ -346,7 +305,7 @@ def main():
         plt.plot(x, y, '.')
         plt.axis('equal')
 
-        dx_dsxg, dy_dsxg, dx_dsyg, dy_dsyg, dx_dRg, dy_dRg = regular_generic_layout_gradients(n_wt=100, sx=5, sy=4, stagger=2, rotation=35, ratio=1.25)
+        dx_dsxg, dy_dsxg, dx_dsyg, dy_dsyg, dx_dRg, dy_dRg = regular_generic_layout_gradients(n_wt=100, sx=5, sy=4, stagger=2, rotation=35, ratio=1.25, x0=20, y0=40)
         plt.figure()
         plt.plot(dx_dsx.ravel(), dx_dsxg.ravel(), '.')
         plt.figure()
