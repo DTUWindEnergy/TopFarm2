@@ -44,9 +44,11 @@ class XYBoundaryConstraint(Constraint):
     def get_comp(self, n_wt):
         if not hasattr(self, 'boundary_comp'):
             if self.boundary_type == 'polygon':
-                self.boundary_comp = PolygonBoundaryComp(n_wt, self.boundary, self.const_id, self.units, self.relaxation)
+                self.boundary_comp = PolygonBoundaryComp(
+                    n_wt, self.boundary, self.const_id, self.units, self.relaxation)
             elif self.boundary_type == 'multi_polygon':
-                self.boundary_comp = MultiPolygonBoundaryComp(n_wt, self.multi_boundary, self.const_id, self.units, self.relaxation)
+                self.boundary_comp = MultiPolygonBoundaryComp(
+                    n_wt, self.multi_boundary, self.const_id, self.units, self.relaxation)
             else:
                 self.boundary_comp = ConvexBoundaryComp(
                     n_wt, self.boundary, self.boundary_type, self.const_id, self.units)
@@ -346,27 +348,31 @@ class PolygonBoundaryComp(BoundaryBaseComp):
         self.zeros = np.zeros(self.nTurbines)
         self.units = units
         self.boundary_properties = self.get_boundary_properties(xy_boundary)
-        BoundaryBaseComp.__init__(self, n_wt, xy_boundary=self.boundary_properties[0], const_id=const_id, units=units, relaxation=relaxation)
+        BoundaryBaseComp.__init__(self, n_wt, xy_boundary=self.boundary_properties[0], const_id=const_id,
+                                  units=units, relaxation=relaxation)
         self._cache_input = None
         self._cache_output = None
         self.relaxation = relaxation
 
-    def get_boundary_properties(self, xy_boundary):
+    def get_boundary_properties(self, xy_boundary, inclusion_zone=True):
         vertices = np.array(xy_boundary)
 
-        def edges_counter_clockwise(vertices):
+        def get_edges(vertices, counter_clockwise):
             if np.any(vertices[0] != vertices[-1]):
                 vertices = np.r_[vertices, vertices[:1]]
             x1, y1 = vertices[:-1].T
             x2, y2 = vertices[1:].T
             double_area = np.sum((x1 - x2) * (y1 + y2))  # 2 x Area (+: counterclockwise
             assert double_area != 0, "Area must be non-zero"
-            if double_area < 0:  #
-                return edges_counter_clockwise(vertices[::-1])
+            if (counter_clockwise and double_area < 0) or (not counter_clockwise and double_area > 0):  #
+                return get_edges(vertices[::-1], counter_clockwise)
             else:
                 return vertices[:-1], x1, y1, x2, y2
 
-        xy_boundary, x1, y1, x2, y2 = edges_counter_clockwise(vertices)
+        # inclusion zones are defined counter clockwise (unitnormal vector pointing out) while
+        # exclusion zones are defined clockwise (unitnormal vector pointing in)
+        xy_boundary, x1, y1, x2, y2 = get_edges(vertices, inclusion_zone)
+
         dx = x2 - x1
         dy = y2 - y1
         length = ((y2 - y1)**2 + (x2 - x1)**2)**0.5
@@ -532,7 +538,13 @@ class MultiPolygonBoundaryComp(PolygonBoundaryComp):
 
         '''
         self.xy_multi_boundary = xy_multi_boundary
-        PolygonBoundaryComp.__init__(self, n_wt, xy_boundary=xy_multi_boundary[0][0], const_id=const_id, units=units, relaxation=relaxation)
+        PolygonBoundaryComp.__init__(
+            self,
+            n_wt,
+            xy_boundary=xy_multi_boundary[0][0],
+            const_id=const_id,
+            units=units,
+            relaxation=relaxation)
         self.bounds_poly = [Polygon(x) for x, _ in xy_multi_boundary]
         self.types_bool = [1 if x in ['i', 'include', True, 1, None] else 0 for _, x in xy_multi_boundary]
         self._setup_boundaries()
@@ -551,11 +563,12 @@ class MultiPolygonBoundaryComp(PolygonBoundaryComp):
     def _setup_boundaries(self):
         self.res_poly = self._calc_resulting_polygons(self.bounds_poly)
         self.boundaries = self._poly_to_bound(self.res_poly)
-        self.boundary_properties_list = [self.get_boundary_properties(bound) for bound, _ in self.boundaries]
-        self.n_edges = np.asarray([len(bound) for bound, _ in self.boundaries])
-        self.n_edges_tot = np.sum(self.n_edges)
-        self.start_at = np.cumsum(self.n_edges) - self.n_edges
-        self.end_at = self.start_at + self.n_edges
+
+        boundary_properties_list_all = list(zip(*[self.get_boundary_properties(bound, incl_excl)
+                                                  for bound, incl_excl in self.boundaries]))
+        ax = {7: 1, 9: 1, 10: 1, 11: 1}  # axis to concatenate
+        self.boundary_properties_list_all = [np.concatenate(v, ax.get(i, 0))
+                                             for i, v in enumerate(boundary_properties_list_all)]
 
     def _poly_to_bound(self, polygons):
         boundaries = []
@@ -720,20 +733,10 @@ class MultiPolygonBoundaryComp(PolygonBoundaryComp):
         '''
         if np.all(np.array([x, y]) == self._cache_input) & (not self.relaxation):
             return self._cache_output
-        Dist_ij = np.zeros((len(x), self.n_edges_tot))
-        dDdk_ijk = np.zeros((len(x), self.n_edges_tot, 2))
-        for n, (bound, bound_type) in enumerate(self.boundaries):
-            sa = self.start_at[n]
-            ea = self.end_at[n]
-            distance, ddist_dX, ddist_dY = self._calc_distance_and_gradients(x, y, self.boundary_properties_list[n])
-            if bound_type == 0:
-                distance *= -1
-                ddist_dX *= -1
-                ddist_dY *= -1
-            Dist_ij[:, sa:ea] = distance
-            dDdk_ijk[:, sa:ea, 0] = ddist_dX
-            dDdk_ijk[:, sa:ea, 1] = ddist_dY
 
+        Dist_ij, ddist_dX, ddist_dY = self._calc_distance_and_gradients(x, y, self.boundary_properties_list_all)
+
+        dDdk_ijk = np.moveaxis([ddist_dX, ddist_dY], 0, -1)
         sign_i = self.sign(Dist_ij)
         self._cache_input = np.array([x, y])
         self._cache_output = [Dist_ij, dDdk_ijk, sign_i]
@@ -818,7 +821,7 @@ def main():
         plt.legend()
         plt.grid()
         plt.axis('square')
-        plt.contourf(x_grid, y_grid, distances.reshape(N_points, N_points), 50)
+        plt.contourf(x_grid, y_grid, distances.reshape(N_points, N_points), np.linspace(-10, 10, 100), cmap='seismic')
         plt.colorbar()
 
         plt.figure()
@@ -827,7 +830,7 @@ def main():
             x.reshape(
                 N_points, N_points), y.reshape(
                 N_points, N_points), distances.reshape(
-                N_points, N_points), 50)
+                N_points, N_points), np.linspace(-10, 10, 100), cmap='seismic')
         ax.set_xlabel('x')
         ax.set_ylabel('y')
         ax.set_zlabel('z')
@@ -838,6 +841,7 @@ def main():
                 plt.figure()
                 ax = plt.gca()
                 MPBC.plot(ax)
+        plt.show()
 
 
 main()

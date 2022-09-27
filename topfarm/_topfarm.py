@@ -631,7 +631,6 @@ def main():
         from topfarm.cost_models.dummy import DummyCost, DummyCostPlotComp
         from topfarm.constraint_components.spacing import SpacingConstraint
         from topfarm.constraint_components.boundary import XYBoundaryConstraint
-        from openmdao.api import n2
 
         initial = np.array([[6, 0], [6, -8], [1, 1]])  # initial turbine layouts
         optimal = np.array([[2.5, -3], [6, -7], [4.5, -3]])  # optimal turbine layouts
