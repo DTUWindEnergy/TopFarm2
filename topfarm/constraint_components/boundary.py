@@ -342,99 +342,110 @@ class PolygonBoundaryComp(BoundaryBaseComp):
         def get_edges(vertices, counter_clockwise):
             if np.any(vertices[0] != vertices[-1]):
                 vertices = np.r_[vertices, vertices[:1]]
-            x1, y1 = vertices[:-1].T
-            x2, y2 = vertices[1:].T
+            x1, y1 = A = vertices[:-1].T
+            x2, y2 = B = vertices[1:].T
             double_area = np.sum((x1 - x2) * (y1 + y2))  # 2 x Area (+: counterclockwise
             assert double_area != 0, "Area must be non-zero"
             if (counter_clockwise and double_area < 0) or (not counter_clockwise and double_area > 0):  #
                 return get_edges(vertices[::-1], counter_clockwise)
             else:
-                return vertices[:-1], x1, y1, x2, y2
+                return vertices[:-1], A, B
 
-        # inclusion zones are defined counter clockwise (unitnormal vector pointing out) while
-        # exclusion zones are defined clockwise (unitnormal vector pointing in)
-        xy_boundary, x1, y1, x2, y2 = get_edges(vertices, inclusion_zone)
+        # inclusion zones are defined counter clockwise (unit-normal vector pointing in) while
+        # exclusion zones are defined clockwise (unit-normal vector pointing out)
+        xy_boundary, A, B = get_edges(vertices, inclusion_zone)
 
-        dx = x2 - x1
-        dy = y2 - y1
-        length = ((y2 - y1)**2 + (x2 - x1)**2)**0.5
-        edge_unit_vec = (np.array([dy, -dx]) / length)
-        v = np.hstack((edge_unit_vec, edge_unit_vec[:, :1]))
-        xy2_vec = v[:, :-1] + v[:, 1:]
-        xy1_vec = np.hstack((xy2_vec[:, -1:], xy2_vec[:, 1:]))
-        dEdgeDist_dx = -dy / length
-        dEdgeDist_dy = dx / length
-        edge_vect_j = np.array([x2 - x1, y2 - y1])
-        edge_vect_len_j = np.linalg.norm(edge_vect_j, axis=0)
-        return (xy_boundary, x1, y1, x2, y2, dEdgeDist_dx, dEdgeDist_dy,
-                edge_unit_vec, dx, xy1_vec, xy2_vec, edge_vect_j, edge_vect_len_j)
+        dx, dy = AB = B - A
+        AB_len = np.linalg.norm(AB, axis=0)
+        edge_unit_normal = (np.array([-dy, dx]) / AB_len)
+
+        # A_normal and B_normal are the normal vectors at the nodes A,B (the mean of the adjacent edge normal vectors
+        A_normal = (edge_unit_normal + np.roll(edge_unit_normal, 1, 1)) / 2
+        B_normal = np.roll(A_normal, -1, 1)
+
+        # import matplotlib.pyplot as plt
+        # for (x, y), (dx, dy), (unx, uny) in zip(A.T, AB.T, edge_unit_normal.T):
+        #     plt.arrow(x, y, dx, dy, color='k', head_width=.2)
+        #     plt.arrow(x, y, unx, uny, color='r', head_width=.2)
+        # for (x, y), (nx, ny) in zip(A.T, A_normal.T):
+        #     plt.arrow(x, y, nx, ny, color='b', head_width=.2)
+        # for (x, y), (nx, ny) in zip(B.T, B_normal.T):
+        #     plt.arrow(x, y, nx / 2, ny / 2, color='g', head_width=.2)
+
+        return (xy_boundary, A, B, AB, AB_len, edge_unit_normal, A_normal, B_normal)
 
     def _calc_distance_and_gradients(self, x, y, boundary_properties=None):
         """
-        distances point(x,y) to edge((x1,y1)->(x2,y2))
+        distances point, P=(x,y) to edge(A->B)
         +/-: inside/outside
-        case (x,y) closest to edge:
-            distances = edge_unit_vec dot (x1-x,y1-y)
-            ddist_dx = -(y2-y2)/|edge|
-            ddist_dy = (x2-x2)/|edge|
-        case (x,y) closest to (x1,y1) (and (x2,y2)):
-            sign = sign of distances to nearest edge
-            distances = sign * (x1-x^2 + y1-y)^2)^.5
-            ddist_dx = sign * 2*x-2*x1 / (2 * distances^.5)
-            ddist_dy = sign * 2*y-2*y1 / (2 * distances^.5)
         """
-        boundary_properties = boundary_properties or self.boundary_properties
-        _, x1, y1, x2, y2, dEdgeDist_dx, dEdgeDist_dy, edge_unit_vec, dx, xy1_vec, xy2_vec, edge_vect_j, edge_vect_len_j = boundary_properties
-        X, Y = [np.tile(xy, (len(x1), 1)).T for xy in [x, y]]  # dim = (ntb, nEdges)
-        X1, Y1, X2, Y2, ddist_dX, ddist_dY = [np.tile(xy, (len(x), 1))
-                                              for xy in [x1, y1, x2, y2, dEdgeDist_dx, dEdgeDist_dy]]
-        # vector a is the vector from vertex to point
-        a = np.array([X - X1, Y - Y1])
+        def vec_len(vec):
+            return np.linalg.norm(vec, axis=0)
 
-        # signed component of a on the edge vector, a_tilde
-        a_tilde = np.sum(a * edge_vect_j[:, na, :], axis=0) / edge_vect_len_j[na, :]
+        boundary_properties = boundary_properties or self.boundary_properties[1:]
+        A, B, AB, AB_len, edge_unit_normal, A_normal, B_normal = boundary_properties
+        """
+        A: edge start point
+        B: edge end point
+        edge_unit_normal: unit vector perpendicular to edge pointing to the good side
+        (i.e. inside for inclusion zones and outside for exclusion zones)
+        AB: Vector from A to B (edge)
+        AB_len: length of AB (edge)
+        A_normal: mean of edge unit normal vectors adjacent to A
+        B_normal: mean of edge unit normal vectors adjacent to B
+        """
 
-        # if a_tilde is negative use vertex 1 and if a_tilde is longer than the edge vector use vertex 2
-        use_xy1 = 0 > a_tilde
-        use_xy2 = a_tilde > edge_vect_len_j
+        # Add dim to match (2, #P, #Edges), where the first dimension is (x,y)
+        P = np.array([x, y])[:, :, na]
+        A, B, AB = A[:, na], B[:, na], AB[:, na]
+        edge_unit_normal, A_normal, B_normal = edge_unit_normal[:, na], A_normal[:, na], B_normal[:, na]
+        AB_len = AB_len[na]
 
-        # perpendicular distances to edge (dot product)
-        d12 = (x1 - X) * edge_unit_vec[0] + (y1 - Y) * edge_unit_vec[1]
+        # ===============================================================================================================
+        # Determine if P is closer to A, B or the edge (between A and B)
+        # ===============================================================================================================
+        AP = P - A  # vector from edge start to point
+        BP = P - B  # vector from edge end to point
 
-        # nearest point on edge
-        px = X + d12 * edge_unit_vec[0]
-        py = Y + d12 * edge_unit_vec[1]
+        # signed component of AP on the edge vector
+        a_tilde = np.sum(AP * AB, axis=0) / AB_len
 
-        # distances to start and end points
-        d1 = np.sqrt((x1 - X)**2 + (y1 - Y)**2)
-        d2 = np.sqrt((x2 - X)**2 + (y2 - Y)**2)
+        # a_tilde < 0: closer to A
+        # a_tilde > |AB|: closer to B
+        # else: closer to edge (between A and B)
+        use_A = 0 > a_tilde
+        use_B = a_tilde > AB_len
 
-        px[use_xy1] = X1[use_xy1]
-        py[use_xy1] = Y1[use_xy1]
-        px[use_xy2] = X2[use_xy2]
-        py[use_xy2] = Y2[use_xy2]
+        # ===============================================================================================================
+        # Calculate distance from P to closer point on edge
+        # ===============================================================================================================
 
-        distance = d12.copy()
-        v = (px[use_xy1] - X[use_xy1]) * xy1_vec[0, np.where(use_xy1)[1]] + \
-            (py[use_xy1] - Y[use_xy1]) * xy1_vec[1, np.where(use_xy1)[1]]
-        sign_use_xy1 = np.choose(v >= 0, [-1, 1])
-        v = (px[use_xy2] - X[use_xy2]) * xy2_vec[0, np.where(use_xy2)[1]] + \
-            (py[use_xy2] - Y[use_xy2]) * xy2_vec[1, np.where(use_xy2)[1]]
-        sign_use_xy2 = np.choose(v >= 0, [-1, 1])
+        # Perpendicular distances to edge (AP dot edge_unit_normal product).
+        # This is the distance to the edge if not use_A or use_B
+        distance = np.sum((AP) * edge_unit_normal, 0)
 
-        d12[use_xy2]
-        d12[:, 1:][use_xy2[:, :-1]]
+        # Update distance for points closer to A
+        good_side_of_A = (np.sum((AP * A_normal)[:, use_A], 0) > 0)
+        sign_use_A = np.where(good_side_of_A, 1, -1)
+        distance[use_A] = (vec_len(AP[:, use_A]) * sign_use_A)
 
-        distance[use_xy1] = sign_use_xy1 * d1[use_xy1]
-        distance[use_xy2] = sign_use_xy2 * d2[use_xy2]
+        # Update distance for points closer to B
+        good_side_of_B = np.sum((BP * B_normal)[:, use_B], 0) > 0
+        sign_use_B = np.where(good_side_of_B, 1, -1)
+        distance[use_B] = (vec_len(BP[:, use_B]) * sign_use_B)
 
-        length = np.sqrt((X1[use_xy1] - X[use_xy1])**2 + (Y1[use_xy1] - Y[use_xy1])**2)
-        ddist_dX[use_xy1] = sign_use_xy1 * (2 * X[use_xy1] - 2 * X1[use_xy1]) / (2 * length)
-        ddist_dY[use_xy1] = sign_use_xy1 * (2 * Y[use_xy1] - 2 * Y1[use_xy1]) / (2 * length)
+        # ===============================================================================================================
+        # Calculate gradient of distance from P to closer point on edge wrt. x and y
+        # ===============================================================================================================
 
-        length = np.sqrt((X2[use_xy2] - X[use_xy2])**2 + (Y2[use_xy2] - Y[use_xy2])**2)
-        ddist_dX[use_xy2] = sign_use_xy2 * (2 * X[use_xy2] - 2 * X2[use_xy2]) / (2 * length)
-        ddist_dY[use_xy2] = sign_use_xy2 * (2 * Y[use_xy2] - 2 * Y2[use_xy2]) / (2 * length)
+        # Gradient of perpendicular distances to edge.
+        # This is the gradient if not use_A or use_B
+        ddist_dxy = np.tile(edge_unit_normal, (1, len(x), 1))
+
+        # Update gradient for points closer to A or B
+        ddist_dxy[:, use_A] = sign_use_A * (AP[:, use_A] / vec_len(AP[:, use_A]))
+        ddist_dxy[:, use_B] = sign_use_B * (BP[:, use_B] / vec_len(BP[:, use_B]))
+        ddist_dX, ddist_dY = ddist_dxy
 
         return distance, ddist_dX, ddist_dY
 
@@ -520,13 +531,8 @@ class MultiPolygonBoundaryComp(PolygonBoundaryComp):
 
         '''
         self.xy_multi_boundary = xy_multi_boundary
-        PolygonBoundaryComp.__init__(
-            self,
-            n_wt,
-            xy_boundary=xy_multi_boundary[0][0],
-            const_id=const_id,
-            units=units,
-            relaxation=relaxation)
+        PolygonBoundaryComp.__init__(self, n_wt, xy_boundary=xy_multi_boundary[0][0],
+                                     const_id=const_id, units=units, relaxation=relaxation)
         self.bounds_poly = [Polygon(x) for x, _ in xy_multi_boundary]
         self.types_bool = [1 if x in ['i', 'include', True, 1, None] else 0 for _, x in xy_multi_boundary]
         self._setup_boundaries()
@@ -546,11 +552,11 @@ class MultiPolygonBoundaryComp(PolygonBoundaryComp):
         self.res_poly = self._calc_resulting_polygons(self.bounds_poly)
         self.boundaries = self._poly_to_bound(self.res_poly)
 
-        boundary_properties_list_all = list(zip(*[self.get_boundary_properties(bound, incl_excl)
+        boundary_properties_list_all = list(zip(*[self.get_boundary_properties(bound, incl_excl)[1:]
                                                   for bound, incl_excl in self.boundaries]))
-        ax = {7: 1, 9: 1, 10: 1, 11: 1}  # axis to concatenate
-        self.boundary_properties_list_all = [np.concatenate(v, ax.get(i, 0))
-                                             for i, v in enumerate(boundary_properties_list_all)]
+
+        self.boundary_properties_list_all = [np.concatenate(v, -1)
+                                             for v in boundary_properties_list_all]
 
     def _poly_to_bound(self, polygons):
         boundaries = []
