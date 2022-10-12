@@ -7,6 +7,7 @@ import time
 from tqdm import tqdm
 from openmdao.core.explicitcomponent import ExplicitComponent
 import topfarm
+from abc import abstractmethod, ABC
 
 
 def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, random_pct=0, plot=False, seed=None):
@@ -147,12 +148,21 @@ def smooth_max_gradient(X, alpha, axis=0):
         (1 + alpha * (X - np.expand_dims(smooth_max(X, alpha, axis=axis), axis)))
 
 
-class StrictMax():
-    def __init__(self):
-        """Normal max with discontinous gradient"""
-
+class AggregationFunction(ABC):
     def __str__(self):
         return self.__class__.__name__
+
+    @abstractmethod
+    def __call__(self, x, axis=-1):
+        """compute function value over axis"""
+
+    @abstractmethod
+    def gradient(self, x, axis=-1):
+        """compute gradients of aggregated value wrt x over axis"""
+
+
+class StrictMax(AggregationFunction):
+    """Normal max with discontinous gradient"""
 
     def __call__(self, x, axis=-1):
         return np.max(x, axis)
@@ -180,7 +190,7 @@ def SoftMax(x, alpha, axis=-1):
     return np.exp(alpha * xn) / np.sum(np.exp(alpha * xn), axis)
 
 
-class SmoothMax(StrictMax):
+class SmoothMax(AggregationFunction):
     def __init__(self, base=1):
         """
         https://en.wikipedia.org/wiki/Smooth_maximum
@@ -219,7 +229,7 @@ class SmoothMax(StrictMax):
 
 
 class SmoothMin(SmoothMax):
-    def __init__(self, base=.1):
+    def __init__(self, base=1):
         SmoothMax.__init__(self, base=-base)
 
 

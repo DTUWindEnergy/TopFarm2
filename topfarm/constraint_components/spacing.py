@@ -11,6 +11,9 @@ class SpacingConstraint(Constraint):
         ----------
         min_spacing : int or float
             Minimum spacing between turbines [m]
+        aggregation_function : topfarm.utils.AggregationFunction or None
+            if None: compute returns all wt-wt spacings (n_wt *(n_wt-1))/2
+            if AggregationFunction: compute returns an aggregated (minimum) spacing
         """
         self.min_spacing = min_spacing
         self.aggregation_function = aggregation_function
