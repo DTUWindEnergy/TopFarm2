@@ -9,10 +9,9 @@ from topfarm.drivers.random_search_driver import RandomizeTurbinePosition_Circle
 from py_wake.deficit_models.gaussian import IEA37SimpleBastankhahGaussian
 import topfarm
 import numpy as np
-from scipy.interpolate.interpolate import RegularGridInterpolator
+from scipy.interpolate import RegularGridInterpolator
 import warnings
-from py_wake.flow_map import HorizontalGrid, Points, XYGrid
-import xarray as xr
+from py_wake.flow_map import Points
 from py_wake.utils.gradients import autograd
 
 
@@ -61,12 +60,16 @@ class PyWakeAEPCostModelComponent(AEPCostModelComponent):
         self.n_cpu = n_cpu
 
         def aep(**kwargs):
-            return self.windFarmModel.aep(x=kwargs[topfarm.x_key],
-                                          y=kwargs[topfarm.y_key],
-                                          h=kwargs.get(topfarm.z_key, None),
-                                          type=kwargs.get(topfarm.type_key, 0),
-                                          wd=wd, ws=ws,
-                                          n_cpu=n_cpu)
+            try:
+                return self.windFarmModel.aep(x=kwargs[topfarm.x_key],
+                                              y=kwargs[topfarm.y_key],
+                                              h=kwargs.get(topfarm.z_key, None),
+                                              type=kwargs.get(topfarm.type_key, 0),
+                                              wd=wd, ws=ws,
+                                              n_cpu=n_cpu)
+            except ValueError as e:
+                if 'are at the same position' in str(e):
+                    return 0
 
         if grad_method:
             if hasattr(self.windFarmModel, 'dAEPdxy'):

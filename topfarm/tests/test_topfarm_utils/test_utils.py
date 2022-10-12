@@ -1,4 +1,4 @@
-from topfarm.utils import smart_start
+from topfarm.utils import smart_start, SmoothMax, SmoothMin, SoftMax, StrictMax, StrictMin, LogSumExpMax, LogSumExpMin
 import numpy as np
 from topfarm.tests import npt
 from topfarm import TopFarmProblem
@@ -10,7 +10,7 @@ from topfarm.constraint_components.boundary import CircleBoundaryConstraint
 from topfarm.constraint_components.spacing import SpacingConstraint
 from topfarm.cost_models.py_wake_wrapper import PyWakeAEPCostModelComponent, PyWakeAEP
 from py_wake.examples.data.iea37._iea37 import IEA37Site
-
+import matplotlib.pyplot as plt
 from py_wake.site._site import UniformSite
 import pytest
 
@@ -174,3 +174,63 @@ def test_smart_start_aep_map_PyWakeAEP():
         plt.axis('equal')
         plt.show()
     npt.assert_almost_equal(aep_1wt * n_wt, tf['AEP'], 5)
+
+
+@pytest.mark.parametrize('max_func,scaling,ref',
+                         [
+                             (StrictMax(), 1, [1.0, 0.9, 0.8, 0.7, 0.6, 0.5]),
+                             (StrictMin(), 1, [0, .1, .2, .3, .4, .5]),
+                             (SmoothMax(.1), 1, [1.0, 0.9, 0.8, 0.69, 0.58, 0.5]),
+                             (SmoothMax(.2), 1, [0.99, 0.89, 0.77, 0.65, 0.55, 0.5]),
+                             (SmoothMax(100), 1000, [999.95, 899.73, 798.52, 692.81, 576.16, 500.0]),
+                             (SmoothMax(50), 1000, [1000.0, 900.0, 800.0, 699.87, 596.4, 500.0]),
+                             (SmoothMax(1), 1000, [1000.0, 900.0, 800.0, 700.0, 600.0, 500.0]),
+                             (SmoothMin(.1), 1, [0.0, 0.1, 0.2, 0.31, 0.42, 0.5]),
+                             (SmoothMin(100), 1000, [0.05, 100.27, 201.48, 307.19, 423.84, 500.0]),
+                             (SmoothMin(1), 1000, [0.0, 100.0, 200.0, 300.0, 400.0, 500.0]),
+                             (LogSumExpMax(.1), 1, [1.0, 0.9, 0.8, 0.7, 0.61, 0.57]),
+                             (LogSumExpMax(.2), 1, [1.0, 0.9, 0.81, 0.73, 0.66, 0.64]),
+                             (LogSumExpMax(200), 1000, [1001.34, 903.63, 809.72, 725.39, 662.65, 638.63]),
+                             (LogSumExpMin(.1), 1, [-0.0, 0.1, 0.2, 0.3, 0.39, 0.43]),
+
+                         ])
+def test_max_funcs(max_func, scaling, ref):
+
+    def abmax(x):
+        a, b = x * scaling, (1 - x) * scaling
+        return a, b, max_func([a, b], 0), max_func.gradient([a, b], 0)
+
+    def dmax_da_fd(x):
+        a, b = x * scaling, (1 - x) * scaling
+        step = 1e-6
+        return (max_func([a + step, b], 0) - max_func([a, b], 0)) / step
+
+    if 0:
+        x = np.arange(0, 1, .01)
+        a, b, m, (dm_da, _) = abmax(x)
+        plt.title(str(max_func))
+        plt.plot(x, a, label='a')
+        plt.plot(x, b, label='b')
+        plt.plot(x, m, label='max')
+        dmax_fd = dmax_da_fd(x)
+        plt.plot(x, dmax_fd * scaling, label=f'fd*{scaling}')
+        plt.plot(x, dm_da * scaling, '--', label=f'dmax da*{scaling}')
+
+        x = np.arange(0, .6, .1)
+        a, b, m, (dm_da, _) = abmax(x)
+        plt.plot(x, m, '.')
+        print(list(np.round(m, 2)))
+        plt.legend()
+        plt.show()
+
+    x = np.arange(0, .6, .1)
+    a, b, m, _ = abmax(x)
+    npt.assert_array_almost_equal(ref, m, 2)
+
+    x = np.arange(0, 1, .01)
+    a, b, m, (dm_da, _) = abmax(x)
+    if max_func.__class__.__name__.startswith('Strict'):
+        mask = (x < .49) | (x > .51)
+    else:
+        mask = slice(None)
+    npt.assert_array_almost_equal(dmax_da_fd(x)[mask], dm_da[mask], 4)

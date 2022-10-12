@@ -1,4 +1,4 @@
-from topfarm.cost_models.dummy import DummyCost
+from topfarm.cost_models.dummy import DummyCost, DummyCostPlotComp
 from topfarm.plotting import NoPlot
 from openmdao.drivers.genetic_algorithm_driver import SimpleGADriver
 from topfarm.tests.test_files import xy3tb
@@ -7,13 +7,16 @@ from topfarm.tests import npt
 from openmdao.utils.assert_utils import assert_check_partials
 from openmdao.api import Problem, IndepVarComp
 import numpy as np
+from topfarm.utils import SmoothMin, LogSumExpMin, StrictMin
+import pytest
 
 
-def test_spacing():
-    tf = xy3tb.get_tf(constraints=[SpacingConstraint(2)])
+@pytest.mark.parametrize('aggfunc', [None, StrictMin(), SmoothMin(1), LogSumExpMin(1)])
+def test_spacing(aggfunc):
+    tf = xy3tb.get_tf(constraints=[SpacingConstraint(2, aggregation_function=aggfunc)], plot=False)
     tf.optimize()
     tb_pos = tf.turbine_positions[:, :2]
-    tf.plot_comp.show()
+    # tf.plot_comp.show()
     tol = 1e-4
     assert sum((tb_pos[2] - tb_pos[0])**2) > 2**2 - tol  # check min spacing
 
@@ -60,8 +63,9 @@ def test_satisfy2():
     npt.assert_array_less(2, dist)
 
 
-def test_partials():
-    tf = xy3tb.get_tf(constraints=[SpacingConstraint(2)])
+@pytest.mark.parametrize('aggfunc', [None, StrictMin(), SmoothMin(1), LogSumExpMin(1)])
+def test_partials(aggfunc):
+    tf = xy3tb.get_tf(constraints=[SpacingConstraint(2, aggregation_function=aggfunc)])
     # if complex numbers work: uncomment tf.setup below and
     # change method='cs' and step=1e-40 in check_partials
     # tf.setup(force_alloc_complex=True)
@@ -82,10 +86,13 @@ def test_partials():
         raise
 
 
-def test_partials_many_turbines():
+@pytest.mark.parametrize('aggfunc', [None,
+                                     # StrictMin(), # not working
+                                     SmoothMin(1), LogSumExpMin(1)])
+def test_partials_many_turbines(aggfunc):
     n_wt = 10
     theta = np.linspace(0, 2 * np.pi, n_wt, endpoint=False)
-    sc = SpacingComp(n_wt=n_wt, min_spacing=2, const_id="")
+    sc = SpacingComp(n_wt=n_wt, min_spacing=2, const_id="", aggregation_function=aggfunc)
     tf = Problem()
     ivc = IndepVarComp()
     ivc.add_output('x', val=np.cos(theta))
@@ -111,7 +118,3 @@ def test_partials_many_turbines():
     except ValueError as err:
         print(str(err))
         raise
-
-
-if __name__ == '__main__':
-    test_satisfy2()

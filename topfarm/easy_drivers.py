@@ -42,7 +42,7 @@ class EasyScipyOptimizeDriver(ScipyOptimizeDriver, EasyDriverBase):
         ScipyOptimizeDriver.__init__(self)
         if optimizer == 'IPOPT':
             try:
-                from ipopt.ipopt_wrapper import minimize_ipopt
+                from cyipopt.ipopt_wrapper import minimize_ipopt
             except ImportError:
                 raise ImportError("""Cannot import ipopt wrapper. Please install cyipopt, e.g. via conda
 Windows: conda install -c pycalphad cyipopt
@@ -57,7 +57,7 @@ Linux/OSX: conda install -c conda-forge cyipopt
             ipopt_options = {k: fmt_option(v) for k, v in kwargs.items()}
 
             def minimize_ipopt_wrapper(*args, maxiter=200, disp=True, **kwargs):
-                from ipopt.ipopt_wrapper import minimize_ipopt
+                from cyipopt.ipopt_wrapper import minimize_ipopt
                 ipopt_options.update({'max_iter': self.max_iter or maxiter, 'print_level': int(disp)})
                 return minimize_ipopt(*args, options=ipopt_options, **kwargs)
             kwargs = {}

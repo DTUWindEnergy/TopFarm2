@@ -4,7 +4,7 @@ import topfarm
 
 
 class SpacingConstraint(Constraint):
-    def __init__(self, min_spacing, units=None):
+    def __init__(self, min_spacing, units=None, aggregation_function=None):
         """Initialize SpacingConstraint
 
         Parameters
@@ -13,6 +13,7 @@ class SpacingConstraint(Constraint):
             Minimum spacing between turbines [m]
         """
         self.min_spacing = min_spacing
+        self.aggregation_function = aggregation_function
         self.const_id = 'spacing_comp_{}'.format(int(min_spacing))
         self.units = units
 
@@ -22,14 +23,14 @@ class SpacingConstraint(Constraint):
 
     def _setup(self, problem):
         self.n_wt = problem.n_wt
-        self.spacing_comp = SpacingComp(self.n_wt, self.min_spacing, self.const_id, self.units)
+        self.spacing_comp = SpacingComp(self.n_wt, self.min_spacing, self.const_id, self.units,
+                                        aggregation_function=self.aggregation_function)
         problem.model.pre_constraints.add_subsystem(self.const_id, self.spacing_comp,
                                                     promotes=[topfarm.x_key, topfarm.y_key, 'penalty_' + self.const_id, 'wtSeparationSquared'])
 
     def setup_as_constraint(self, problem):
         self._setup(problem)
-        zero = np.zeros(int(((self.n_wt - 1.) * self.n_wt / 2.)))
-        problem.model.add_constraint('wtSeparationSquared', lower=zero + (self.min_spacing)**2)
+        problem.model.add_constraint('wtSeparationSquared', lower=self.min_spacing**2)
 
     def setup_as_penalty(self, problem):
         self._setup(problem)
@@ -41,13 +42,17 @@ class SpacingComp(ConstraintComponent):
 
     """
 
-    def __init__(self, n_wt, min_spacing, const_id=None, units=None):
+    def __init__(self, n_wt, min_spacing, const_id=None, units=None, aggregation_function=None):
         super().__init__()
         self.n_wt = n_wt
         self.min_spacing = min_spacing
         self.const_id = const_id
-        self.veclen = int((n_wt - 1.) * n_wt / 2.)
+        if aggregation_function:
+            self.veclen = 1
+        else:
+            self.veclen = int((n_wt - 1.) * n_wt / 2.)
         self.units = units
+        self.aggregation_function = aggregation_function
 
     def setup(self):
         # Explicitly size input arrays
@@ -59,20 +64,31 @@ class SpacingComp(ConstraintComponent):
         # Explicitly size output array
         self.add_output('wtSeparationSquared', val=np.zeros(self.veclen),
                         desc='spacing of all turbines in the wind farm')
-        # Sparse partial declaration
-        cols = np.array([(i, j) for i in range(self.n_wt - 1)
-                         for j in range(i + 1, self.n_wt)]).flatten()
-        rows = np.repeat(np.arange(self.veclen), 2)
 
-        self.declare_partials('wtSeparationSquared',
-                              [topfarm.x_key, topfarm.y_key],
-                              rows=rows, cols=cols)
+        col_pairs = np.array([(i, j) for i in range(self.n_wt - 1) for j in range(i + 1, self.n_wt)])
+        if self.aggregation_function:
+            self.declare_partials('wtSeparationSquared', [topfarm.x_key, topfarm.y_key])
+
+            self.partial_indices = np.array([np.r_[np.where(col_pairs[:, 1] == i)[0], np.where(col_pairs[:, 0] == i)[0]]
+                                             for i in range(self.n_wt)]).T
+            self.partial_sign = (np.ones((self.n_wt, self.n_wt)) - 2 * np.triu(np.ones((self.n_wt, self.n_wt)), 1))[:-1]
+        else:
+            # Sparse partial declaration
+            cols = col_pairs.flatten()
+            rows = np.repeat(np.arange(self.veclen), 2)
+
+            self.declare_partials('wtSeparationSquared',
+                                  [topfarm.x_key, topfarm.y_key],
+                                  rows=rows, cols=cols)
 
     def compute(self, inputs, outputs):
         self.x = inputs[topfarm.x_key]
         self.y = inputs[topfarm.y_key]
         separation_squared = self._compute(self.x, self.y)
-        outputs['wtSeparationSquared'] = separation_squared
+        if self.aggregation_function:
+            outputs['wtSeparationSquared'] = self.aggregation_function(separation_squared)
+        else:
+            outputs['wtSeparationSquared'] = separation_squared
         outputs['penalty_' + self.const_id] = -np.minimum(separation_squared - self.min_spacing**2, 0).sum()
 
     def _compute(self, x, y):
@@ -90,10 +106,22 @@ class SpacingComp(ConstraintComponent):
         x = inputs[topfarm.x_key]
         y = inputs[topfarm.y_key]
 
-        dSdx, dSdy = self._compute_partials(x, y)
-        # populate Jacobian dict
-        J['wtSeparationSquared', topfarm.x_key] = dSdx.flatten()
-        J['wtSeparationSquared', topfarm.y_key] = dSdy.flatten()
+        # gradient of spacing [(i,j) for i=0..n_wt-1 and j=i+1..n_wt] wrt (wt_x[i], wt_x[j]) and (wt_y[i], wt_y[j])
+        dS_dxij, dS_dyij = self._compute_partials(x, y)
+        if self.aggregation_function:
+            # gradient of aggregated (minimum) spacing wrt. spacing(i,j)
+            dSagg_dS = self.aggregation_function.gradient(self._compute(x, y)).flatten()
+            # partial_indices extracts the spacing elements that each wt contributes to
+            # partial sign gives it the right sign
+            # and finally we sum the contributions of each wt
+            J['wtSeparationSquared', topfarm.x_key] = (
+                (dS_dxij[:, 0] * dSagg_dS)[self.partial_indices] * self.partial_sign).sum(0).T
+            J['wtSeparationSquared', topfarm.y_key] = (
+                (dS_dyij[:, 0] * dSagg_dS)[self.partial_indices] * self.partial_sign).sum(0).T
+        else:
+            # populate Jacobian dict
+            J['wtSeparationSquared', topfarm.x_key] = dS_dxij.flatten()
+            J['wtSeparationSquared', topfarm.y_key] = dS_dyij.flatten()
 
     def _compute_partials(self, x, y):
         # get number of turbines

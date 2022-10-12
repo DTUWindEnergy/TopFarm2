@@ -147,6 +147,116 @@ def smooth_max_gradient(X, alpha, axis=0):
         (1 + alpha * (X - np.expand_dims(smooth_max(X, alpha, axis=axis), axis)))
 
 
+class StrictMax():
+    def __init__(self):
+        """Normal max with discontinous gradient"""
+
+    def __str__(self):
+        return self.__class__.__name__
+
+    def __call__(self, x, axis=-1):
+        return np.max(x, axis)
+
+    def gradient(self, x, axis=-1):
+        return x == self(np.atleast_2d(x), axis)
+
+
+class StrictMin(StrictMax):
+    """Normal min with discontinous gradient"""
+
+    def __call__(self, x, axis=-1):
+        return np.min(x, axis)
+
+
+def SoftMax(x, alpha, axis=-1):
+    """gradient of LogSumExpMax
+
+    https://en.wikipedia.org/wiki/Softmax_function"""
+    if alpha > 0:
+        x_max = np.max(np.atleast_2d(x), axis)
+    else:
+        x_max = np.min(np.atleast_2d(x), axis)
+    xn = x - np.expand_dims(x_max, axis)
+    return np.exp(alpha * xn) / np.sum(np.exp(alpha * xn), axis)
+
+
+class SmoothMax(StrictMax):
+    def __init__(self, base=1):
+        """
+        https://en.wikipedia.org/wiki/Smooth_maximum
+
+        Underpredict the maximum of similar values
+
+        Parameters
+        ----------
+        base : float
+            smoothing factor ]0;inf[. higher number gives more smooth transition
+            For two numbers, (a,b), the smoothing approximately starts when |a-b| < 4*base
+        """
+        self.alpha = 1 / base
+
+    def __str__(self):
+        return f"{self.__class__.__name__}({1/self.alpha})"
+
+    def __call__(self, x, axis=-1):
+        if self.alpha > 0:
+            x_max = np.max(np.atleast_2d(x), axis)
+        else:
+            x_max = np.min(np.atleast_2d(x), axis)
+        xn = x - np.expand_dims(x_max, axis)
+        return np.sum(x * np.exp(self.alpha * xn), axis) / np.sum(np.exp(self.alpha * xn), axis)
+
+    def gradient(self, x, axis=-1):
+        x = np.asarray(x)
+        a = self.alpha
+        if a > 0:
+            x_max = np.max(np.atleast_2d(x), axis)
+        else:
+            x_max = np.min(np.atleast_2d(x), axis)
+        xn = x - np.expand_dims(x_max, axis)
+        return (np.exp(a * xn) /
+                np.expand_dims(np.sum(np.exp(a * xn), axis), axis) * (1 + a * (x - np.expand_dims(self(x, axis), axis))))
+
+
+class SmoothMin(SmoothMax):
+    def __init__(self, base=.1):
+        SmoothMax.__init__(self, base=-base)
+
+
+class LogSumExpMax(SmoothMax):
+    """LogSumExp
+
+    Overpredict the maximum of similar values
+
+    Parameters
+    ----------
+    base : float
+        smoothing factor ]0;inf[. higher number gives more smooth transition
+        For two numbers, (a,b), the smoothing approximately starts when |a-b| < 4*base
+    """
+
+    def __str__(self):
+        return f"{self.__class__.__name__}({1/self.alpha})"
+
+    def __call__(self, x, axis=-1):
+        # factor used to reduce numerical errors in power
+        if self.alpha > 0:
+            x_max = np.max(np.atleast_2d(x), axis)
+        else:
+            x_max = np.min(np.atleast_2d(x), axis)
+        xn = x - np.expand_dims(x_max, axis)
+        alpha = self.alpha
+        return x_max + 1 / alpha * np.log(np.sum(np.exp(alpha * (xn)), axis))
+
+    def gradient(self, x, axis=-1):
+        return SoftMax(x, self.alpha, axis)
+
+
+class LogSumExpMin(LogSumExpMax):
+    def __init__(self, base=1):
+        LogSumExpMax.__init__(self, base=-base)
+
+
 def regular_generic_layout(n_wt, sx, sy, stagger, rotation, x0=0, y0=0, ratio=1.0):
     '''
     Parameters
@@ -305,7 +415,8 @@ def main():
         plt.plot(x, y, '.')
         plt.axis('equal')
 
-        dx_dsxg, dy_dsxg, dx_dsyg, dy_dsyg, dx_dRg, dy_dRg = regular_generic_layout_gradients(n_wt=100, sx=5, sy=4, stagger=2, rotation=35, ratio=1.25, x0=20, y0=40)
+        dx_dsxg, dy_dsxg, dx_dsyg, dy_dsyg, dx_dRg, dy_dRg = regular_generic_layout_gradients(
+            n_wt=100, sx=5, sy=4, stagger=2, rotation=35, ratio=1.25, x0=20, y0=40)
         plt.figure()
         plt.plot(dx_dsx.ravel(), dx_dsxg.ravel(), '.')
         plt.figure()
