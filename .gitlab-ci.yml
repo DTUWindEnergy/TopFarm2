@@ -66,6 +66,7 @@ pages:  # "pages" is a job specifically for GitLab pages [1]
   - pip install pypandoc
   - pip install sphinx --upgrade
   - pip install nbsphinx --upgrade
+  - pip install nbconvert --upgrade
   - pip install sphinx_rtd_theme
   - pip install git+https://github.com/vidartf/nbsphinx-link.git
   - pip install -e .
@@ -79,7 +80,7 @@ pages:  # "pages" is a job specifically for GitLab pages [1]
   - /^test_doc.*/ 
 
   tags:  # only runners with this tag can do the job [3]
-  - python
+  - ci-ubuntu
 
 # ===== BUILD WHEELS AND UPLOAD TO PYPI =====
 pypi:
