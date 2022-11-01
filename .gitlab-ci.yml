@@ -37,10 +37,9 @@ test_topfarm_windows:  # name the job what we like
   script:  # runs on windows machine due to tag below
   - conda init powershell
   - "if (test-path $PROFILE.CurrentUserAllHosts) { & $PROFILE.CurrentUserAllHosts}"
-  - conda activate om3
-  - conda install -c conda-forge ffmpeg
-  - pip install --upgrade git+https://gitlab.windenergy.dtu.dk/TOPFARM/PyWake.git
-  - pip install -e .
+  - conda activate tf231
+  - pip install --upgrade git+https://gitlab.windenergy.dtu.dk/TOPFARM/PyWake.git --no-deps
+  - pip install -e .  --no-deps
   - python -m pytest --cov-report term-missing:skip-covered --cov=topfarm --cov-config .coveragerc --ignore=topfarm/cost_models/fuga/Colonel
   tags:  # tag for shared runner on windows machine
   - ANMH_old
