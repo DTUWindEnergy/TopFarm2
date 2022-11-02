@@ -232,6 +232,9 @@ class SmoothMin(SmoothMax):
     def __init__(self, base=1):
         SmoothMax.__init__(self, base=-base)
 
+    def __str__(self):
+        return f"{self.__class__.__name__}({-1/self.alpha})"
+
 
 class LogSumExpMax(SmoothMax):
     """LogSumExp
@@ -265,6 +268,9 @@ class LogSumExpMax(SmoothMax):
 class LogSumExpMin(LogSumExpMax):
     def __init__(self, base=1):
         LogSumExpMax.__init__(self, base=-base)
+
+    def __str__(self):
+        return f"{self.__class__.__name__}({-1/self.alpha})"
 
 
 def regular_generic_layout(n_wt, sx, sy, stagger, rotation, x0=0, y0=0, ratio=1.0):

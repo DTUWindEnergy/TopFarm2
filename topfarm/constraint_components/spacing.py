@@ -4,7 +4,7 @@ import topfarm
 
 
 class SpacingConstraint(Constraint):
-    def __init__(self, min_spacing, units=None, aggregation_function=None):
+    def __init__(self, min_spacing, units=None, aggregation_function=None, full_aggregation=False):
         """Initialize SpacingConstraint
 
         Parameters
@@ -17,6 +17,7 @@ class SpacingConstraint(Constraint):
         """
         self.min_spacing = min_spacing
         self.aggregation_function = aggregation_function
+        self.full_aggregation = full_aggregation
         self.const_id = 'spacing_comp_{}'.format(int(min_spacing))
         self.units = units
 
@@ -27,7 +28,8 @@ class SpacingConstraint(Constraint):
     def _setup(self, problem):
         self.n_wt = problem.n_wt
         self.spacing_comp = SpacingComp(self.n_wt, self.min_spacing, self.const_id, self.units,
-                                        aggregation_function=self.aggregation_function)
+                                        aggregation_function=self.aggregation_function,
+                                        full_aggregation=self.full_aggregation)
         problem.model.pre_constraints.add_subsystem(self.const_id, self.spacing_comp,
                                                     promotes=[topfarm.x_key, topfarm.y_key, 'penalty_' + self.const_id, 'wtSeparationSquared'])
 
@@ -45,17 +47,21 @@ class SpacingComp(ConstraintComponent):
 
     """
 
-    def __init__(self, n_wt, min_spacing, const_id=None, units=None, aggregation_function=None):
+    def __init__(self, n_wt, min_spacing, const_id=None, units=None, aggregation_function=None, full_aggregation=False):
         super().__init__()
         self.n_wt = n_wt
         self.min_spacing = min_spacing
         self.const_id = const_id
         if aggregation_function:
-            self.veclen = 1
+            if full_aggregation:
+                self.veclen = 1
+            else:
+                self.veclen = n_wt
         else:
             self.veclen = int((n_wt - 1.) * n_wt / 2.)
         self.units = units
         self.aggregation_function = aggregation_function
+        self.full_aggregation = full_aggregation
 
     def setup(self):
         # Explicitly size input arrays
@@ -70,11 +76,12 @@ class SpacingComp(ConstraintComponent):
 
         col_pairs = np.array([(i, j) for i in range(self.n_wt - 1) for j in range(i + 1, self.n_wt)])
         if self.aggregation_function:
-            self.declare_partials('wtSeparationSquared', [topfarm.x_key, topfarm.y_key])
+            self.declare_partials('wtSeparationSquared', [topfarm.x_key, topfarm.y_key], method='fd')
 
             self.partial_indices = np.array([np.r_[np.where(col_pairs[:, 1] == i)[0], np.where(col_pairs[:, 0] == i)[0]]
                                              for i in range(self.n_wt)]).T
             self.partial_sign = (np.ones((self.n_wt, self.n_wt)) - 2 * np.triu(np.ones((self.n_wt, self.n_wt)), 1))[:-1]
+            self.col_pairs = col_pairs
         else:
             # Sparse partial declaration
             cols = col_pairs.flatten()
@@ -89,7 +96,12 @@ class SpacingComp(ConstraintComponent):
         self.y = inputs[topfarm.y_key]
         separation_squared = self._compute(self.x, self.y)
         if self.aggregation_function:
-            outputs['wtSeparationSquared'] = self.aggregation_function(separation_squared)
+            if self.full_aggregation:
+                outputs['wtSeparationSquared'] = self.aggregation_function(separation_squared)
+            else:
+                outputs['wtSeparationSquared'] = self.aggregation_function(
+                    separation_squared[self.partial_indices], 0)
+                # print(outputs['wtSeparationSquared'])
         else:
             outputs['wtSeparationSquared'] = separation_squared
         outputs['penalty_' + self.const_id] = -np.minimum(separation_squared - self.min_spacing**2, 0).sum()
@@ -112,15 +124,42 @@ class SpacingComp(ConstraintComponent):
         # gradient of spacing [(i,j) for i=0..n_wt-1 and j=i+1..n_wt] wrt (wt_x[i], wt_x[j]) and (wt_y[i], wt_y[j])
         dS_dxij, dS_dyij = self._compute_partials(x, y)
         if self.aggregation_function:
-            # gradient of aggregated (minimum) spacing wrt. spacing(i,j)
-            dSagg_dS = self.aggregation_function.gradient(self._compute(x, y)).flatten()
-            # partial_indices extracts the spacing elements that each wt contributes to
-            # partial sign gives it the right sign
-            # and finally we sum the contributions of each wt
-            J['wtSeparationSquared', topfarm.x_key] = (
-                (dS_dxij[:, 0] * dSagg_dS)[self.partial_indices] * self.partial_sign).sum(0).T
-            J['wtSeparationSquared', topfarm.y_key] = (
-                (dS_dyij[:, 0] * dSagg_dS)[self.partial_indices] * self.partial_sign).sum(0).T
+            if self.full_aggregation:
+                # gradient of aggregated (minimum) spacing wrt. spacing(i,j)
+                dSagg_dS = self.aggregation_function.gradient(self._compute(x, y)).flatten()
+                # partial_indices extracts the spacing elements that each wt contributes to
+                # partial sign gives it the right sign
+                # and finally we sum the contributions of each wt
+                J['wtSeparationSquared', topfarm.x_key] = (
+                    (dS_dxij[:, 0] * dSagg_dS)[self.partial_indices] * self.partial_sign).sum(0).T
+                J['wtSeparationSquared', topfarm.y_key] = (
+                    (dS_dyij[:, 0] * dSagg_dS)[self.partial_indices] * self.partial_sign).sum(0).T
+            else:
+                # gradient of aggregated (minimum) spacing wrt. spacing(i,j)
+                dSdwtx = (dS_dxij[:, 0])[self.partial_indices] * self.partial_sign
+                dSdwty = (dS_dyij[:, 0])[self.partial_indices] * self.partial_sign
+                S = self._compute(x, y)[self.partial_indices]
+                dSagg_dS = self.aggregation_function.gradient(S, 0)
+
+                # partial_indices extracts the spacing elements that each wt contributes to
+                # partial sign gives it the right sign
+                # and finally we sum the contributions of each wt
+
+                dSagg_dwtx = dSdwtx * dSagg_dS * self.partial_sign
+                dSagg_dwty = dSdwty * dSagg_dS * self.partial_sign
+
+                dSagg_dx = np.zeros((self.n_wt, self.n_wt))  # np.diag((dSagg_dwtx).sum(0))
+                dSagg_dy = np.zeros((self.n_wt, self.n_wt))  # np.diag((dSagg_dwty).sum(0))
+                i = range(self.n_wt)
+                for j in range(dSagg_dwtx.shape[0]):
+                    ai, bi = self.col_pairs[self.partial_indices][j, i, :].T
+                    dSagg_dx[ai, i] += dSagg_dwtx[j, i]
+                    dSagg_dx[bi, i] -= dSagg_dwtx[j, i]
+                    dSagg_dy[ai, i] += dSagg_dwty[j, i]
+                    dSagg_dy[bi, i] -= dSagg_dwty[j, i]
+
+                J['wtSeparationSquared', topfarm.x_key] = dSagg_dx.T
+                J['wtSeparationSquared', topfarm.y_key] = dSagg_dy.T
         else:
             # populate Jacobian dict
             J['wtSeparationSquared', topfarm.x_key] = dS_dxij.flatten()

@@ -9,14 +9,97 @@ from openmdao.api import Problem, IndepVarComp
 import numpy as np
 from topfarm.utils import SmoothMin, LogSumExpMin, StrictMin
 import pytest
+from topfarm._topfarm import TopFarmProblem
 
 
-@pytest.mark.parametrize('aggfunc', [None, StrictMin(), SmoothMin(1), LogSumExpMin(1)])
+@pytest.mark.parametrize('aggfunc', [  # None,
+    StrictMin(),
+    SmoothMin(.1),
+    SmoothMin(1),
+    SmoothMin(10),
+    LogSumExpMin(.1),
+    LogSumExpMin(1),
+    LogSumExpMin(10)
+])
+@pytest.mark.parametrize('x,y', [([6, 5, -8, 1], [0, -8, -4, 1]),
+                                 ([2.84532167, 7.00331189, 3.86523273], [-2.98101466, -6.99667302, -2.98433316])])
+@pytest.mark.parametrize('full_aggregation', [True, False])
+def test_spacing_4wt_partials(aggfunc, full_aggregation, x, y):
+
+    from topfarm.constraint_components.boundary import XYBoundaryConstraint
+    from topfarm.easy_drivers import EasyScipyOptimizeDriver
+    import topfarm
+    initial = desired = np.array([x, y]).T
+    boundary = np.array([(0, 0), (6, 0), (6, -10), (0, -10)])  # turbine boundaries
+    spacing_constr = SpacingConstraint(2, aggregation_function=aggfunc, full_aggregation=full_aggregation)
+
+    k = {'cost_comp': DummyCost(desired[:, :2], [topfarm.x_key, topfarm.y_key]),
+         'design_vars': {topfarm.x_key: initial[:, 0], topfarm.y_key: initial[:, 1]},
+         'driver': EasyScipyOptimizeDriver(disp=True, tol=1e-8),
+         'plot_comp': NoPlot(),
+         'constraints': [spacing_constr, XYBoundaryConstraint(boundary)]}
+    if 0:
+        k['plot_comp'] = DummyCostPlotComp(desired)
+    TopFarmProblem(**k)
+    scomp = spacing_constr.constraintComponent
+    outputs = {}
+
+    def compute(x, y):
+        scomp.compute(dict(x=x, y=y), outputs)
+        return outputs['wtSeparationSquared']
+
+    ref = compute(initial[:, 0], initial[:, 1])
+    ddx = np.array([(compute(x, initial[:, 1]) - ref) / 1e-6 for x in initial[:, 0] + np.eye(len(x)) * 1e-6]).T
+    ddy = np.array([(compute(initial[:, 0], y) - ref) / 1e-6 for y in initial[:, 1] + np.eye(len(x)) * 1e-6]).T
+
+    scomp.compute_partials(dict(x=initial[:, 0], y=initial[:, 1]), outputs)
+    npt.assert_array_almost_equal(outputs[('wtSeparationSquared', 'x')].reshape(ddx.shape), ddx, 4)
+    npt.assert_array_almost_equal(outputs[('wtSeparationSquared', 'y')].reshape(ddy.shape), ddy, 4)
+
+
+@pytest.mark.parametrize('aggfunc', [None,
+                                     StrictMin(),
+                                     SmoothMin(.1),
+                                     SmoothMin(.5),
+                                     LogSumExpMin(.1),
+                                     LogSumExpMin(1),
+                                     LogSumExpMin(10)
+                                     ])
+def test_spacing_4wt(aggfunc):
+
+    from topfarm.constraint_components.boundary import XYBoundaryConstraint
+    from topfarm.easy_drivers import EasyScipyOptimizeDriver
+    import topfarm
+    initial = np.array([[6, 0], [5, -8], [-1, -4], [1, 1]])  # initial turbine layouts
+    desired = np.array([[3, -3], [7, -7], [3, -4], [4, -3]])  # desired turbine layouts
+    boundary = np.array([(0, 0), (6, 0), (6, -10), (0, -10)])  # turbine boundaries
+    # initial = np.array([[6, 0], [1, 1]])  # initial turbine layouts
+    # desired = np.array([[3, -3], [4, -3]])  # desired turbine layouts
+
+    k = {'cost_comp': DummyCost(desired[:, :2], [topfarm.x_key, topfarm.y_key]),
+         'design_vars': {topfarm.x_key: initial[:, 0], topfarm.y_key: initial[:, 1]},
+         'driver': EasyScipyOptimizeDriver(disp=True, tol=1e-8),
+         'plot_comp': NoPlot(),
+         'constraints': [SpacingConstraint(2, aggregation_function=aggfunc), XYBoundaryConstraint(boundary)]}
+    if 0:
+        k['plot_comp'] = DummyCostPlotComp(desired)
+    tf = TopFarmProblem(**k)
+    print(str(aggfunc))
+    tf.optimize()
+    tb_pos = tf.turbine_positions[:, :2]
+    tf.plot_comp.show()
+    tol = 1e-4
+    assert sum((tb_pos[2] - tb_pos[0])**2) > 2**2 - tol  # check min spacing
+
+
+@pytest.mark.parametrize('aggfunc', [
+    # None,
+    StrictMin(), SmoothMin(1), LogSumExpMin(1)])
 def test_spacing(aggfunc):
     tf = xy3tb.get_tf(constraints=[SpacingConstraint(2, aggregation_function=aggfunc)], plot=False)
     tf.optimize()
     tb_pos = tf.turbine_positions[:, :2]
-    # tf.plot_comp.show()
+    tf.plot_comp.show()
     tol = 1e-4
     assert sum((tb_pos[2] - tb_pos[0])**2) > 2**2 - tol  # check min spacing
 
