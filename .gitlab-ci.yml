@@ -53,6 +53,8 @@ trigger_hub_test:
   trigger:
     project: TOPFARMPrivate/triggerhub/topfarmtriggers
     strategy: depend
+  only:
+    - master
 
 
 # ===== BUILD DOCS AND PUSH TO PUBLIC WEBSITE =====
