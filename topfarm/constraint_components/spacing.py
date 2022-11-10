@@ -76,7 +76,7 @@ class SpacingComp(ConstraintComponent):
 
         col_pairs = np.array([(i, j) for i in range(self.n_wt - 1) for j in range(i + 1, self.n_wt)])
         if self.aggregation_function:
-            self.declare_partials('wtSeparationSquared', [topfarm.x_key, topfarm.y_key], method='fd')
+            self.declare_partials('wtSeparationSquared', [topfarm.x_key, topfarm.y_key])
 
             self.partial_indices = np.array([np.r_[np.where(col_pairs[:, 1] == i)[0], np.where(col_pairs[:, 0] == i)[0]]
                                              for i in range(self.n_wt)]).T
