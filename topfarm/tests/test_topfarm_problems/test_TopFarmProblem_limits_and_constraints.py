@@ -73,8 +73,12 @@ def test_TopFarmProblemXYBoundaryConstraint():
                 npt.assert_equal(desvars['indeps.' + xy][lu], np.nan)
     else:
         for i, xy in enumerate('xy'):
-            for lu, func in zip(['lower', 'upper'], (np.min, np.max)):
-                npt.assert_equal(desvars['indeps.' + xy][lu], func(xy3tb.boundary[:, i]))
+            if tf.driver._has_scaling:
+                for lu, z in zip(['lower', 'upper'], (0, 1)):
+                    npt.assert_equal(desvars['indeps.' + xy][lu], z)
+            else:
+                for lu, func in zip(['lower', 'upper'], (np.min, np.max)):
+                    npt.assert_equal(desvars['indeps.' + xy][lu], func(xy3tb.boundary[:, i]))
 
 
 def test_TopFarmProblemXYBoundaryConstraintPolygon():
