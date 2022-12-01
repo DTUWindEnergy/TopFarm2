@@ -56,7 +56,25 @@ class PyWakeAEP(AEPCalculator):
 
 
 class PyWakeAEPCostModelComponent(AEPCostModelComponent):
+    """TOPFARM wrapper for PyWake AEP calculator"""
     def __init__(self, windFarmModel, n_wt, wd=None, ws=None, max_eval=None, grad_method=autograd, n_cpu=1, **kwargs):
+        """Initialize wrapper for PyWake AEP calculator
+
+        Parameters
+        ----------
+        windFarmModel : DeficitModel
+            Wake deficit model used
+        n_wt : int
+            Number of wind turbines
+        wd : array_like
+            Wind directions to study
+        ws : array_like
+            Wind speeds to study
+        max_eval : int
+            Maximum number of function evaluations
+        grad_method : function handle
+            Selected method to calculate gradients, default is autograd
+        """
         self.windFarmModel = windFarmModel
         self.n_cpu = n_cpu
 
@@ -98,6 +116,8 @@ class PyWakeAEPCostModelComponent(AEPCostModelComponent):
                                        max_eval=max_eval, **kwargs)
 
     def get_aep4smart_start(self, ws=[6, 8, 10, 12, 14], wd=np.arange(360)):
+        """Compute AEP with a smart start approach"""
+
         def aep4smart_start(X, Y, wt_x, wt_y, type=0):
             sim_res = self.windFarmModel(wt_x, wt_y, type=type, wd=wd, ws=ws, n_cpu=self.n_cpu)
             H = np.full(X.shape, self.windFarmModel.windTurbines.hub_height())

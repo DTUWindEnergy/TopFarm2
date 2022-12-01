@@ -15,18 +15,34 @@ Cost Component
 		compute_partials
         
     .. automethod:: __init__
+
+
+**AEPCostModelComponent**
 	
-
-**PyWakeAEP**
-
-
-.. autoclass:: topfarm.cost_models.py_wake_wrapper.PyWakeAEP
+.. autoclass:: topfarm.cost_models.cost_model_wrappers.AEPCostModelComponent
     
     .. autosummary::
         __init__
-        get_TopFarm_cost_component
         
-	.. automethod:: __init__
+    .. automethod:: __init__
+
+**AEPMaxLoadCostModelComponent**
+	
+.. autoclass:: topfarm.cost_models.cost_model_wrappers.AEPMaxLoadCostModelComponent
     
-	.. automethod:: get_TopFarm_cost_component
+    .. autosummary::
+        __init__
+        
+    .. automethod:: __init__
+
+
+**PyWakeAEPCostModelComponent**
+
+
+.. autoclass:: topfarm.cost_models.py_wake_wrapper.PyWakeAEPCostModelComponent
     
+    .. autosummary::
+        __init__
+	get_aep4smart_start
+
+    .. automethod:: __init__

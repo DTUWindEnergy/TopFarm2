@@ -198,20 +198,71 @@ class CostModelComponent(ExplicitComponent):
 
 
 class AEPCostModelComponent(CostModelComponent):
+    """Wrapper for pure-Python cost functions"""
     def __init__(self, input_keys, n_wt, cost_function, cost_gradient_function=None,
                  output_unit="", additional_input=[], additional_output=[], max_eval=None,
                  output_key="AEP", **kwargs):
+        """Initialize Sub class of the CostModelComponent for AEP maximization
+
+        Parameters
+        ----------
+        input_keys : list of str
+            Inputs to the cost function
+        n_wt : int
+            Number of wind turbines
+        cost_function : function handle
+            Function to evaluate cost
+        cost_gradient_function : function handle, optional
+            Function to evaluate gradient of the cost function
+        output_key : list
+            Name of output key, default is AEP
+        output_unit : str
+            Units of output of cost function
+        additional_input : list of str
+            Other (non-design-variable) inputs required by the cost function\n
+            Gradients will not be computed for these inputs
+        additional_output : list of str or list of tuples
+            Other outputs to request\n
+            if list of str: ['add_out_name',...]\n
+            if list of tuples [('add_out_name', val),...], where val is a template value of the output
+            The cost function must return: cost, {'add_out1_name': add_out1, ...}
+        max_eval : int
+            Maximum number of function evaluations
+        """
         CostModelComponent.__init__(self, input_keys, n_wt, cost_function,
                                     cost_gradient_function=cost_gradient_function,
                                     output_key=output_key, output_unit=output_unit,
-                                    additional_input=additional_input, additional_output=additional_output,
+                                    additional_input=additional_input,
+                                    additional_output=additional_output,
                                     max_eval=max_eval, maximize=True, **kwargs)
 
 
 class AEPMaxLoadCostModelComponent(CostModelComponent, PostConstraint):
+    """Wrapper for pure-Python cost functions"""
     def __init__(self, input_keys, n_wt, aep_load_function, max_loads,
                  aep_load_gradient=None, output_keys=["AEP", 'loads'], step={},
                  maximize=True, **kwargs):
+        """Initialize Sub class of the CostModelComponent for AEP maximization and load constraints
+
+        Parameters
+        ----------
+        input_keys : list of str
+            Inputs to the cost function
+        n_wt : int
+            Number of wind turbines
+        aep_load_function : function handle
+            Function to evaluate cost
+        aep_load_gradient : function handle, optional
+            Function to evaluate gradient of the cost function
+        output_keys : list
+            Name of output key, default is AEP and loads
+        step : dict of {str : float}
+            Finite difference step size for each input key, e.g. {input_key : step_size, input_key2 : step_size2}
+        maximize : boolean
+            If True: objective is maximised during optimization\n
+            If False: Objective is minimized during optimization
+        """
+
         self.max_loads = max_loads
 
         def cost_function(**kwargs):
