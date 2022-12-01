@@ -26,7 +26,7 @@ class EasyDriverBase():
 
 class EasyScipyOptimizeDriver(ScipyOptimizeDriver, EasyDriverBase):
 
-    def __init__(self, optimizer='SLSQP', maxiter=200, tol=1e-8, disp=True, **kwargs):
+    def __init__(self, optimizer='SLSQP', maxiter=200, tol=1e-8, disp=True, auto_scale=False, **kwargs):
         """
         Parameters
         ----------
@@ -38,8 +38,11 @@ class EasyScipyOptimizeDriver(ScipyOptimizeDriver, EasyDriverBase):
             Tolerance for termination. For detailed control, use solver-specific options.
         disp : bool
             Set to False to prevent printing of Scipy convergence messages
+        auto_scale : bool
+            Set to true to set ref0 and ref1 to boundaries of the desig variables for the drivers which support it (SLSQP, ).
         """
         ScipyOptimizeDriver.__init__(self)
+        self.auto_scale = auto_scale
         if optimizer == 'IPOPT':
             try:
                 from cyipopt.ipopt_wrapper import minimize_ipopt
@@ -82,9 +85,10 @@ Linux/OSX: conda install -c conda-forge cyipopt
             ref0 = 0
             ref1 = 1
 
-            if len(desvar_values) == 4:
-                ref0 = np.min(desvar_values[1])
-                ref1 = np.max(desvar_values[2])
+            if self.auto_scale:
+                if len(desvar_values) == 4:
+                    ref0 = np.min(desvar_values[1])
+                    ref1 = np.max(desvar_values[2])
 
             kwargs.update({'ref0': ref0, 'ref': ref1})
         elif openmdao.__version__ != '2.6.0' and self.options['optimizer'] == 'COBYLA':

@@ -46,7 +46,7 @@ def topfarm_generator_scalable():
                          XYBoundaryConstraint(boundary * xy_scale)],
             driver=driver,
             plot_comp=plot_comp,
-            expected_cost=70 * cost_scale)
+            expected_cost=1.5 * cost_scale)
     return _topfarm_obj
 
 
@@ -76,7 +76,7 @@ except ImportError:
 
 @pytest.mark.parametrize('driver,tol', [
     (EasyScipyOptimizeDriver(disp=False), 1e-4),
-    (EasyScipyOptimizeDriver(tol=1e-4, disp=False), 1e-2),
+    (EasyScipyOptimizeDriver(tol=1e-3, disp=False), 1e-2),
     (EasyScipyOptimizeDriver(maxiter=14, disp=False), 1e-1),
     (EasyScipyOptimizeDriver(optimizer='COBYLA', tol=1e-3, disp=False), 1e-2),
     (EasySimpleGADriver(max_gen=10, pop_size=100, bits={'x': [12] * 3, 'y':[12] * 3}, random_state=1), 1e-1),

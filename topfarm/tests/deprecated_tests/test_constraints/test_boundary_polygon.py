@@ -13,7 +13,7 @@ def testPolygonConcave():
     initial = [(-0, .1), (4, 1.5)][::-1]
     tf = TopFarm(initial, DummyCost(optimal, inputs=['x', 'y']), 0,
                  boundary=boundary, boundary_type='polygon', plot_comp=plot_comp,
-                 driver=EasyScipyOptimizeDriver(tol=1e-8, disp=False), expected_cost=10)
+                 driver=EasyScipyOptimizeDriver(tol=1e-8, disp=False))
     tf.evaluate()
     tf.optimize()
     np.testing.assert_array_almost_equal(tf.turbine_positions[:, :2], optimal, 4)
