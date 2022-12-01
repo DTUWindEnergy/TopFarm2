@@ -9,11 +9,10 @@ from topfarm.drivers.random_search_driver import RandomizeTurbinePosition_Circle
 from py_wake.deficit_models.gaussian import IEA37SimpleBastankhahGaussian
 import topfarm
 import numpy as np
-
+from scipy.interpolate import RegularGridInterpolator
 import warnings
 from py_wake.flow_map import Points
 from py_wake.utils.gradients import autograd
-from scipy.interpolate import RegularGridInterpolator
 
 
 class PyWakeAEP(AEPCalculator):

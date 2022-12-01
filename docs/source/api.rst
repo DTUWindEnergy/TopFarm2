@@ -6,7 +6,7 @@ API Reference
 
 .. toctree::
     :caption: Reference guide
-    :maxdepth: 2
+    :maxdepth: 1
 
     api_reference/topfarmproblem
     api_reference/cost
