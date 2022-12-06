@@ -77,13 +77,10 @@ def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, random_pct=0, plot=Fal
             x, y = arr
             z = np.array([np.mean(z[ind]) for ind in np.hypot((x - x[:, na]), (y - y[:, na])) < radius])
 
-        if random_pct == 0:
-            # pick one of the optimal points
-            next_ind = np.random.choice(np.where(z == z.max())[0])
-        else:
-            # pick one of the <random_pct> best points
-            n_random = int(np.round(random_pct / 100 * len(z)))
-            next_ind = np.random.choice(np.argsort(z)[-(n_random):])
+        # pick one of the <random_pct> best points
+        n_random = np.maximum(1, int(np.round(random_pct / 100 * len(z))))
+        min_z = np.sort(z)[-(n_random)]
+        next_ind = np.random.choice(np.argwhere(z >= min_z)[:, 0])
 
         x0 = arr[0][next_ind]
         y0 = arr[1][next_ind]
@@ -103,6 +100,8 @@ def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, random_pct=0, plot=Fal
         index = np.where((arr[0] - x0)**2 + (arr[1] - y0)**2 >= min_space**2)[0]
         arr = arr[:, index]
 
+    print(
+        f"{len(XX.flatten())} possible points, {N_WT} wt, {len(XX)/N_WT:.1f} points pr wt, {arr.shape[1]}({arr.shape[1]/len(XX.flatten())*100:.0f}%) unused points")
     return xs, ys
 
 

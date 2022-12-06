@@ -49,9 +49,9 @@ def tests_smart_start():
 
 
 def tests_smart_start_random():
-    xs_ref = [1.7, 13.9, 1.4, 7.7, 14.4, 7.6, 19.7, 19.7, 8.7, 19.4, 15.8,
-              12.4, 7.7, 9.8, 14.1, 1.8, 9.7, 6.6, 13.6, 3.5]
-    ys_ref = [7.9, 1.4, 1.7, 1.3, 7.9, 8.4, 1.7, 8.7, 6.4, 6.6, 2.3, 7.1, 3.5, 1.6, 5.8, 5.8, 8.3, 6.5, 3.5, 1.4]
+    xs_ref = [14.2, 1.6, 8.1, 7.7, 14.1, 1.1, 19.8, 19.4, 3.2, 14.4,
+              6.2, 16.1, 12.1, 1.1, 9.9, 16.3, 7.9, 7.9, 3.3, 12.0]
+    ys_ref = [1.6, 8.2, 1.8, 7.8, 7.5, 1.6, 7.9, 2.0, 1.0, 9.6, 0.7, 8.2, 1.7, 6.1, 8.1, 1.7, 9.9, 5.7, 6.9, 7.7]
 
     N_WT = 20
     min_space = 2.1
@@ -60,7 +60,7 @@ def tests_smart_start_random():
 
     with pytest.raises(expected_exception=AssertionError):
         xs, ys = smart_start(XX, YY, val, N_WT, min_space, random_pct=101, seed=0)
-    xs, ys = smart_start(XX, YY, val, N_WT, min_space, random_pct=1, seed=0)
+    xs, ys = smart_start(XX, YY, val, N_WT, min_space, random_pct=1, seed=0, plot=False)
 
     if 0:
         import matplotlib.pyplot as plt

@@ -66,7 +66,7 @@ def testAEPCostModelComponent():
 def test_maxiter_CostModelComponent():
     tf = get_tf(AEPCostModelComponent(['x', 'y'], 4, aep_cost, aep_gradients, max_eval=10))
     cost, state, recorder = tf.optimize()
-    assert 10 <= tf.cost_comp.counter <= 11, tf.cost_comp.counter
+    assert 10 <= tf.cost_comp.counter <= 12, tf.cost_comp.counter
     npt.assert_array_equal(recorder['AEP'][tf.cost_comp.n_func_eval], recorder['AEP'][tf.cost_comp.n_func_eval:])
 
 
