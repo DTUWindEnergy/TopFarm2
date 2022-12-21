@@ -147,6 +147,67 @@ def smooth_max_gradient(X, alpha, axis=0):
         (1 + alpha * (X - np.expand_dims(smooth_max(X, alpha, axis=axis), axis)))
 
 
+def gauss(X):
+    return np.exp(-X ** 2)
+
+
+def gauss_inv(X):
+    return np.sqrt(-np.log(X))
+
+
+def gauss_prime(X):
+    return -2 * X * gauss(X)
+
+
+def gauss_inv_prime(X):
+    return -1 / (2 * X * gauss_inv(X))
+
+
+def smooth_zero(X, alpha=1, axis=0):
+    '''
+    Function that from an array approximates the value cloest to zero. A differentiable alternative
+    to min(abs(X)).
+    Parameters
+    ----------
+    X : ndarray
+        Matrix of which the smooth zero is calculated.
+    alpha : float
+        smoothness parameter.
+    axis : int, optional
+        Axis along which the smooth zero is calculated. The default is 0.
+
+    Returns
+    -------
+    ndarray
+        Matrix of smooth zero.
+
+    '''
+    sign = np.sign(X[np.expand_dims(np.argmin(np.abs(X)), axis)])
+    return sign * gauss_inv(smooth_max(gauss(X), alpha, axis))
+
+
+def smooth_zero_gradient(X, alpha=1, axis=0):
+    '''
+    Gradients of the smooth_zero function.
+    Parameters
+    ----------
+    X : ndarray
+        Matrix of which the smooth zero derivative is calculated.
+    alpha : float
+        smoothness parameter.
+    axis : int, optional
+        Axis along which the smooth zero is calculated. The default is 0.
+
+    Returns
+    -------
+    ndarray
+        Matrix of smooth zero derivatives.
+
+    '''
+    sign = np.sign(X[np.expand_dims(np.argmin(np.abs(X)), axis)])
+    return sign * gauss_prime(X) * smooth_max_gradient(gauss(X), alpha, axis) * gauss_inv_prime(smooth_max(gauss(X), alpha, axis))
+
+
 class AggregationFunction(ABC):
     def __str__(self):
         return self.__class__.__name__

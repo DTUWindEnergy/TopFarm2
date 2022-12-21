@@ -26,4 +26,5 @@ In this section, more complex configurations for wind farm optimization are show
     advanced_examples_nblinks/exclusion_zones_nb
     advanced_examples_nblinks/mongodb_nb
     advanced_examples_nblinks/regular_grid_optimization_nb
+    advanced_examples_nblinks/turbine_specific_boundaries_nb
 

@@ -2,6 +2,7 @@ from openmdao.drivers.scipy_optimizer import ScipyOptimizeDriver
 # from openmdao.drivers.genetic_algorithm_driver import SimpleGADriver  # version 2.5.0 has bug see Issue #874
 from topfarm.drivers.genetic_algorithm_driver import SimpleGADriver
 from topfarm.drivers.random_search_driver import RandomSearchDriver
+from topfarm.drivers.stochastic_gradient_descent_driver import SGDDriver
 import sys
 import numpy as np
 import openmdao
@@ -52,11 +53,6 @@ Windows: conda install -c pycalphad cyipopt
 Linux/OSX: conda install -c conda-forge cyipopt
                 """)
 
-            def fmt_option(v):
-                if isinstance(v, str):
-                    return v.encode()
-                else:
-                    return v
             ipopt_options = {k: fmt_option(v) for k, v in kwargs.items()}
 
             def minimize_ipopt_wrapper(*args, maxiter=200, disp=True, **kwargs):
@@ -69,6 +65,25 @@ Linux/OSX: conda install -c conda-forge cyipopt
                         scipy_optimizer._all_optimizers, scipy_optimizer._constraint_optimizers, scipy_optimizer._constraint_grad_optimizers]:
                 lst.add(minimize_ipopt_wrapper)
             optimizer = minimize_ipopt_wrapper
+
+        if optimizer == 'SGD':
+            from topfarm.drivers.SGD import SGD
+            from openmdao.drivers import scipy_optimizer
+            from scipy.optimize.optimize import OptimizeResult
+            sgd_options = {k: fmt_option(v) for k, v in kwargs.items()}
+            sgd_opt = SGD(**kwargs)
+
+            def minimize_sgd_wrapper(*args, maxiter=200, disp=True, **kwargs):
+                sgd_options.update({'max_iter': self.max_iter or maxiter, 'print_level': int(disp)})
+                s = sgd_opt.run(*args, options=sgd_options, **kwargs)
+                return OptimizeResult(x=s, fun=args[0](s), jac=kwargs['jac'](s), nit=int(sgd_opt.T),
+                                      nfev=None, njev=None, status=1,
+                                      message='hello world!', success=1)
+            kwargs = {}
+            for lst in [scipy_optimizer._optimizers, scipy_optimizer._gradient_optimizers, scipy_optimizer._bounds_optimizers,
+                        scipy_optimizer._all_optimizers, scipy_optimizer._constraint_optimizers, scipy_optimizer._constraint_grad_optimizers]:
+                lst.add(minimize_sgd_wrapper)
+            optimizer = minimize_sgd_wrapper
 
         self.options.update({'optimizer': optimizer, 'maxiter': self.max_iter or maxiter, 'tol': tol, 'disp': disp})
         if kwargs:
@@ -261,3 +276,31 @@ class EasyRandomSearchDriver(RandomSearchDriver, EasyDriverBase):
         """
         RandomSearchDriver.__init__(self, randomize_func=randomize_func,
                                     max_iter=self.max_iter or max_iter, max_time=max_time, disp=disp, run_parallel=run_parallel)
+
+
+class EasySGDDriver(SGDDriver, EasyDriverBase):
+    def __init__(self, maxiter=100, max_time=600, disp=False, run_parallel=False,
+                 learning_rate=10, upper=0.1, lower=0, beta1=0.1, beta2=0.2, gamma_min_factor=1e-2,
+                 speedupSGD=False, sgd_thresh=0.1):
+        """Easy initialization of RandomSearchDriver
+
+        Parameters
+        ----------
+        randomize_func : f(desvar_dict)
+            Function to randomize desired variables of desvar_dict
+        maxiter : int, optional
+            Maximum iterations
+        max_time : int, optional
+            Maximum time in seconds
+        disp : bool
+        """
+        # self.T = T
+        self.learning_rate = learning_rate
+        self.upper = upper
+        self.lower = lower
+        self.beta1 = beta1
+        self.beta2 = beta2
+        self.gamma_min_factor = gamma_min_factor
+        self.gamma_min = gamma_min_factor  # * learning_rate
+        SGDDriver.__init__(self, maxiter=maxiter, max_time=max_time, disp=disp, run_parallel=run_parallel,
+                           speedupSGD=speedupSGD, sgd_thresh=sgd_thresh)

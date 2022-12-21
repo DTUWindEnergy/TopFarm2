@@ -4,7 +4,7 @@ from topfarm.cost_models.dummy import DummyCost, DummyCostPlotComp
 from topfarm.plotting import NoPlot, XYPlotComp
 from topfarm.easy_drivers import EasyScipyOptimizeDriver
 from topfarm.constraint_components.boundary import XYBoundaryConstraint,\
-    PolygonBoundaryComp
+    PolygonBoundaryComp, InclusionZone, ExclusionZone, MultiPolygonBoundaryComp
 from topfarm._topfarm import TopFarmProblem
 
 
@@ -53,10 +53,10 @@ def testPolygonTwoRegionsStartInWrong():
 
 def testMultiPolygon():
     optimal = [(1.75, 1.3), (4, 1)]
-    boundary = [([(0, 0), (5, 0), (5, 2), (3, 2), (3, 1), (2, 1), (2, 2), (0, 2), (0, 0)], 1),
-                ([(3.5, 0.5), (4.5, 0.5), (4.5, 1.5), (3.5, 1.5)], 1),
-                ([(0.5, 0.5), (1.75, 0.5), (1.75, 1.5), (0.5, 1.5)], 0),
-                ([(0.75, 0.75), (1.25, 0.75), (1.25, 1.25), (0.75, 1.25)], 0),
+    boundary = [InclusionZone([(0, 0), (5, 0), (5, 2), (3, 2), (3, 1), (2, 1), (2, 2), (0, 2), (0, 0)]),
+                InclusionZone([(3.5, 0.5), (4.5, 0.5), (4.5, 1.5), (3.5, 1.5)]),
+                ExclusionZone([(0.5, 0.5), (1.75, 0.5), (1.75, 1.5), (0.5, 1.5)]),
+                ExclusionZone([(0.75, 0.75), (1.25, 0.75), (1.25, 1.25), (0.75, 1.25)]),
                 ]
     xy_bound_ref_ = np.array([[0., 0.],
                               [5., 0.],
@@ -70,7 +70,7 @@ def testMultiPolygon():
 
     bound_dist_ref = np.array([0, 1])
     plot_comp = NoPlot()  # DummyCostPlotComp(optimal)
-    initial = [(-0, .1), (4, 1.5)][::-1]
+    initial = np.asarray([(-0, .1), (4, 1.5)][::-1])
     tf = get_tf(initial, optimal, boundary, plot_comp, boundary_type='multi_polygon')
     tf.evaluate()
     cost, state, recorder = tf.optimize()
@@ -99,10 +99,10 @@ def test_calculate_distance_to_boundary():
 
 
 def testDistanceRelaxation():
-    boundary = [([(0, 0), (5, 0), (5, 2), (3, 2), (3, 1), (2, 1), (2, 2), (0, 2), (0, 0)], 1),
-                ([(3.5, 0.5), (4.5, 0.5), (4.5, 1.5), (3.5, 1.5)], 1),
-                ([(0.5, 0.5), (1.75, 0.5), (1.75, 1.5), (0.5, 1.5)], 0),
-                ([(0.75, 0.75), (1.25, 0.75), (1.25, 1.25), (0.75, 1.25)], 0),
+    boundary = [InclusionZone([(0, 0), (5, 0), (5, 2), (3, 2), (3, 1), (2, 1), (2, 2), (0, 2), (0, 0)]),
+                InclusionZone([(3.5, 0.5), (4.5, 0.5), (4.5, 1.5), (3.5, 1.5)]),
+                ExclusionZone([(0.5, 0.5), (1.75, 0.5), (1.75, 1.5), (0.5, 1.5)]),
+                ExclusionZone([(0.75, 0.75), (1.25, 0.75), (1.25, 1.25), (0.75, 1.25)]),
                 ]
     initial = [(-0, .1), (4, 1.5)][::-1]
     optimal = [(1.75, 1.3), (4, 1)]
@@ -124,3 +124,27 @@ def testDistanceRelaxation():
     # gradients with respect of iteration number should be the same at every point
     assert tf.model.constraint_components[0].gradients(np.array([3]), np.array([5]))[2][0] \
         == tf.model.constraint_components[0].gradients(np.array([1.5]), np.array([8]))[2][1]
+
+
+def testDistanceRelaxationPolygons():
+    zones = [InclusionZone([(0, 0), (5, 0), (5, 2), (3, 2), (3, 1), (2, 1), (2, 2), (0, 2), (0, 0)]),
+             InclusionZone([(3.5, 0.5), (4.5, 0.5), (4.5, 1.5), (3.5, 1.5)]),
+             ExclusionZone([(0.5, 0.5), (1.75, 0.5), (1.75, 1.5), (0.5, 1.5)]),
+             ExclusionZone([(0.75, 0.75), (1.25, 0.75), (1.25, 1.25), (0.75, 1.25)]),
+             ]
+    MPBC = MultiPolygonBoundaryComp(1, zones, relaxation=(0.1, 10))
+    (rp1, rp2) = MPBC.relaxed_polygons(7)
+    bp1 = MPBC.get_boundary_properties(rp1)
+    bp2 = MPBC.get_boundary_properties(rp2)
+    np.testing.assert_allclose(bp1[0][0], np.array([[2.3, 1.3],
+                                                    [2.7, 1.3],
+                                                    [2.7, 2.3],
+                                                    [5.3, 2.3],
+                                                    [5.3, -0.3],
+                                                    [-0.3, -0.3],
+                                                    [-0.3, 2.3],
+                                                    [2.3, 2.3]]))
+    np.testing.assert_allclose(bp2[0][0], np.array([[1.45, 1.2],
+                                                    [0.8, 1.2],
+                                                    [0.8, 0.8],
+                                                    [1.45, 0.8]]))

@@ -189,7 +189,8 @@ class TopFarmProblem(Problem):
         self.load_recorder()
         if not isinstance(approx_totals, dict) and approx_totals:
             approx_totals = {'method': 'fd'}
-
+        if not isinstance(constraints, list):
+            constraints = [constraints]
         if not isinstance(design_vars, dict):
             design_vars = dict(design_vars)
         self.design_vars = design_vars
@@ -237,9 +238,6 @@ class TopFarmProblem(Problem):
                     constr.setup_as_penalty(self)
                 else:
                     constr.setup_as_constraint(self)
-                    # Use the assembled Jacobian.
-                    self.model.pre_constraints.options['assembled_jac_type'] = 'csc'
-                    self.model.pre_constraints.linear_solver.assemble_jac = True
             penalty_comp = PenaltyComponent(constraints, constraints_as_penalty)
             self.model.add_subsystem('penalty_comp', penalty_comp, promotes=['*'])
         else:
@@ -267,13 +265,7 @@ class TopFarmProblem(Problem):
                     if isinstance(constr, Constraint):
                         if 'post_constraints' not in self.model._subsystems_allprocs and 'post_constraints' not in self.model._static_subsystems_allprocs:
                             self.model.add_subsystem('post_constraints', ParallelGroup(), promotes=['*'])
-                        if constraints_as_penalty:
-                            constr.setup_as_penalty(self, group='post_constraints')
-                        else:
-                            constr.setup_as_constraint(self, group='post_constraints')
-                            # Use the assembled Jacobian.
-                            self.model.post_constraints.options['assembled_jac_type'] = 'csc'
-                            self.model.post_constraints.linear_solver.assemble_jac = True
+                        constr.setup_as_constraint(self, group='post_constraints')
 
                     elif isinstance(constr[-1], dict):
                         self.model.add_constraint(str(constr[0]), **constr[-1])
@@ -292,9 +284,6 @@ class TopFarmProblem(Problem):
                         upper = None if constr[2] is None else np.full(constr[3], constr[2])
                         self.model.add_constraint(
                             constr[0], lower=lower, upper=upper)
-                    # Use the assembled Jacobian.
-#                    self.model.cost_comp.post_constraints.options['assembled_jac_type'] = 'csc'
-#                    self.model.cost_comp.post_constraints.linear_solver.assemble_jac = True
 
         aggr_comp = AggregatedCost(constraints_as_penalty, constraints, post_constraints)
         self.model.add_subsystem('aggr_comp', aggr_comp, promotes=['*'])

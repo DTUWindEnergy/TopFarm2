@@ -1,9 +1,11 @@
 import matplotlib
+import os
 from openmdao.api import ExplicitComponent
 import matplotlib.pyplot as plt
 import numpy as np
 import topfarm
 import sys
+import matplotlib.pyplot as plt
 
 
 def mypause(interval):
@@ -209,6 +211,11 @@ class XYPlotComp(ExplicitComponent):
             self.counter += 1
             outputs['plot_counter'] = self.counter
 
+            fig = self.ax
+            if not os.path.exists('Figures'):
+                os.makedirs('Figures')
+            plt.savefig('Figures/iteration_%s.png' % self.counter)
+
 
 class PlotComp(XYPlotComp):
     def __init__(self, memory=10, delay=0.001, plot_initial=True, plot_improvements_only=False, ax=None):
@@ -219,7 +226,7 @@ class PlotComp(XYPlotComp):
 
 class TurbineTypePlotComponent(XYPlotComp):
     """Plotting component for turbine types"""
-    colors = ['b', 'r', 'm', 'c', 'g', 'y', 'orange', 'indigo', 'grey'] * 100
+    colors = np.array(['b', 'r', 'm', 'c', 'g', 'y', 'orange', 'indigo', 'grey'] * 10)
     markers = np.array(list("123v^<>.o48spP*hH+xXDd|_"))
 
     def __init__(self, turbine_type_names, **kwargs):
@@ -245,14 +252,39 @@ class TurbineTypePlotComponent(XYPlotComp):
 
     def init_plot(self, limits):
         XYPlotComp.init_plot(self, limits)
-        for m, n in zip(self.markers, self.turbine_type_names):
-            self.ax.plot([], [], m + 'k', label=n)
+        for m, n, c in zip(self.markers, self.turbine_type_names, self.colors):
+            self.ax.plot([], [], m + c, label=n)
         self.ax.legend()
 
+    def plot_initial2current(self, x0, y0, x, y):
+        rec = self.problem.recorder
+        if rec.num_cases > 0:
+            pw = self.problem.get_vars_from_recorder()
+            x0 = np.atleast_1d(pw['x0'])
+            y0 = np.atleast_1d(pw['y0'])
+            for c, x0_, y0_, x_, y_ in zip(self.colors[self.types], x0, y0, x, y):
+                self.ax.plot(x0_, y0_, '>', markerfacecolor=c, markeredgecolor='k')
+                self.ax.plot((x0_, x_), (y0_, y_), '-', color=c)
+            self.ax.plot([], [], '>k', markerfacecolor="#00000000", markeredgecolor='k', label='Initial position')
+
+    def plot_history(self, x, y):
+        rec = self.problem.recorder
+        if rec.num_cases > 0:
+            def get(xy, xy_key, pw):
+                rec_xy = pw[xy_key][-self.memory:]
+                if len(rec_xy.shape) == 1:
+                    rec_xy = rec_xy[:, np.newaxis]
+                return np.r_[rec_xy, [xy]]
+            pw = self.problem.get_vars_from_recorder()
+            x = get(x, topfarm.x_key, pw)
+            y = get(y, topfarm.y_key, pw)
+            for c, x_, y_ in zip(self.colors[self.types], x.T, y.T):
+                self.ax.plot(x_, y_, '--', color=c)
+
     def plot_current_position(self, x, y):
-        for m, c, x_, y_ in zip(self.markers[self.types], self.colors, x, y):
+        for m, c, x_, y_ in zip(self.markers[self.types], self.colors[self.types], x, y):
             # self.ax.plot(x_, y_, 'o', color=c, ms=5)
-            self.ax.plot(x_, y_, m + 'k', markeredgecolor=c, markeredgewidth=1, ms=8)
+            self.ax.plot(x_, y_, m + 'k', markeredgecolor=c, markeredgewidth=1, ms=20)
 
 
 class TurbineCablePlotComponent(XYPlotComp):
@@ -309,3 +341,51 @@ class TurbineCablePlotComponent(XYPlotComp):
                 xs = CoordX[(self.tree[index].T[:2] - 1).astype(int)]
                 ys = CoordY[(self.tree[index].T[:2] - 1).astype(int)]
                 self.ax.plot(xs, ys, self.colors[n])
+
+
+class AggregatedConstraintsPlotComponent(XYPlotComp):
+
+    colors = np.array(['b', 'r', 'm', 'c', 'g', 'y', 'orange', 'indigo', 'grey'] * 10)
+    markers = np.array(list("123v^<>.o48spP*hH+xXDd|_"))
+
+    def show(self):
+        pass
+
+    def plot_constraints(self):
+        if len(self.problem.model.aggr_comp.constraints) != 0:
+            for constr in self.problem.model.aggr_comp.constraints[0].constraints:
+                constr.constraintComponent.plot(self.ax)
+        else:
+            for constr in self.problem.model.constraint_components:
+                constr.plot(self.ax)
+
+    def plot_history(self, x, y):
+        rec = self.problem.recorder
+        if rec.num_cases > 0:
+            def get(xy, xy_key, pw):
+                rec_xy = pw[xy_key][-self.memory:]
+                if len(rec_xy.shape) == 1:
+                    rec_xy = rec_xy[:, np.newaxis]
+                return np.r_[rec_xy, [xy]]
+            pw = self.problem.get_vars_from_recorder()
+            x = get(x, topfarm.x_key, pw)
+            y = get(y, topfarm.y_key, pw)
+            for c, x_, y_ in zip(self.colors, x.T, y.T):
+                self.ax.plot(x_, y_, '--', color=c)
+
+    def plot_initial2current(self, x0, y0, x, y):
+        rec = self.problem.recorder
+        if rec.num_cases > 0:
+            pw = self.problem.get_vars_from_recorder()
+            x0 = np.atleast_1d(pw['x0'])
+            y0 = np.atleast_1d(pw['y0'])
+            for c, x0_, y0_, x_, y_ in zip(self.colors, x0, y0, x, y):
+                self.ax.plot(x0_, y0_, '>', markerfacecolor=c, markeredgecolor='k')
+                self.ax.plot((x0_, x_), (y0_, y_), '-', color=c)
+            self.ax.plot([], [], '>k', markerfacecolor="#00000000", markeredgecolor='k', label='Initial position')
+
+    def plot_current_position(self, x, y):
+        for c, x_, y_ in zip(self.colors, x, y):
+            self.ax.plot(x_, y_, 'o', color=c, ms=5)
+            self.ax.plot(x_, y_, 'xk', ms=4)
+        self.ax.plot([], [], 'xk', label='Current position')

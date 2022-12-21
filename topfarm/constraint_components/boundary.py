@@ -4,13 +4,13 @@ from scipy.spatial import ConvexHull
 from topfarm.constraint_components import Constraint, ConstraintComponent
 from topfarm.utils import smooth_max, smooth_max_gradient
 import topfarm
-from shapely.geometry import Polygon, MultiPolygon
+from shapely.geometry import Polygon, MultiPolygon, LineString
 from shapely.ops import unary_union
 import warnings
 
 
 class XYBoundaryConstraint(Constraint):
-    def __init__(self, boundary, boundary_type='convex_hull', units=None, relaxation=False):
+    def __init__(self, boundary, boundary_type='convex_hull', units=None, relaxation=False, **kwargs):
         """Initialize XYBoundaryConstraint
 
         Parameters
@@ -26,16 +26,20 @@ class XYBoundaryConstraint(Constraint):
             - 'rectangle': Smallest axis-aligned rectangle covering the boundary points\n
             - 'square': Smallest axis-aligned square covering the boundary points
             - 'multi_polygon': Mulitple polygon boundaries incl. exclusion zones (may be non convex).\n
+            - 'type_specific': Set of multiple polygon boundaries that depend on the wind turbine type. \n
 
 
         """
         if boundary_type == 'multi_polygon':
-            if np.ndim(boundary[0][0]) < 2:
-                self.multi_boundary = [(np.asarray(boundary), 1)]
-            else:
-                self.multi_boundary = [(np.asarray(bound), boolean) for bound, boolean in boundary]
-                boundary = boundary[0][0]
-        self.boundary = np.asarray(boundary)
+            self.zones = boundary
+            self.boundary = np.asarray(self.zones[0].boundary)
+        elif boundary_type == 'turbine_specific':
+            self.zones = boundary
+            assert 'turbines' in list(kwargs)
+            self.turbines = kwargs['turbines']
+            self.boundary = np.asarray(self.zones[0].boundary)
+        else:
+            self.boundary = np.asarray(boundary)
         self.boundary_type = boundary_type
         self.const_id = 'xyboundary_comp_{}_{}'.format(boundary_type, int(self.boundary.sum()))
         self.units = units
@@ -47,11 +51,11 @@ class XYBoundaryConstraint(Constraint):
                 self.boundary_comp = PolygonBoundaryComp(
                     n_wt, self.boundary, self.const_id, self.units, self.relaxation)
             elif self.boundary_type == 'multi_polygon':
-                self.boundary_comp = MultiPolygonBoundaryComp(
-                    n_wt, self.multi_boundary, self.const_id, self.units, self.relaxation)
+                self.boundary_comp = MultiPolygonBoundaryComp(n_wt, self.zones, const_id=self.const_id, units=self.units, relaxation=self.relaxation)
+            elif self.boundary_type == 'turbine_specific':
+                self.boundary_comp = TurbineSpecificBoundaryComp(n_wt, self.turbines, self.zones, const_id=self.const_id, units=self.units, relaxation=self.relaxation)
             else:
-                self.boundary_comp = ConvexBoundaryComp(
-                    n_wt, self.boundary, self.boundary_type, self.const_id, self.units)
+                self.boundary_comp = ConvexBoundaryComp(n_wt, self.boundary, self.boundary_type, self.const_id, self.units)
         return self.boundary_comp
 
     @property
@@ -59,9 +63,9 @@ class XYBoundaryConstraint(Constraint):
         return self.boundary_comp
 
     def set_design_var_limits(self, design_vars):
-        if hasattr(self, 'multi_boundary'):
-            bound_min = np.vstack([(bound[0]).min(0) for bound in self.multi_boundary]).min(0)
-            bound_max = np.vstack([(bound[0]).max(0) for bound in self.multi_boundary]).max(0)
+        if self.boundary_type in ['multi_polygon', 'turbine_specific']:
+            bound_min = np.vstack([(bound).min(0) for bound, _ in self.boundary_comp.boundaries]).min(0)
+            bound_max = np.vstack([(bound).max(0) for bound, _ in self.boundary_comp.boundaries]).max(0)
         else:
             bound_min = self.boundary_comp.xy_boundary.min(0)
             bound_max = self.boundary_comp.xy_boundary.max(0)
@@ -142,6 +146,8 @@ class BoundaryBaseComp(ConstraintComponent):
                        desc='y coordinates of turbines in global ref. frame', units=self.units)
         if self.relaxation:
             self.add_input('time', 0)
+        if hasattr(self, 'types'):
+            self.add_input('type', np.zeros(self.n_wt))
         self.add_output('penalty_' + self.const_id, val=0.0)
         # Explicitly size output array
         # (vector with positive elements if turbines outside of hull)
@@ -155,9 +161,10 @@ class BoundaryBaseComp(ConstraintComponent):
 
     def compute(self, inputs, outputs):
         # calculate distances from each point to each face
-        boundaryDistances = self.distances(x=inputs[topfarm.x_key], y=inputs[topfarm.y_key])
+        args = {x: inputs[x] for x in [topfarm.x_key, topfarm.y_key, topfarm.type_key] if x in inputs}
+        boundaryDistances = self.distances(**args)
         outputs['boundaryDistances'] = boundaryDistances
-        outputs['penalty_' + self.const_id] = -np.minimum(boundaryDistances, 0).sum()
+        outputs['penalty_' + self.const_id] = np.sum(np.minimum(boundaryDistances, 0) ** 2)
 
     def compute_partials(self, inputs, partials):
         # return Jacobian dict
@@ -173,14 +180,27 @@ class BoundaryBaseComp(ConstraintComponent):
 
     def plot(self, ax):
         """Plot boundary"""
-        if isinstance(self, MultiPolygonBoundaryComp):
+        if isinstance(self, TurbineSpecificBoundaryComp):
+            linestyles = ['--', '-']
+            colors = np.array(['b', 'r', 'm', 'c', 'g', 'y', 'orange', 'indigo', 'grey'] * 10)
+            for n, t in enumerate(self.types):
+                line, = ax.plot(*self.ts_merged_xy_boundaries[n][0][0][0, :], color=colors[t], linewidth=1, label=f'{self.wind_turbines._names[n]} boundary')
+                for bound, io in self.ts_merged_xy_boundaries[n]:
+                    ax.plot(np.asarray(bound)[:, 0].tolist() + [np.asarray(bound)[0, 0]],
+                            np.asarray(bound)[:, 1].tolist() + [np.asarray(bound)[0, 1]], color=colors[t], linewidth=1, linestyle=linestyles[io])
+        elif isinstance(self, MultiPolygonBoundaryComp):
             colors = ['--k', 'k']
+            if self.relaxation != 0:
+                for bound, io in self.relaxed_polygons():
+                    ax.plot(np.asarray(bound)[:, 0].tolist() + [np.asarray(bound)[0, 0]],
+                            np.asarray(bound)[:, 1].tolist() + [np.asarray(bound)[0, 1]], c='r', linewidth=1, linestyle='--')
+                ax.plot([], c='r', linewidth=1, linestyle='--', label='Relaxed boundaries')
             for bound, io in self.boundaries:
                 ax.plot(np.asarray(bound)[:, 0].tolist() + [np.asarray(bound)[0, 0]],
-                        np.asarray(bound)[:, 1].tolist() + [np.asarray(bound)[0, 1]], colors[io])
+                        np.asarray(bound)[:, 1].tolist() + [np.asarray(bound)[0, 1]], colors[io], linewidth=1)
         else:
             ax.plot(self.xy_boundary[:, 0].tolist() + [self.xy_boundary[0, 0]],
-                    self.xy_boundary[:, 1].tolist() + [self.xy_boundary[0, 1]], 'k')
+                    self.xy_boundary[:, 1].tolist() + [self.xy_boundary[0, 1]], 'k', linewidth=1)
 
 
 class ConvexBoundaryComp(BoundaryBaseComp):
@@ -506,16 +526,35 @@ class CircleBoundaryComp(PolygonBoundaryComp):
         return np.diagflat(dx), np.diagflat(dy)
 
 
+class Zone(object):
+    def __init__(self, boundary, dist2wt, geometry_type, incl, name):
+        self.name = name
+        self.boundary = boundary
+        self.dist2wt = dist2wt
+        self.geometry_type = geometry_type
+        self.incl = incl
+
+
+class InclusionZone(Zone):
+    def __init__(self, boundary, dist2wt=None, geometry_type='polygon', name=''):
+        super().__init__(np.asarray(boundary), dist2wt, geometry_type, incl=1, name=name)
+
+
+class ExclusionZone(Zone):
+    def __init__(self, boundary, dist2wt=None, geometry_type='polygon', name=''):
+        super().__init__(np.asarray(boundary), dist2wt, geometry_type, incl=0, name=name)
+
+
 class MultiPolygonBoundaryComp(PolygonBoundaryComp):
-    def __init__(self, n_wt, xy_multi_boundary, const_id=None, units=None, relaxation=False, method='nearest',
+    def __init__(self, n_wt, zones, const_id=None, units=None, relaxation=False, method='nearest',
                  simplify_geometry=False):
         '''
         Parameters
         ----------
         n_wt : TYPE
             DESCRIPTION.
-        xy_multi_boundary : TYPE
-            DESCRIPTION.
+        zones : list
+            list of InclusionZone and ExclusionZone objects
         const_id : TYPE, optional
             DESCRIPTION. The default is None.
         units : TYPE, optional
@@ -530,11 +569,11 @@ class MultiPolygonBoundaryComp(PolygonBoundaryComp):
         None.
 
         '''
-        self.xy_multi_boundary = xy_multi_boundary
-        PolygonBoundaryComp.__init__(self, n_wt, xy_boundary=xy_multi_boundary[0][0],
-                                     const_id=const_id, units=units, relaxation=relaxation)
-        self.bounds_poly = [Polygon(x) for x, _ in xy_multi_boundary]
-        self.types_bool = [1 if x in ['i', 'include', True, 1, None] else 0 for _, x in xy_multi_boundary]
+        self.zones = zones
+        self.bounds_poly, xy_boundaries = self.get_xy_boundaries()
+        PolygonBoundaryComp.__init__(self, n_wt, xy_boundary=xy_boundaries[0], const_id=const_id, units=units, relaxation=relaxation)
+        # self.bounds_poly = [Polygon(x) for x in xy_boundaries]
+        self.incl_excls = [x.incl for x in zones]
         self._setup_boundaries()
         self.relaxation = relaxation
         self.method = method
@@ -547,6 +586,25 @@ class MultiPolygonBoundaryComp(PolygonBoundaryComp):
         else:
             self.bounds_poly = [rp.simplify(simplify_geometry) for rp in self.bounds_poly]
         self._setup_boundaries()
+
+    # def line_to_xy_boundary(self, line, buffer):
+    #     return np.asarray(Polygon(LineString(line).buffer(buffer, join_style=2).exterior).exterior.coords)
+
+    def get_xy_boundaries(self):
+        polygons = []
+        bounds = []
+        for z in self.zones:
+            if hasattr(z.dist2wt, '__code__'):
+                buffer = z.dist2wt(**{k: 100 for k in z.dist2wt.__code__.co_varnames})
+            else:
+                buffer = 0
+            if z.geometry_type == 'line':
+                poly = Polygon(LineString(z.boundary).buffer(buffer, join_style=2).exterior)
+            elif z.geometry_type == 'polygon':
+                poly = Polygon(z.boundary).buffer(buffer, join_style=2)
+            polygons.append(poly)
+            bounds.append(np.asarray(poly.exterior.coords))
+        return polygons, bounds
 
     def _setup_boundaries(self):
         self.res_poly = self._calc_resulting_polygons(self.bounds_poly)
@@ -582,13 +640,13 @@ class MultiPolygonBoundaryComp(PolygonBoundaryComp):
         for i in range(len(boundary_polygons)):
             b = boundary_polygons[i]
             if len(domain) == 0:
-                if self.types_bool[i]:
+                if self.incl_excls[i]:
                     domain.append(b)
                 else:
                     warnings.warn("First boundary should be an inclusion zone or it will be ignored")
                     pass
             else:
-                if self.types_bool[i]:
+                if self.incl_excls[i]:
                     temp = []
                     for j, d in enumerate(domain):
                         if d.intersects(b):
@@ -631,72 +689,6 @@ class MultiPolygonBoundaryComp(PolygonBoundaryComp):
                     domain = temp
         return domain
 
-    # def _calc_distance_and_gradients(self, x, y, boundary_properties):
-    #     '''
-    #     x_xn_vect_ij is the vector from edge start point (p1) to x
-    #     x_xn_len_ij is the signed length of x_xn_vect_ij which is used to assess x is closer to the edge or either of the end points
-    #     overlapping_ij assesses if x is closer to an edge or the end points
-    #     Dp_ij is the distance from edge start point to x
-    #     Dp_ij_res is the distance from the point to the closest of the edge ends
-    #     De_ij is the distance from x to an edge
-    #     inside_edge_ij is a boolen array that desribes if the point lies on the correct side of the edge
-    #     turns_left indicates if an angle between two consecutive edges is going into the boundary (concave) or out of the boundary (convex).
-    #     '''
-    #     _, x1, y1, x2, y2, dEdgeDist_dx, dEdgeDist_dy, _, _, _, _, edge_vect_j, edge_vect_len_j = boundary_properties
-    #     x = np.asarray(x)
-    #     y = np.asarray(y)
-    #     shape_ij = (len(x), len(x1))
-    #     x_xn_vect_ij = np.array([x[:, na] - x1[na, :], y[:, na] - y1[na, :]])
-    #     x_xn_len_ij = np.sum(x_xn_vect_ij * edge_vect_j[:, na, :], axis=0) / edge_vect_len_j[na, :]
-
-    #     D_ij = np.zeros(shape_ij)
-    #     dDdx_ij = np.zeros(shape_ij)
-    #     dDdy_ij = np.zeros(shape_ij)
-
-    #     before_ij = 0 > x_xn_len_ij
-    #     overlapping_ij = (0 <= x_xn_len_ij) & (x_xn_len_ij <= edge_vect_len_j)
-    #     after_ij = x_xn_len_ij > edge_vect_len_j
-    #     inside_edge_ij = np.cross(edge_vect_j[:, na, :], x_xn_vect_ij, axisa=0, axisb=0) > 0
-    #     outside_edge_ij = np.logical_not(inside_edge_ij)
-    #     turns_left_ij = np.broadcast_to(np.cross(np.roll(edge_vect_j, 1, axis=1), edge_vect_j, axis=0) > 0, shape_ij)
-    #     turns_right_ij = np.logical_not(turns_left_ij)
-
-    #     De_ij = np.abs((x2[na, :] - x1[na, :]) * (y1[na, :] - y[:, na]) - (x1[na, :] - x[:, na]) *
-    #                    (y2[na, :] - y1[na, :])) / np.sqrt((x2[na, :] - x1[na, :]) ** 2 + (y2[na, :] - y1[na, :]) ** 2)
-    #     Dp_ij = np.sqrt((x[:, na] - x1[na, :]) ** 2 + (y[:, na] - y1[na, :]) ** 2)
-
-    #     D_ij[overlapping_ij] = De_ij[overlapping_ij]
-    #     D_ij[before_ij] = Dp_ij[before_ij]
-    #     D_ij[after_ij] = np.roll(Dp_ij, -1, axis=1)[after_ij]
-
-    #     dDdx_ij[before_ij] = (x[:, na] - x1[na, :])[before_ij] / Dp_ij[before_ij]
-    #     dDdx_ij[after_ij] = np.roll((x[:, na] - x1[na, :]), -1, axis=1)[after_ij] / np.roll(Dp_ij, -1, axis=1)[after_ij]
-    #     dDdx_ij[overlapping_ij] = np.broadcast_to(dEdgeDist_dx[na, :], shape_ij)[overlapping_ij]
-    #     dDdy_ij[before_ij] = (y[:, na] - y1[na, :])[before_ij] / Dp_ij[before_ij]
-    #     dDdy_ij[after_ij] = np.roll((y[:, na] - y1[na, :]), -1, axis=1)[after_ij] / np.roll(Dp_ij, -1, axis=1)[after_ij]
-    #     dDdy_ij[overlapping_ij] = np.broadcast_to(dEdgeDist_dy[na, :], shape_ij)[overlapping_ij]
-
-    #     D_ij[outside_edge_ij & overlapping_ij] *= -1
-    #     D_ij[before_ij & turns_left_ij] *= -1
-    #     D_ij[after_ij & np.roll(turns_left_ij, -1, axis=1)] *= -1
-    #     D_ij[before_ij & turns_right_ij & np.roll(outside_edge_ij, 1, axis=1) & outside_edge_ij] *= -1
-    #     D_ij[after_ij & np.roll(turns_right_ij, -1, axis=1) &
-    #          np.roll(outside_edge_ij, -1, axis=1) & outside_edge_ij] *= -1
-
-    #     dDdx_ij[before_ij & turns_left_ij] *= -1
-    #     dDdx_ij[after_ij & np.roll(turns_left_ij, -1, axis=1)] *= -1
-    #     dDdx_ij[before_ij & turns_right_ij & np.roll(outside_edge_ij, 1, axis=1) & outside_edge_ij] *= -1
-    #     dDdx_ij[after_ij & np.roll(turns_right_ij, -1, axis=1) &
-    #             np.roll(outside_edge_ij, -1, axis=1) & outside_edge_ij] *= -1
-
-    #     dDdy_ij[before_ij & turns_left_ij] *= -1
-    #     dDdy_ij[after_ij & np.roll(turns_left_ij, -1, axis=1)] *= -1
-    #     dDdy_ij[before_ij & turns_right_ij & np.roll(outside_edge_ij, 1, axis=1) & outside_edge_ij] *= -1
-    #     dDdy_ij[after_ij & np.roll(turns_right_ij, -1, axis=1) &
-    #             np.roll(outside_edge_ij, -1, axis=1) & outside_edge_ij] *= -1
-
-    #     return D_ij, dDdx_ij, dDdy_ij
-
     def sign(self, Dist_ij):
         return np.sign(Dist_ij[np.arange(Dist_ij.shape[0]), np.argmin(abs(Dist_ij), axis=1)])
 
@@ -730,12 +722,13 @@ class MultiPolygonBoundaryComp(PolygonBoundaryComp):
         self._cache_output = [Dist_ij, dDdk_ijk, sign_i]
         return self._cache_output
 
-    def calc_relaxation(self):
+    def calc_relaxation(self, iteration_no=None):
         '''
         The tupple relaxation contains a first term for the penalty constant
         and a second term for the n first iterations to apply relaxation.
         '''
-        iteration_no = self.problem.cost_comp.n_grad_eval + 1
+        if iteration_no is None:
+            iteration_no = self.problem.cost_comp.n_grad_eval + 1
         return max(0, self.relaxation[0] * (self.relaxation[1] - iteration_no))
 
     def distances(self, x, y):
@@ -744,6 +737,9 @@ class MultiPolygonBoundaryComp(PolygonBoundaryComp):
             Dist_i = smooth_max(np.abs(Dist_ij), -np.abs(Dist_ij).max(), axis=1) * sign_i
         elif self.method == 'nearest':
             Dist_i = Dist_ij[np.arange(x.size), np.argmin(np.abs(Dist_ij), axis=1)]
+        else:
+            warning = f'method: {self.method} is not implemented. Available options are smooth_min and nearest.'
+            warnings.warn(warning)
         if self.relaxation:
             Dist_i += self.calc_relaxation()
         return Dist_i
@@ -755,6 +751,9 @@ class MultiPolygonBoundaryComp(PolygonBoundaryComp):
             where S is smooth maximum, D is distance to edge and k is the spacial dimension
         '''
         Dist_ij, dDdk_ijk, _ = self.calc_distance_and_gradients(x, y)
+        if self.relaxation:
+            Dist_ij += self.calc_relaxation()
+            # dDdt = -self.relaxation[1]
         if self.method == 'smooth_min':
             dSdDist_ij = smooth_max_gradient(np.abs(Dist_ij), -np.abs(Dist_ij).max(), axis=1)
             dSdkx_i, dSdky_i = (dSdDist_ij[:, :, na] * dDdk_ijk).sum(axis=1).T
@@ -768,10 +767,176 @@ class MultiPolygonBoundaryComp(PolygonBoundaryComp):
             gradients = np.diagflat(dSdkx_i), np.diagflat(dSdky_i)
         return gradients
 
+    def relaxed_polygons(self, iteration_no=None):
+        poly = [Polygon(x.boundary) for x in self.zones]
+        booleans = [x.incl for x in self.zones]
+        relaxed_poly = []
+        for i, p in enumerate(poly):
+            if booleans[i] == 0:
+                pb = p.buffer(-self.calc_relaxation(iteration_no), join_style=2)
+                relaxed_poly.append(pb)
+            else:
+                pb = p.buffer(self.calc_relaxation(iteration_no), join_style=2)
+                relaxed_poly.append(pb)
+        merged_poly = self._calc_resulting_polygons(relaxed_poly)
+        return self._poly_to_bound(merged_poly)
+
+
+class TurbineSpecificBoundaryComp(MultiPolygonBoundaryComp):
+    def __init__(self, n_wt, wind_turbines, zones, const_id=None,
+                 units=None, relaxation=False, method='nearest', simplify_geometry=False):
+        # self.dependencies = [d or {'type': None, 'multiplier': None, 'ref': None} for d in dependencies]
+        # self.multi_boundary = xy_boundaries = self.get_xy_boundaries(boundaries, geometry_types, incl_excls)
+        self.wind_turbines = wind_turbines
+        self.types = wind_turbines.types()
+        # self.incl_excls = incl_excls
+        self.n_wt = n_wt
+        self.zones = zones
+        self.ts_polygon_boundaries, ts_xy_boundaries = self.get_ts_boundaries()
+        MultiPolygonBoundaryComp.__init__(self, n_wt=n_wt, zones=zones, const_id=const_id, units=units,
+                                          relaxation=relaxation, method=method, simplify_geometry=simplify_geometry)
+        # self.polygon_boundaries = [Polygon(x) for x, _ in xy_boundaries]
+        # self.ts_polygon_boundaries = self.get_ts_polygon_boundaries(self.types)
+        self.ts_merged_polygon_boundaries = self.merge_boundaries()
+        self.ts_merged_xy_boundaries = self.get_ts_xy_boundaries()
+        self.ts_boundary_properties = self.get_ts_boundary_properties()
+        self.ts_item_indices = self.get_ts_item_indices()
+
+    def get_ts_boundaries(self):
+        polygons = []
+        bounds = []
+        for t in set(self.types):
+            temp1 = []
+            temp2 = []
+            dist2wt_input = dict(D=self.wind_turbines.diameter(t),
+                                 H=self.wind_turbines.hub_height(t))
+            for z in self.zones:
+                if hasattr(z.dist2wt, '__code__'):
+                    buffer = z.dist2wt(**{k: dist2wt_input[k] for k in z.dist2wt.__code__.co_varnames})
+                else:
+                    buffer = 0
+                if z.geometry_type == 'line':
+                    poly = Polygon(LineString(z.boundary).buffer(buffer, join_style=2).exterior)
+                elif z.geometry_type == 'polygon':
+                    poly = Polygon(z.boundary).buffer(buffer, join_style=2)
+                bound = np.asarray(poly)
+                temp1.append(poly)
+                temp2.append(bound)
+            polygons.append(temp1)
+            bounds.append(temp2)
+        return polygons, bounds
+        # for wt
+        # temp = []
+        # for n, (b, t, ie) in enumerate(zip(boundaries, geometry_types, incl_excls)):
+        #     if t == 'line':
+        #         bound = np.asarray(Polygon(LineString(b).buffer(default_ref, join_style=2).exterior).exterior.coords)
+        #         self.dependencies[n]['ref'] = default_ref
+        #     elif t == 'polygon':
+        #         bound = b
+        #     else:
+        #         raise NotImplementedError("Geometry type '%s' is not implemented" % b)
+        #     temp.append((bound, ie))
+
+    # def get_ts_polygon_boundaries(self, types):
+    #     temp = []
+    #     for t in set(types):
+    #         d = self.wind_turbines.diameter(t)
+    #         h = self.wind_turbines.hub_height(t)
+    #         temp.append(self.get_ts_polygon_boundary(d, h))
+    #     return temp
+
+    def get_ts_xy_boundaries(self):
+        return [self._poly_to_bound(b) for b in self.ts_merged_polygon_boundaries]
+
+    # def get_ts_polygon_boundary(self, d=None, h=None):
+    #     temp = []
+    #     for bound, dep in zip(self.polygon_boundaries, self.dependencies):
+    #         ref = dep['ref'] or 0
+    #         if dep['type'] == 'D':
+    #             ts_polygon_boundary = bound.buffer(dep['multiplier']*d-ref, join_style=2)
+    #         elif dep['type'] == 'H':
+    #             ts_polygon_boundary = bound.buffer(dep['multiplier']*h-ref, join_style=2)
+    #         else:
+    #             ts_polygon_boundary = bound
+    #         temp.append(ts_polygon_boundary)
+    #     return temp
+
+    def merge_boundaries(self):
+        return [self._calc_resulting_polygons(bounds) for bounds in self.ts_polygon_boundaries]
+
+    def get_ts_boundary_properties(self,):
+        return [[self.get_boundary_properties(bound) for bound, _ in bounds] for bounds in self.ts_merged_xy_boundaries]
+
+    def get_ts_item_indices(self):
+        temp = []
+        for bounds in self.ts_merged_xy_boundaries:
+            n_edges = np.asarray([len(bound) for bound, _ in bounds])
+            n_edges_tot = np.sum(n_edges)
+            start_at = np.cumsum(n_edges) - n_edges
+            end_at = start_at + n_edges
+            item_indices = [n_edges_tot, start_at, end_at]
+            temp.append(item_indices)
+        return temp
+
+    def calc_distance_and_gradients(self, x, y, types=None):
+        if not isinstance(self._cache_input, type(None)):
+            if np.all(np.array([x, y]) == self._cache_input[0]) & (not self.relaxation) & np.all(np.asarray([types]) == self._cache_input[1]):
+                return self._cache_output
+        if isinstance(types, type(None)):
+            types = np.zeros(self.n_wt)
+        Dist_i = np.zeros(self.n_wt)
+        sign_i = np.zeros(self.n_wt)
+        dDdx_i = np.zeros(self.n_wt)
+        dDdy_i = np.zeros(self.n_wt)
+        for t in set(types):
+            t = int(t)
+            idx = (types == t)
+            n_edges_tot, start_at, end_at = self.ts_item_indices[t]
+            Dist_ij = np.zeros((sum(idx), n_edges_tot))
+            dDdk_ijk = np.zeros((sum(idx), n_edges_tot, 2))
+            for n, (bound, bound_type) in enumerate(self.ts_merged_xy_boundaries[t]):
+                sa = start_at[n]
+                ea = end_at[n]
+                distance, ddist_dX, ddist_dY = self._calc_distance_and_gradients(x[idx], y[idx], self.ts_boundary_properties[t][n][1:])
+                if bound_type == 0:
+                    distance *= -1
+                    ddist_dX *= -1
+                    ddist_dY *= -1
+                Dist_ij[:, sa:ea] = distance
+                dDdk_ijk[:, sa:ea, 0] = ddist_dX
+                dDdk_ijk[:, sa:ea, 1] = ddist_dY
+
+            sign_i[idx] = self.sign(Dist_ij)
+            Dist_i[idx] = Dist_ij[np.arange(sum(idx)), np.argmin(np.abs(Dist_ij), axis=1)]
+            dDdx_i[idx], dDdy_i[idx] = dDdk_ijk[np.arange(sum(idx)), np.argmin(np.abs(Dist_ij), axis=1), :].T
+        self._cache_input = (np.array([x, y]), np.asarray(types))
+        self._cache_output = [Dist_i, dDdx_i, dDdy_i, sign_i]
+        return self._cache_output
+
+    def distances(self, x, y, type=None):
+        Dist_i, _, _, _ = self.calc_distance_and_gradients(x, y, types=type)
+        if self.relaxation:
+            Dist_i += self.calc_relaxation()
+        return Dist_i
+
+    def gradients(self, x, y, type=None):
+        Dist_i, dDdx_i, dDdy_i, _ = self.calc_distance_and_gradients(x, y, types=type)
+        if self.relaxation:
+            Dist_i += self.calc_relaxation()
+            dDdt = -self.relaxation[0]
+        if self.relaxation:
+            gradients = np.diagflat(dDdx_i), np.diagflat(dDdy_i), np.ones(self.n_wt) * dDdt
+        else:
+            gradients = np.diagflat(dDdx_i), np.diagflat(dDdy_i)
+        return gradients
+
 
 def main():
     if __name__ == '__main__':
         import matplotlib.pyplot as plt
+        from py_wake.wind_turbines import WindTurbines
+        from py_wake.wind_turbines.power_ct_functions import CubePowerSimpleCt
+
         plt.close('all')
         i1 = np.array([[2, 17], [6, 23], [16, 23], [26, 15], [19, 0], [14, 4], [4, 4]])
         e1 = np.array([[0, 10], [20, 21], [22, 12], [10, 12], [9, 6], [2, 7]])
@@ -780,7 +945,18 @@ def main():
         i3 = np.array([[5, 0], [5, 1], [10, 3], [10, 0]])
         e3 = np.array([[6, -1], [6, 18], [7, 18], [7, -1]])
         e4 = np.array([[15, 9], [15, 11], [20, 11], [20, 9]])
-        multi_boundary = [(i1, 'i'), (e1, 'e'), (i2, 'i'), (e2, 'e'), (i3, 'i'), (e3, 'e'), (e4, 'e')]
+        e5 = np.array([[10, 25], [20, 0]])
+        zones = [
+            InclusionZone(i1, name='i1'),
+            InclusionZone(i2, name='i2'),
+            InclusionZone(i3, name='i3'),
+            ExclusionZone(e1, name='e1'),
+            ExclusionZone(e2, name='e2'),
+            ExclusionZone(e3, name='e3'),
+            ExclusionZone(e4, name='e4'),
+            ExclusionZone(e5, name='e5', dist2wt=lambda: 1, geometry_type='line'),
+        ]
+
         N_points = 50
         xs = np.linspace(-1, 30, N_points)
         ys = np.linspace(-1, 30, N_points)
@@ -788,7 +964,7 @@ def main():
         x = x_grid.ravel()
         y = y_grid.ravel()
         n_wt = len(x)
-        MPBC = MultiPolygonBoundaryComp(n_wt, multi_boundary)
+        MPBC = MultiPolygonBoundaryComp(n_wt, zones, method='nearest')
         distances = MPBC.distances(x, y)
         delta = 1e-9
         distances2 = MPBC.distances(x + delta, y)
@@ -825,11 +1001,92 @@ def main():
 
         if 0:
             for smpl in [0, 1, 2, 3, 4, 5, 6, 7, 8]:
-                MPBC = MultiPolygonBoundaryComp(n_wt, multi_boundary, simplify_geometry=smpl)
+                MPBC = MultiPolygonBoundaryComp(n_wt, zones, simplify_geometry=smpl)
                 plt.figure()
                 ax = plt.gca()
                 MPBC.plot(ax)
-        plt.show()
+
+        wind_turbines = WindTurbines(names=['tb1', 'tb2'],
+                                     diameters=[80, 120],
+                                     hub_heights=[70, 110],
+                                     powerCtFunctions=[
+            CubePowerSimpleCt(ws_cutin=3, ws_cutout=25, ws_rated=12,
+                              power_rated=2000, power_unit='kW',
+                              ct=8 / 9, additional_models=[]),
+            CubePowerSimpleCt(ws_cutin=3, ws_cutout=25, ws_rated=12,
+                              power_rated=3000, power_unit='kW',
+                              ct=8 / 9, additional_models=[])])
+
+        x1 = [0, 3000, 3000, 0]
+        y1 = [0, 0, 3000, 3000]
+        b1 = np.transpose((x1, y1))
+
+        # Buildings
+        x2 = [600, 1400, 1400, 600]
+        y2 = [1700, 1700, 2500, 2500]
+        b2 = np.transpose((x2, y2))
+
+        # River
+        x3 = np.linspace(520, 2420, 16)
+        y3 = [0, 133, 266, 400, 500, 600, 700, 733, 866, 1300, 1633,
+              2100, 2400, 2533, 2700, 3000]
+        b3 = np.transpose((x3, y3))
+
+        # Roads
+        x4 = np.linspace(0, 3000, 16)
+        y4 = [1095, 1038, 1110, 1006, 1028, 992, 977, 1052, 1076, 1064, 1073,
+              1027, 964, 981, 1015, 1058]
+        b4 = np.transpose((x4, y4))
+
+        zones = [
+            InclusionZone(b1, name='i1'),
+            ExclusionZone(b2, dist2wt=lambda H: 4 * H - 360, name='building'),
+            ExclusionZone(b3, geometry_type='line', dist2wt=lambda D: 3 * D, name='river'),
+            ExclusionZone(b4, geometry_type='line', dist2wt=lambda D, H: max(D * 2, H * 3), name='road'),
+        ]
+        N_points = 50
+        xs = np.linspace(0, 3000, N_points)
+        ys = np.linspace(0, 3000, N_points)
+        y_grid, x_grid = np.meshgrid(xs, ys)
+        x = x_grid.ravel()
+        y = y_grid.ravel()
+        n_wt = len(x)
+        types = np.zeros(n_wt)
+        TSBC = TurbineSpecificBoundaryComp(n_wt, wind_turbines, zones)
+        distances = TSBC.distances(x, y, type=types)
+        delta = 1e-9
+        distances2 = TSBC.distances(x + delta, y, type=types)
+        dx_fd = (distances2 - distances) / delta
+        dx = np.diag(TSBC.gradients(x + delta / 2, y, type=types)[0])
+
+        plt.figure()
+        plt.plot(dx_fd, dx, '.')
+
+        plt.figure()
+        for ll, t in enumerate(TSBC.types):
+            line, = plt.plot(*TSBC.ts_merged_xy_boundaries[ll][0][0][0, :], label=f'type {ll}')
+            for n, bound in enumerate(TSBC.ts_merged_xy_boundaries[ll]):
+                x_bound, y_bound = bound[0].T
+                x_bound = np.append(x_bound, x_bound[0])
+                y_bound = np.append(y_bound, y_bound[0])
+                plt.plot(x_bound, y_bound, color=line.get_color())
+
+        plt.legend()
+        plt.grid()
+        plt.axis('square')
+
+        for ll, t in enumerate(TSBC.types):
+            plt.figure()
+            for n, bound in enumerate(TSBC.ts_merged_xy_boundaries[ll]):
+                x_bound, y_bound = bound[0].T
+                x_bound = np.append(x_bound, x_bound[0])
+                y_bound = np.append(y_bound, y_bound[0])
+                plt.plot(x_bound, y_bound, 'b')
+            plt.grid()
+            plt.title(f'type {ll}')
+            plt.axis('square')
+            plt.contourf(x_grid, y_grid, TSBC.distances(x, y, type=t * np.ones(n_wt)).reshape(N_points, N_points), 50)
+            plt.colorbar()
 
 
 main()

@@ -182,6 +182,10 @@ class CostModelComponent(ExplicitComponent):
         if self.counter >= self.max_eval:
             return
 
+        if hasattr(self, 'skip_linearize'):
+            if self.skip_linearize:
+                return
+
         t = time.time()
         if self.cost_gradient_function:
             for k, dCostdk in zip(self.input_keys_only,
