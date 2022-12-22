@@ -8,6 +8,7 @@ from tqdm import tqdm
 from openmdao.core.explicitcomponent import ExplicitComponent
 import topfarm
 from abc import abstractmethod, ABC
+import gc
 
 
 def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, random_pct=0, plot=False, seed=None):
@@ -99,6 +100,7 @@ def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, random_pct=0, plot=Fal
         # Remove all point within min_space from the newly added wt
         index = np.where((arr[0] - x0)**2 + (arr[1] - y0)**2 >= min_space**2)[0]
         arr = arr[:, index]
+        gc.collect()
 
     print(
         f"{len(XX.flatten())} possible points, {N_WT} wt, {len(XX)/N_WT:.1f} points pr wt, {arr.shape[1]}({arr.shape[1]/len(XX.flatten())*100:.0f}%) unused points")

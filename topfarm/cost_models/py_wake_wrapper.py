@@ -56,6 +56,7 @@ class PyWakeAEP(AEPCalculator):
 
 class PyWakeAEPCostModelComponent(AEPCostModelComponent):
     """TOPFARM wrapper for PyWake AEP calculator"""
+
     def __init__(self, windFarmModel, n_wt, wd=None, ws=None, max_eval=None, grad_method=autograd, n_cpu=1, **kwargs):
         """Initialize wrapper for PyWake AEP calculator
 
@@ -114,13 +115,16 @@ class PyWakeAEPCostModelComponent(AEPCostModelComponent):
                                        output_unit='GWh',
                                        max_eval=max_eval, **kwargs)
 
-    def get_aep4smart_start(self, ws=[6, 8, 10, 12, 14], wd=np.arange(360)):
+    def get_aep4smart_start(self, ws=[6, 8, 10, 12, 14], wd=np.arange(360), type=0):
         """Compute AEP with a smart start approach"""
 
-        def aep4smart_start(X, Y, wt_x, wt_y, type=0):
-            sim_res = self.windFarmModel(wt_x, wt_y, type=type, wd=wd, ws=ws, n_cpu=self.n_cpu)
+        def aep4smart_start(X, Y, wt_x, wt_y):
+            type_ = np.atleast_1d(type)
+            t = np.zeros_like(wt_x) + type_[:len(wt_x)]
+            sim_res = self.windFarmModel(wt_x, wt_y, type=t, wd=wd, ws=ws, n_cpu=self.n_cpu)
             H = np.full(X.shape, self.windFarmModel.windTurbines.hub_height())
-            return sim_res.aep_map(Points(X, Y, H), n_cpu=self.n_cpu).values
+            next_type = type_[min(len(type_) - 1, len(wt_x) + 1)]
+            return sim_res.aep_map(Points(X, Y, H), type=next_type, n_cpu=self.n_cpu).values
         return aep4smart_start
 
 
