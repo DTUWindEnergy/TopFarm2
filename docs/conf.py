@@ -18,12 +18,13 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 import os
 import sys
-sys.path.insert(0, os.path.join(os.path.abspath('.'), '..', '..'))
+sys.path.insert(0, os.path.join(os.path.abspath('.'), '..'))
 
 nbsphinx_allow_errors = True
 
 from topfarm import __version__
 from topfarm import __release__
+
 
 # -- General configuration ------------------------------------------------
 
@@ -42,7 +43,10 @@ extensions = ['sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
 	'sphinx.ext.napoleon',
 	'sphinx.ext.viewcode',
-	'nbsphinx_link',]
+#	'nbsphinx_link',
+    'sphinx.ext.inheritance_diagram',
+    'nbsphinx',
+    'sphinx.ext.mathjax',]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -75,18 +79,70 @@ release = __release__
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = 'en'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This patterns also effect to html_static_path and html_extra_path
-exclude_patterns = []
+exclude_patterns = [
+    'notebooks/.ipynb_checkpoints/*.ipynb',
+    'build/*'
+]
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = True
+
+autosummary_generate = True
+napolean_use_rtype = False
+
+# -- Options for nbsphinx -----------------------------------------------------
+
+# Execute notebooks before conversion: 'always', 'never', 'auto' (default)
+# We execute all notebooks, exclude the slow ones using 'exclude_patterns'
+nbsphinx_execute = 'never'
+
+# Use this kernel instead of the one stored in the notebook metadata:
+#nbsphinx_kernel_name = 'python3'
+
+# List of arguments to be passed to the kernel that executes the notebooks:
+# nbsphinx_execute_arguments = []
+
+# If True, the build process is continued even if an exception occurs:
+#nbsphinx_allow_errors = True
+
+
+# Controls when a cell will time out (defaults to 30; use -1 for no timeout):
+nbsphinx_timeout = 180
+
+# Default Pygments lexer for syntax highlighting in code cells:
+#nbsphinx_codecell_lexer = 'ipython3'
+
+# Width of input/output prompts used in CSS:
+#nbsphinx_prompt_width = '8ex'
+
+# If window is narrower than this, input/output prompts are on separate lines:
+#nbsphinx_responsive_width = '700px'
+
+# This is processed by Jinja2 and inserted before each notebook
+nbsphinx_prolog = r"""
+{% set docname = 'docs/' + env.doc2path(env.docname, base=None) %}
+
+
+.. only:: html
+
+    .. role:: raw-html(raw)
+        :format: html
+
+    .. nbinfo::
+
+
+        :raw-html:`<a href="https://colab.research.google.com/github/DTUWindEnergy/TopFarm2/blob/master/{{ docname }}"><img alt="Open and run in Colab (interactive)" src="https://colab.research.google.com/assets/colab-badge.svg" style="vertical-align:text-bottom"></a>
+        <a href="https://gitlab.windenergy.dtu.dk/TOPFARM/TopFarm2/-/tree/master/{{ docname }}"><img alt="Edit on Gitlab" src="https://img.shields.io/badge/Edit%20on-Gitlab-blue?style=flat&logo=gitlab" style="vertical-align:text-bottom"></a>`
+
+"""
 
 
 # -- Options for HTML output ----------------------------------------------
@@ -182,9 +238,9 @@ texinfo_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
-'python': ('https://docs.python.org/3.4', None),
-'pandas': ('http://pandas-docs.github.io/pandas-docs-travis', None),
-'numpy': ('http://docs.scipy.org/doc/numpy-1.13.0', None)
+    'python': ('https://docs.python.org/3/', None),
+    'numpy': ('https://docs.scipy.org/doc/numpy/', None),
+    'scipy': ('https://docs.scipy.org/doc/scipy/reference/', None),
 }
 
 figure_language_filename = 'examples/{basename}{ext}'

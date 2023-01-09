@@ -6,7 +6,7 @@ import mock
 import pytest
 import matplotlib.pyplot as plt
 import sys
-from examples import docs
+from examples import scripts
 import subprocess
 import contextlib
 import io
@@ -14,7 +14,7 @@ from topfarm.easy_drivers import EasyDriverBase
 
 
 def get_main_modules():
-    package = docs
+    package = scripts
     modules = []
     for _, modname, _ in pkgutil.walk_packages(package.__path__, package.__name__ + '.'):
         with warnings.catch_warnings():

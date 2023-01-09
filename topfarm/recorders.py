@@ -107,7 +107,7 @@ class TopFarmListRecorder(SqliteRecorder):
             for k, v in meta_fields:
                 self.driver_iteration_dict[k].append(v)
 
-    def _initialize_database(self):
+    def _initialize_database(self, comm=None):
         pass
 
     def animate_turbineXY(self, duration=10, tail=5, plot_initial=True, filename=None):

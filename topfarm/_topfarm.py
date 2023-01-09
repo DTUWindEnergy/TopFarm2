@@ -23,7 +23,7 @@ import numpy as np
 import warnings
 import copy
 from openmdao.api import Problem, IndepVarComp, Group, ParallelGroup,\
-    ExplicitComponent, ListGenerator, DOEDriver, SimpleGADriver
+    ExplicitComponent, ListGenerator, DOEDriver, SimpleGADriver, OpenMDAOWarning
 from openmdao.drivers.doe_generators import DOEGenerator
 from openmdao.utils import mpi
 from openmdao.core.constants import _SetupStatus
@@ -178,6 +178,7 @@ class TopFarmProblem(Problem):
             driver = DOEDriver(ListGenerator(driver))
         elif isinstance(driver, DOEGenerator):
             driver = DOEDriver(generator=driver)
+        warnings.filterwarnings('ignore', category=OpenMDAOWarning)
         self.driver = driver
         self.driver.recording_options['record_desvars'] = True
         self.driver.recording_options['includes'] = ['*']
@@ -529,8 +530,8 @@ class TopFarmProblem(Problem):
         return np.array([self[k] for k in [topfarm.x_key, topfarm.y_key]]).T
 
     def smart_start(self, XX, YY, ZZ=None, radius=None, random_pct=0, plot=False, seed=None):
-        if len(XX.shape) == 1:
-            XX, YY = np.meshgrid(XX, YY)
+        # if len(XX.shape) == 1:
+        #     XX, YY = np.meshgrid(XX, YY)
         assert XX.shape == YY.shape
         ZZ_is_func = hasattr(ZZ, '__call__')
         spacing_comp_lst = [c for c in self.model.constraint_components if isinstance(c, SpacingComp)]

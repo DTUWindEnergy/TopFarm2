@@ -17,10 +17,10 @@ In this section, only the most basic components of TOPFARM are explained. In add
     :caption: Contents
     :maxdepth: 1
 
-    basic_examples_nblinks/design_variables_nb
-    basic_examples_nblinks/constraints_nb	
-    basic_examples_nblinks/drivers_nb
-    basic_examples_nblinks/problems_nb
-    basic_examples_nblinks/cost_models_nb
+    notebooks/design_variables
+    notebooks/constraints	
+    notebooks/drivers
+    notebooks/problems
+    notebooks/cost_models
 
 

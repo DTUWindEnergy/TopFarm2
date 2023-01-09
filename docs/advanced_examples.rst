@@ -17,14 +17,14 @@ In this section, more complex configurations for wind farm optimization are show
     :caption: Contents
     :maxdepth: 1
 
-    advanced_examples_nblinks/hub_height_optimization_nb
-    advanced_examples_nblinks/unconstrained_wake_steering_nb
-    advanced_examples_nblinks/roads_and_cables_nb
-    advanced_examples_nblinks/wake_steering_and_loads_nb
-    advanced_examples_nblinks/layout_and_loads_nb
-    advanced_examples_nblinks/bathymetry_nb
-    advanced_examples_nblinks/exclusion_zones_nb
-    advanced_examples_nblinks/mongodb_nb
-    advanced_examples_nblinks/regular_grid_optimization_nb
-    advanced_examples_nblinks/turbine_specific_boundaries_nb
-
+    notebooks/hub_height_optimization
+    notebooks/unconstrained_wake_steering
+    notebooks/roads_and_cables
+    notebooks/wake_steering_and_loads
+    notebooks/layout_and_loads
+    notebooks/bathymetry
+    notebooks/exclusion_zones
+    notebooks/MongoDB_recorder
+    notebooks/regular_grid_optimization
+    notebooks/turbine_specific_boundaries
+    notebooks/smart_start_with_predefined_types
