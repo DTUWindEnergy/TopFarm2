@@ -42,10 +42,10 @@ class PyWakeAEP(AEPCalculator):
             output_unit='GWh')
 
     def get_aep4smart_start(self, ws=[6, 8, 10, 12, 14], wd=np.arange(360)):
-        def aep4smart_start(X, Y, wt_x, wt_y):
+        def aep4smart_start(X, Y, wt_x, wt_y, T=0, wt_t=0):
             x = np.sort(np.unique(X))
             y = np.sort(np.unique(Y))
-            X_j, Y_j, aep_map = self.aep_map(x, y, 0, wt_x, wt_y, wd=wd, ws=ws)
+            X_j, Y_j, aep_map = self.aep_map(x, y, T, wt_x, wt_y, wd=wd, ws=ws, wt_type=wt_t)
 #             import matplotlib.pyplot as plt
 #             c = plt.contourf(X_j, Y_j, aep_map[:, :, 0], 100)
 #             plt.colorbar(c)
@@ -118,12 +118,17 @@ class PyWakeAEPCostModelComponent(AEPCostModelComponent):
     def get_aep4smart_start(self, ws=[6, 8, 10, 12, 14], wd=np.arange(360), type=0):
         """Compute AEP with a smart start approach"""
 
-        def aep4smart_start(X, Y, wt_x, wt_y):
-            type_ = np.atleast_1d(type)
-            t = np.zeros_like(wt_x) + type_[:len(wt_x)]
-            sim_res = self.windFarmModel(wt_x, wt_y, type=t, wd=wd, ws=ws, n_cpu=self.n_cpu)
+        def aep4smart_start(X, Y, wt_x, wt_y, T=0, wt_t=0):
             H = np.full(X.shape, self.windFarmModel.windTurbines.hub_height())
-            next_type = type_[min(len(type_) - 1, len(wt_x) + 1)]
+            if type == 0:
+                sim_res = self.windFarmModel(wt_x, wt_y, type=wt_t, wd=wd, ws=ws, n_cpu=self.n_cpu)
+                next_type = T
+            else:
+                type_ = np.atleast_1d(type)
+                t = np.zeros_like(wt_x) + type_[:len(wt_x)]
+                sim_res = self.windFarmModel(wt_x, wt_y, type=t, wd=wd, ws=ws, n_cpu=self.n_cpu)
+                H = np.full(X.shape, self.windFarmModel.windTurbines.hub_height())
+                next_type = type_[min(len(type_) - 1, len(wt_x) + 1)]
             return sim_res.aep_map(Points(X, Y, H), type=next_type, n_cpu=self.n_cpu).values
         return aep4smart_start
 

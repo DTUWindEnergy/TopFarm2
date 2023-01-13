@@ -529,16 +529,21 @@ class TopFarmProblem(Problem):
     def turbine_positions(self):
         return np.array([self[k] for k in [topfarm.x_key, topfarm.y_key]]).T
 
-    def smart_start(self, XX, YY, ZZ=None, radius=None, random_pct=0, plot=False, seed=None):
+    def smart_start(self, XX, YY, ZZ=None, min_space=None, radius=None, random_pct=0, plot=False, seed=None, types=None):
         # if len(XX.shape) == 1:
         #     XX, YY = np.meshgrid(XX, YY)
         assert XX.shape == YY.shape
         ZZ_is_func = hasattr(ZZ, '__call__')
         spacing_comp_lst = [c for c in self.model.constraint_components if isinstance(c, SpacingComp)]
-        if len(spacing_comp_lst) == 1:
-            min_spacing = spacing_comp_lst[0].min_spacing
+        if min_space is not None:
+            min_spacing = min_space
         else:
-            min_spacing = 0
+            if len(spacing_comp_lst) == 1:
+                min_spacing = spacing_comp_lst[0].min_spacing
+            elif len(spacing_comp_lst) > 1:
+                min_spacing = [c.min_spacing for c in spacing_comp_lst]
+            else:
+                min_spacing = 0
         X, Y = XX.flatten(), YY.flatten()
         if not ZZ_is_func:
             if ZZ is None:
@@ -555,9 +560,11 @@ class TopFarmProblem(Problem):
                 X, Y = X[mask], Y[mask]
                 if not ZZ_is_func:
                     Z = Z[mask]
-        x, y = smart_start(X, Y, Z, self.n_wt, min_spacing, radius, random_pct, plot, seed=seed)
-        self.update_state({topfarm.x_key: x, topfarm.y_key: y})
-        return x, y
+        res = smart_start(X, Y, Z, self.n_wt, min_spacing, radius, random_pct, plot, seed=seed, types=types)
+        self.update_state({topfarm.x_key: res[0], topfarm.y_key: res[1]})
+        if types:
+            self.set_val(topfarm.type_key, res[2])
+        return res
 
 
 class ProblemComponent(ExplicitComponent):

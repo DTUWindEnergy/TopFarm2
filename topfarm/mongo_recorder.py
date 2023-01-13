@@ -319,7 +319,7 @@ class MongoRecorder(CaseRecorder):
                 var_settings[name][prop] = make_serializable(var_settings[name][prop])
         return var_settings
 
-    def startup(self, recording_requester):
+    def startup(self, recording_requester, comm=None):
         """
         Prepare for a new run and create/update the abs2prom and prom2abs variables.
 
@@ -412,7 +412,10 @@ class MongoRecorder(CaseRecorder):
 
                     # Design variables, constraints and objectives can be requested by input name.
                     if var_type != 'output':
-                        name = var_set[name]['ivc_source']
+                        try:
+                            name = var_set[name]['ivc_source']
+                        except KeyError:
+                            name = var_set[name]['source']
 
                     if name not in self._abs2meta:
                         try:

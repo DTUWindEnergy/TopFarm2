@@ -1,18 +1,21 @@
-from topfarm.utils import smart_start, SmoothMax, SmoothMin, SoftMax, StrictMax, StrictMin, LogSumExpMax, LogSumExpMin
+import matplotlib.pyplot as plt
 import numpy as np
+import pytest
+
+from topfarm.utils import smart_start, SmoothMax, SmoothMin, SoftMax, StrictMax, StrictMin, LogSumExpMax, LogSumExpMin
 from topfarm.tests import npt
 from topfarm import TopFarmProblem
-
-from py_wake.examples.data import hornsrev1
-from py_wake.deficit_models.noj import NOJ
 from topfarm.easy_drivers import EasyScipyOptimizeDriver
 from topfarm.constraint_components.boundary import CircleBoundaryConstraint
 from topfarm.constraint_components.spacing import SpacingConstraint
 from topfarm.cost_models.py_wake_wrapper import PyWakeAEPCostModelComponent, PyWakeAEP
+
+from py_wake.examples.data import hornsrev1
+from py_wake.deficit_models.noj import NOJ
 from py_wake.examples.data.iea37._iea37 import IEA37Site
-import matplotlib.pyplot as plt
 from py_wake.site._site import UniformSite
-import pytest
+from py_wake.wind_turbines import WindTurbines
+from py_wake.wind_turbines.power_ct_functions import CubePowerSimpleCt
 
 
 def egg_tray_map():
@@ -20,6 +23,17 @@ def egg_tray_map():
     y = np.arange(0, 10, 0.1)
     YY, XX = np.meshgrid(y, x)
     val = np.sin(XX) + np.sin(YY)
+    return XX, YY, val
+
+
+def types_map():
+    x = np.arange(0, 40, 0.1)
+    y = np.arange(0, 20, 0.1)
+    YY, XX = np.meshgrid(y, x)
+    val = np.ones((4, ) + XX.shape) * (np.sin(XX) + np.sin(YY))
+    val[0, :] *= 16
+    val[1, :] *= 9
+    val[2, :] *= 4
     return XX, YY, val
 
 
@@ -45,6 +59,17 @@ def tests_smart_start():
 
         plt.axis('equal')
         plt.show()
+    npt.assert_array_almost_equal([xs, ys], [xs_ref, ys_ref])
+
+
+def tests_smart_start_types():
+    xs_ref = [26.7, 26.7, 1.6, 39.3, 1.6, 14.1, 39.3, 14.1, 33.0, 20.4, 7.9, 33.0, 20.4, 7.9, 20.4, 20.4, 20.4, 20.4, 33.0, 33.0]
+    ys_ref = [1.6, 14.1, 1.6, 1.6, 14.1, 1.6, 14.1, 14.1, 7.9, 7.9, 7.9, 19.9, 19.9, 19.9, 15.7, 0.0, 3.2, 12.5, 15.8, 3.3]
+    N_WT = 20
+    min_space = np.array([8, 6, 4, 2]) * 1.3
+    XX, YY, val = types_map()
+    types = [0, 1, 2, 3]
+    xs, ys, type_i = smart_start(XX, YY, val, N_WT, min_space, seed=0, types=types)
     npt.assert_array_almost_equal([xs, ys], [xs_ref, ys_ref])
 
 
@@ -122,13 +147,63 @@ def test_smart_start_aep_map(seed, radius, resolution, tol):
             print(wfm(wt_x[:i], wt_y[:i]).aep().sum(['wd', 'ws']))
         aep_comp.windFarmModel(wt_x, wt_y, ws=ws_lst, wd=wd_lst).flow_map().aep_xy().plot()
         print(tf.evaluate())
-        import matplotlib.pyplot as plt
+        # import matplotlib.pyplot as plt
         plt.plot(wt_x, wt_y, '2r')
         for c in tf.model.constraint_components:
             c.plot()
         plt.axis('equal')
         plt.show()
     npt.assert_almost_equal(aep_1wt * n_wt, tf['AEP'], tol)
+
+
+def test_smart_start_aep_map_types(seed=1, radius=750, resolution=10):
+    site = IEA37Site(16)
+    n_wt = 4
+    x, y = site.initial_position[:n_wt].T
+    wd_lst = np.arange(0, 360, 20)
+    ws_lst = [10]
+    types = [0, 1, 2]
+    init_types = n_wt * [0]
+    turbines = WindTurbines(names=['T1', 'T2', 'T3'],
+                            diameters=[60, 80, 100],
+                            hub_heights=[60, 80, 100],
+                            powerCtFunctions=[CubePowerSimpleCt(power_rated=200 * 60 ** 2, power_unit='W'),
+                                              CubePowerSimpleCt(power_rated=200 * 80 ** 2, power_unit='W'),
+                                              CubePowerSimpleCt(power_rated=200 * 100 ** 2, power_unit='W')],)
+    min_space = 2 * np.array([60, 80, 100])
+    site = UniformSite([1], .75)
+    site.default_ws = ws_lst
+    site.default_wd = wd_lst
+    wfm = NOJ(site, turbines)
+    aep_comp = PyWakeAEPCostModelComponent(wfm, n_wt=n_wt, additional_input=[('type', init_types)], grad_method=None)
+    aep_1wt = np.asarray([wfm([0], [0], type=tt).aep().sum() for tt in types])
+
+    tf = TopFarmProblem(
+        design_vars={'x': x, 'y': y},
+        cost_comp=aep_comp,
+        driver=EasyScipyOptimizeDriver(),
+        constraints=[SpacingConstraint(160), CircleBoundaryConstraint((0, 0), radius)]
+    )
+    x = np.arange(-radius, radius, resolution)
+    y = np.arange(-radius, radius, resolution)
+    XX, YY = np.meshgrid(x, y)
+
+    xs, ys, ts = tf.smart_start(XX, YY, aep_comp.get_aep4smart_start(wd=wd_lst, ws=ws_lst), min_space=min_space, radius=None, plot=0, seed=seed, types=types)
+    tf.evaluate()
+
+    if 0:
+        wt_x, wt_y = tf['x'], tf['y']
+        for i, _ in enumerate(wt_x, 1):
+            print(wfm(wt_x[:i], wt_y[:i], type=2).aep().sum(['wd', 'ws']))
+        aep_comp.windFarmModel(wt_x, wt_y, ws=ws_lst, wd=wd_lst, type=2).flow_map().aep_xy(type=2).plot()
+        print(tf.evaluate())
+        # import matplotlib.pyplot as plt
+        plt.plot(wt_x, wt_y, '2r')
+        for c in tf.model.constraint_components:
+            c.plot()
+        plt.axis('equal')
+        plt.show()
+    assert 0.98379 <= float(tf['AEP'] / aep_1wt[ts].sum())
 
 
 def test_smart_start_aep_map_PyWakeAEP():
@@ -165,7 +240,7 @@ def test_smart_start_aep_map_PyWakeAEP():
             print(aep.calculate_AEP(wt_x[:i], wt_y[:i]).sum((1, 2)))
         X_j, Y_j, aep_map = aep.aep_map(x, y, 0, wt_x, wt_y, ws=ws_lst, wd=wd_lst)
         print(tf.evaluate())
-        import matplotlib.pyplot as plt
+        # import matplotlib.pyplot as plt
         c = plt.contourf(X_j, Y_j, aep_map, 100)
         plt.colorbar(c)
         plt.plot(wt_x, wt_y, '2r')

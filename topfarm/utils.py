@@ -11,7 +11,7 @@ from abc import abstractmethod, ABC
 import gc
 
 
-def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, random_pct=0, plot=False, seed=None):
+def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, random_pct=0, plot=False, seed=None, types=None):
     """Selects the a number of gridpoints (N_WT) in the grid defined by x and y,
     where ZZ has the maximum value, while chosen points spacing (min_space)
     is respected.
@@ -33,6 +33,9 @@ def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, random_pct=0, plot=Fal
         select by random position of the <random_pct> best points
     plot : boolean
         if True, each step is plotted in new figure
+    types : array_like of integers or None
+        list of turbine type numbers e.g. types = [0, 1, 2, 3] for 4 different types. ZZ, min_space and optionally
+        also radius should also have type dimension. if ZZ is callable it should be callable with type argument.
 
     Returns
     -------
@@ -41,20 +44,34 @@ def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, random_pct=0, plot=Fal
 
     Notes
     -----
-    XX, YY and ZZ can be 1D or 2D, but must have same size
+    XX, YY and ZZ can be 1D or 2D, but must have same size. If multiple turbine types
+    ZZ must have the shape (n_types, shape_like_XX)
     """
     assert 0 <= random_pct <= 100
     ZZ_is_func = hasattr(ZZ, '__call__')
-    if ZZ_is_func:
-        arr = np.array([XX.flatten(), YY.flatten()])
+    if types:
+        n_types = len(types)
+        n_points = XX.size
+        arr = np.zeros((3, n_points, n_types))
+        arr[0, :, :] = XX.ravel()[:, np.newaxis]
+        arr[1, :, :] = YY.ravel()[:, np.newaxis]
+        if ZZ_is_func:
+            arr[2, :, :] = np.zeros_like(arr[0])
+        else:
+            arr[2, :, :] = ZZ.reshape(n_types, -1).T
     else:
-        arr = np.array([XX.flatten(), YY.flatten(), ZZ.flatten()])
+        if ZZ_is_func:
+            arr = np.array([XX.flatten(), YY.flatten()])
+        else:
+            arr = np.array([XX.flatten(), YY.flatten(), ZZ.flatten()])
 
     # set radius to None(faster) if if grid resolution > radius
     if radius is not None and (np.diff(np.sort(np.unique(arr[0]))).min() > radius and
                                (np.diff(np.sort(np.unique(arr[1]))).min() > radius)):
         radius = None
     xs, ys = [], []
+    if types:
+        type_i = []
     if seed is None:
         seed = np.uint32(int((time.time() - int(time.time())) * 1e8 +
                              multiprocessing.current_process().ident + threading.get_ident()) % (2**31))
@@ -67,11 +84,16 @@ def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, random_pct=0, plot=Fal
 
         if ZZ_is_func:
             if random_pct < 100:
-                z = ZZ(arr[0], arr[1], xs, ys)
+                if types:
+                    z = arr[2] = np.asarray([ZZ(arr[0, :, 0], arr[1, :, 0], xs, ys, tt, type_i) for tt in types]).T
+                else:
+                    z = ZZ(arr[0], arr[1], xs, ys)
             else:
                 z = np.zeros_like(arr[0])
+                if types:
+                    arr[2] = z
         else:
-            z = arr[2]
+            z = np.squeeze(arr[2])
 
         if radius is not None:
             # average over the rotor area, i.e. all points within one radius from the point
@@ -79,9 +101,16 @@ def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, random_pct=0, plot=Fal
             z = np.array([np.mean(z[ind]) for ind in np.hypot((x - x[:, na]), (y - y[:, na])) < radius])
 
         # pick one of the <random_pct> best points
-        n_random = np.maximum(1, int(np.round(random_pct / 100 * len(z))))
-        min_z = np.sort(z)[-(n_random)]
-        next_ind = np.random.choice(np.argwhere(z >= min_z)[:, 0])
+        n_random = np.maximum(1, int(np.round(random_pct / 100 * z.size)))
+        min_z = np.sort(z.ravel())[-(n_random)]
+        if types:
+            choises = np.argwhere(z >= min_z)
+            arg_choise = np.random.choice(np.arange(choises.shape[0]))
+            next_ind, t = choises[arg_choise]
+            next_ind = (next_ind, 0)
+            type_i.append(t)
+        else:
+            next_ind = np.random.choice(np.argwhere(z >= min_z)[:, 0])
 
         x0 = arr[0][next_ind]
         y0 = arr[1][next_ind]
@@ -89,22 +118,42 @@ def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, random_pct=0, plot=Fal
         ys.append(y0)
 
         if plot:
-            plt.figure()
-            c = plt.scatter(arr[0], arr[1], c=z)
-            plt.colorbar(c)
-            plt.plot(xs, ys, '2k', ms=10)
-            plt.plot(xs[-1], ys[-1], '2r', ms=10)
-            plt.axis('equal')
-            plt.show()
+            if types:
+                for typ in types:
+                    plt.figure()
+                    c = plt.scatter(arr[0, :, typ], arr[1, :, typ], c=z[:, typ])
+                    plt.colorbar(c)
+                    plt.plot(xs, ys, '2k', ms=10)
+                    plt.plot(xs[-1], ys[-1], '2r', ms=10)
+                    plt.axis('equal')
+                    plt.show()
+            else:
+                plt.figure()
+                c = plt.scatter(arr[0], arr[1], c=z)
+                plt.colorbar(c)
+                plt.plot(xs, ys, '2k', ms=10)
+                plt.plot(xs[-1], ys[-1], '2r', ms=10)
+                plt.axis('equal')
+                plt.show()
 
         # Remove all point within min_space from the newly added wt
-        index = np.where((arr[0] - x0)**2 + (arr[1] - y0)**2 >= min_space**2)[0]
-        arr = arr[:, index]
-        gc.collect()
+        if types:
+            for tt in types:
+                eff_min_space = (min_space[tt] + min_space[t]) / 2
+                index = np.where((arr[0][:, tt] - x0)**2 + (arr[1][:, tt] - y0)**2 < eff_min_space**2)[0]
+                # w_inds, p_inds, t_inds = np.unravel_index(index, arr.shape)
+                arr[2][index, tt] = -np.inf
+            arr = arr[:, np.any(arr[2] != -np.inf, axis=1), :]
+        else:
+            index = np.where((arr[0] - x0)**2 + (arr[1] - y0)**2 >= min_space**2)[0]
+            arr = arr[:, index]
 
     print(
         f"{len(XX.flatten())} possible points, {N_WT} wt, {len(XX)/N_WT:.1f} points pr wt, {arr.shape[1]}({arr.shape[1]/len(XX.flatten())*100:.0f}%) unused points")
-    return xs, ys
+    if types:
+        return xs, ys, type_i
+    else:
+        return xs, ys
 
 
 def smooth_max(X, alpha, axis=0):
