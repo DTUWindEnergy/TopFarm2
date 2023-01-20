@@ -78,14 +78,18 @@ def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, random_pct=0, plot=Fal
         np.random.seed(seed)
         seed = np.random.randint(0, 2**31)
     np.random.seed(seed)
+    mask = np.full(arr.shape[1:], True)
     for i in tqdm(range(N_WT), desc='Smartstart'):
+        idx = np.where(mask < 1)
         if arr.shape[1] == 0:
             raise Exception('No feasible positions for wt %d' % i)
 
         if ZZ_is_func:
             if random_pct < 100:
                 if types:
-                    z = arr[2] = np.asarray([ZZ(arr[0, :, 0], arr[1, :, 0], xs, ys, tt, type_i) for tt in types]).T
+                    z = np.asarray([ZZ(arr[0, :, tt], arr[1, :, tt], xs, ys, tt, type_i) for tt in types]).T
+                    z[idx] = -np.inf
+                    arr[2] = z
                 else:
                     z = ZZ(arr[0], arr[1], xs, ys)
             else:
@@ -93,7 +97,9 @@ def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, random_pct=0, plot=Fal
                 if types:
                     arr[2] = z
         else:
-            z = np.squeeze(arr[2])
+            z = arr[2]
+            if types:
+                z[idx] = -np.inf
 
         if radius is not None:
             # average over the rotor area, i.e. all points within one radius from the point
@@ -121,7 +127,7 @@ def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, random_pct=0, plot=Fal
             if types:
                 for typ in types:
                     plt.figure()
-                    c = plt.scatter(arr[0, :, typ], arr[1, :, typ], c=z[:, typ])
+                    c = plt.scatter(arr[0, :, typ], arr[1, :, typ], c=arr[2, :, typ])
                     plt.colorbar(c)
                     plt.plot(xs, ys, '2k', ms=10)
                     plt.plot(xs[-1], ys[-1], '2r', ms=10)
@@ -138,15 +144,15 @@ def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, random_pct=0, plot=Fal
 
         # Remove all point within min_space from the newly added wt
         if types:
-            for tt in types:
-                eff_min_space = (min_space[tt] + min_space[t]) / 2
-                index = np.where((arr[0][:, tt] - x0)**2 + (arr[1][:, tt] - y0)**2 < eff_min_space**2)[0]
-                # w_inds, p_inds, t_inds = np.unravel_index(index, arr.shape)
-                arr[2][index, tt] = -np.inf
-            arr = arr[:, np.any(arr[2] != -np.inf, axis=1), :]
+            eff_min_space = (min_space + min_space[t]) / 2
+            mask = np.logical_and(mask, ((arr[0, :, 0] - x0) ** 2 + (arr[1, :, 0] - y0) ** 2)[:, na] >= eff_min_space[na, :] ** 2)
+            idx = mask.sum((1)) > 0
+            arr = arr[:, idx, :]
+            mask = mask[idx, :]
         else:
             index = np.where((arr[0] - x0)**2 + (arr[1] - y0)**2 >= min_space**2)[0]
             arr = arr[:, index]
+        gc.collect()
 
     print(
         f"{len(XX.flatten())} possible points, {N_WT} wt, {len(XX)/N_WT:.1f} points pr wt, {arr.shape[1]}({arr.shape[1]/len(XX.flatten())*100:.0f}%) unused points")

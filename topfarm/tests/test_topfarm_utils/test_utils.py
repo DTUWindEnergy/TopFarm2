@@ -7,7 +7,7 @@ from topfarm.tests import npt
 from topfarm import TopFarmProblem
 from topfarm.easy_drivers import EasyScipyOptimizeDriver
 from topfarm.constraint_components.boundary import CircleBoundaryConstraint
-from topfarm.constraint_components.spacing import SpacingConstraint
+from topfarm.constraint_components.spacing import SpacingConstraint, SpacingTypeConstraint
 from topfarm.cost_models.py_wake_wrapper import PyWakeAEPCostModelComponent, PyWakeAEP
 
 from py_wake.examples.data import hornsrev1
@@ -71,6 +71,14 @@ def tests_smart_start_types():
     types = [0, 1, 2, 3]
     xs, ys, type_i = smart_start(XX, YY, val, N_WT, min_space, seed=0, types=types)
     npt.assert_array_almost_equal([xs, ys], [xs_ref, ys_ref])
+    if 0:
+        import matplotlib.pyplot as plt
+        plt.contourf(XX, YY, val[0], 100)
+        for i in range(N_WT):
+            circle = plt.Circle((xs[i], ys[i]), min_space[type_i[i]] / 2, color='b', fill=False)
+            plt.gcf().gca().add_artist(circle)
+            plt.plot(xs[i], ys[i], 'rx')
+        plt.axis('equal')
 
 
 def tests_smart_start_random():
@@ -157,9 +165,13 @@ def test_smart_start_aep_map(seed, radius, resolution, tol):
 
 
 def test_smart_start_aep_map_types(seed=1, radius=750, resolution=10):
+    x_ref = [0.0, -240.0, 700.0, -730.0, -550.0, 390.0, -600.0, 570.0, -130.0, 220.0, -180.0, 20.0, -510.0, 230.0, 670.0, 160.0]
+    y_ref = [-690.0, 700.0, -70.0, -100.0, -490.0, 470.0, 450.0, -480.0, 120.0, -80.0, -300.0, 450.0, 140.0, -460.0, 300.0, 730.0]
+    ts_ref = [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 0, 0, 0, 0]
+    aep_ref = 96.86027158
     site = IEA37Site(16)
-    n_wt = 4
-    x, y = site.initial_position[:n_wt].T
+    n_wt = 16
+    x, y = site.initial_position.T
     wd_lst = np.arange(0, 360, 20)
     ws_lst = [10]
     types = [0, 1, 2]
@@ -170,40 +182,37 @@ def test_smart_start_aep_map_types(seed=1, radius=750, resolution=10):
                             powerCtFunctions=[CubePowerSimpleCt(power_rated=200 * 60 ** 2, power_unit='W'),
                                               CubePowerSimpleCt(power_rated=200 * 80 ** 2, power_unit='W'),
                                               CubePowerSimpleCt(power_rated=200 * 100 ** 2, power_unit='W')],)
-    min_space = 2 * np.array([60, 80, 100])
-    site = UniformSite([1], .75)
+    min_space = 4 * np.array([60, 80, 100])
     site.default_ws = ws_lst
     site.default_wd = wd_lst
     wfm = NOJ(site, turbines)
     aep_comp = PyWakeAEPCostModelComponent(wfm, n_wt=n_wt, additional_input=[('type', init_types)], grad_method=None)
-    aep_1wt = np.asarray([wfm([0], [0], type=tt).aep().sum() for tt in types])
 
     tf = TopFarmProblem(
         design_vars={'x': x, 'y': y},
         cost_comp=aep_comp,
         driver=EasyScipyOptimizeDriver(),
-        constraints=[SpacingConstraint(160), CircleBoundaryConstraint((0, 0), radius)]
+        constraints=[SpacingTypeConstraint(min_space), CircleBoundaryConstraint((0, 0), radius)],
+        ext_vars={'type': init_types}
     )
-    x = np.arange(-radius, radius, resolution)
-    y = np.arange(-radius, radius, resolution)
-    XX, YY = np.meshgrid(x, y)
+    xs = np.arange(-radius, radius, resolution)
+    ys = np.arange(-radius, radius, resolution)
+    XX, YY = np.meshgrid(xs, ys)
 
-    xs, ys, ts = tf.smart_start(XX, YY, aep_comp.get_aep4smart_start(wd=wd_lst, ws=ws_lst), min_space=min_space, radius=None, plot=0, seed=seed, types=types)
+    xs, ys, ts = tf.smart_start(XX, YY, aep_comp.get_aep4smart_start(wd=wd_lst, ws=ws_lst), seed=seed, types=types)
     tf.evaluate()
 
     if 0:
         wt_x, wt_y = tf['x'], tf['y']
-        for i, _ in enumerate(wt_x, 1):
-            print(wfm(wt_x[:i], wt_y[:i], type=2).aep().sum(['wd', 'ws']))
-        aep_comp.windFarmModel(wt_x, wt_y, ws=ws_lst, wd=wd_lst, type=2).flow_map().aep_xy(type=2).plot()
-        print(tf.evaluate())
-        # import matplotlib.pyplot as plt
+        plt.figure()
+        aep_comp.windFarmModel(wt_x, wt_y, ws=ws_lst, wd=wd_lst, type=ts).flow_map().aep_xy(type=1).plot()
         plt.plot(wt_x, wt_y, '2r')
         for c in tf.model.constraint_components:
             c.plot()
         plt.axis('equal')
         plt.show()
-    assert 0.98379 <= float(tf['AEP'] / aep_1wt[ts].sum())
+    npt.assert_array_almost_equal([xs, ys, ts], [x_ref, y_ref, ts_ref])
+    npt.assert_array_almost_equal(tf['AEP'], aep_ref)
 
 
 def test_smart_start_aep_map_PyWakeAEP():

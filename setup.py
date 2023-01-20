@@ -22,14 +22,14 @@ setup(name='topfarm',
       long_description=read('README'),
       url='https://gitlab.windenergy.dtu.dk/TOPFARM/topfarm2',
       author='DTU Wind Energy',
-      author_email='dave@dtu.dk',
+      author_email='mikf@dtu.dk',
       license='MIT',
       packages=find_packages(),
       install_requires=[
               'matplotlib',  # for plotting
               'numpy',  # for numerical calculations
               'numpy-financial',  # for irr calculations
-              'openmdao==3.16',  # for optimization
+              'openmdao>=3.16',  # for optimization
               'pytest',  # for testing
               'pycodestyle',  # for testing
               'pytest-cov',  # for calculating coverage

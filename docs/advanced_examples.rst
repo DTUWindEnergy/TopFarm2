@@ -28,3 +28,4 @@ In this section, more complex configurations for wind farm optimization are show
     notebooks/regular_grid_optimization
     notebooks/turbine_specific_boundaries
     notebooks/smart_start_with_predefined_types
+    notebooks/smart_start_types
