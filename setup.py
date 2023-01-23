@@ -34,14 +34,15 @@ setup(name='topfarm',
               'pycodestyle',  # for testing
               'pytest-cov',  # for calculating coverage
               'py_wake>=2',  # for calculating AEP
-              'pymongo[srv]', # for mongo_recorder
+              'pyDOE2',  # for GA driver
+              'pymongo[srv]',  # for mongo_recorder
               'scipy',  # constraints
               'sphinx',  # generating documentation
               'sphinx_rtd_theme',  # docs theme
               'scikit-learn',  # load surrogate
               'mock',  # replace variables during tests
               'tensorflow',  # loads examples with surrogates
-              'shapely>=1.8.2', # for multiple polygon boundaries and exclusion zones
+              'shapely>=1.8.2',  # for multiple polygon boundaries and exclusion zones
               'memory_profiler',  # memory profiling
-              ],
+      ],
       zip_safe=True)
