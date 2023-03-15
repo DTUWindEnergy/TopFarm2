@@ -12,7 +12,7 @@ test_topfarm:  # name the job what we like
   - mkdir -p /data/db
   - py.test
   tags:  # only runners with this tag can do the job [3]
-  - python
+  - linux
 
   
 # ===== TEST TOPFARM =====
@@ -23,7 +23,7 @@ test_topfarm_pep8:  # name the job what we like
   - pip install -e .
   - pycodestyle --ignore=E501,W504 --exclude="*Colonel*" topfarm
   tags:  # only runners with this tag can do the job [3]
-  - python
+  - linux
 
 # ===== TEST TOPFARM on Windows =====
 test_topfarm_windows:  # name the job what we like
@@ -69,6 +69,7 @@ pages:  # "pages" is a job specifically for GitLab pages [1]
   - pip install nbconvert --upgrade
   - pip install sphinx_rtd_theme
   - pip install git+https://github.com/vidartf/nbsphinx-link.git
+  - pip install --upgrade git+https://gitlab.windenergy.dtu.dk/TOPFARM/PyWake.git
   - pip install -e .
   - cd docs; make html
   - cd ../; mv docs/build/html public/
@@ -80,7 +81,7 @@ pages:  # "pages" is a job specifically for GitLab pages [1]
   - /^test_doc.*/ 
 
   tags:  # only runners with this tag can do the job [3]
-  - python
+  - linux
 
 # ===== BUILD WHEELS AND UPLOAD TO PYPI =====
 pypi:
@@ -96,7 +97,7 @@ pypi:
     # - twine upload --repository-url https://test.pypi.org/legacy/ dist/* -u $TWINE_USERNAME -p $TWINE_PASSWORD # for testing purposes
     - twine upload dist/* -u $TWINE_USERNAME -p $TWINE_PASSWORD
   tags:  
-    - python
+    - linux
 
 
 # [1] GitLab page: https://docs.gitlab.com/ee/ci/yaml/#pages
