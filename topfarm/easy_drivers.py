@@ -289,17 +289,18 @@ class EasySGDDriver(SGDDriver, EasyDriverBase):
     def __init__(self, maxiter=100, max_time=600, disp=False, run_parallel=False,
                  learning_rate=10, upper=0.1, lower=0, beta1=0.1, beta2=0.2, gamma_min_factor=1e-2,
                  speedupSGD=False, sgd_thresh=0.1):
-        """Easy initialization of RandomSearchDriver
+        """Easy initialization of Stochastic Gradient Descent (SGD) Driver
 
         Parameters
         ----------
-        randomize_func : f(desvar_dict)
-            Function to randomize desired variables of desvar_dict
         maxiter : int, optional
             Maximum iterations
-        max_time : int, optional
-            Maximum time in seconds
-        disp : bool
+        max_time : int
+            Maximum evaluation time in seconds
+        learning_rate : int, optional
+            determines the step size
+        gamma_min_factor : int, optional
+            initial value for constraint aggregation multiplier
         """
         # self.T = T
         self.learning_rate = learning_rate

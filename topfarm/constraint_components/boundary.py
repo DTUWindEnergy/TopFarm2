@@ -26,7 +26,7 @@ class XYBoundaryConstraint(Constraint):
             - 'rectangle': Smallest axis-aligned rectangle covering the boundary points\n
             - 'square': Smallest axis-aligned square covering the boundary points
             - 'multi_polygon': Mulitple polygon boundaries incl. exclusion zones (may be non convex).\n
-            - 'type_specific': Set of multiple polygon boundaries that depend on the wind turbine type. \n
+            - 'turbine_specific': Set of multiple polygon boundaries that depend on the wind turbine type. \n
 
 
         """

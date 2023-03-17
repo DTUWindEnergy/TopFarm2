@@ -26,6 +26,8 @@ In this section, more complex configurations for wind farm optimization are show
     notebooks/exclusion_zones
     notebooks/MongoDB_recorder
     notebooks/regular_grid_optimization
-    notebooks/turbine_specific_boundaries
+    notebooks/nested_optimization_type_and_positions
+    notebooks/example_randomize_type_and_position_with_specific_boundaries
     notebooks/smart_start_with_predefined_types
+    notebooks/sgd_slsqp_comparison
     notebooks/smart_start_types

@@ -4,6 +4,7 @@ Created on Thu Oct  6 13:55:21 2022
 
 @author: mikf
 """
+import numpy as np
 from topfarm.constraint_components import Constraint, ConstraintComponent
 from topfarm.cost_models.cost_model_wrappers import CostModelComponent
 
@@ -41,3 +42,49 @@ class ConstraintAggregationComp(CostModelComponent, ConstraintComponent):
 
     def satisfy(self, state):
         pass
+
+
+class DistanceConstraintAggregation(ConstraintAggregation):
+    """Aggregating the spacing and boundary distances constraints into a penalty function"""
+
+    def __init__(self, constraints, n_wt, min_spacing_m, windTurbines, name='sgd_constraint', **kwargs):
+        """Initializing spacing constraint aggregation class
+
+        Parameters
+        ----------
+        constraints : list
+            list of constraint components, common constraints are [SpacingConstraints] and [XYBoundaryConstraints]
+        n_wt : int
+            number of turbines
+        min_spacing_m : float
+            minimum inter turbine spacing in meters
+        windTurbines : object
+            pywake object for the wind turbine used
+        """
+
+        def constr_aggr_func(wtSeparationSquared, boundaryDistances, **kwargs):
+            separation_constraint = wtSeparationSquared - (2 * windTurbines.diameter()) ** 2
+            separation_constraint = separation_constraint[separation_constraint < 0]
+            distance_constraint = boundaryDistances
+            distance_constraint = distance_constraint[distance_constraint < 0]
+            return np.sum(-1 * separation_constraint) + np.sum(distance_constraint ** 2)
+
+        def constr_aggr_grad(wtSeparationSquared, boundaryDistances, **kwargs):
+            separation_constraint = wtSeparationSquared - (2 * windTurbines.diameter()) ** 2
+            J_separation = np.zeros_like(wtSeparationSquared)
+            J_separation[np.where(separation_constraint < 0)] = -1
+            J_distance = np.zeros_like(boundaryDistances)
+            J_distance[np.where(boundaryDistances < 0)] = 2 * boundaryDistances[np.where(boundaryDistances < 0)]
+            return [[J_separation], [J_distance]]
+
+        kwargs['component_args'] = {'input_keys': [('wtSeparationSquared', np.zeros(int(n_wt * (n_wt - 1) / 2))),
+                                                   ('boundaryDistances', np.zeros((n_wt, 4)))],
+                                    'n_wt': n_wt,
+                                    'cost_function': constr_aggr_func,
+                                    'cost_gradient_function': constr_aggr_grad,
+                                    'objective': False,
+                                    'output_keys': [(name, 0)],
+                                    'use_penalty': False}
+        kwargs['constraint_args'] = {'name': name, 'lower': 0}
+
+        ConstraintAggregation.__init__(self, constraints, **kwargs)

@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import topfarm
 import sys
-import matplotlib.pyplot as plt
 
 
 def mypause(interval):
@@ -33,7 +32,7 @@ class XYPlotComp(ExplicitComponent):
     # colors = ['b', 'r', 'm', 'c', 'g', 'y', 'orange', 'indigo', 'grey'] * 100
     colors = [c['color'] for c in iter(matplotlib.rcParams['axes.prop_cycle'])] * 100
 
-    def __init__(self, memory=10, delay=0.001, plot_initial=True, plot_improvements_only=False, ax=None, legendloc=1):
+    def __init__(self, memory=10, delay=0.001, plot_initial=True, plot_improvements_only=False, ax=None, legendloc=1, save_plot_per_iteration=False):
         """Initialize component for plotting turbine locations
 
         Parameters
@@ -62,6 +61,7 @@ class XYPlotComp(ExplicitComponent):
         self.counter = 0
         self.by_pass = False
         self.legendloc = legendloc
+        self.save_plot_per_iteration = save_plot_per_iteration
 
     @property
     def ax(self):
@@ -211,10 +211,11 @@ class XYPlotComp(ExplicitComponent):
             self.counter += 1
             outputs['plot_counter'] = self.counter
 
-            fig = self.ax
-            if not os.path.exists('Figures'):
-                os.makedirs('Figures')
-            plt.savefig('Figures/iteration_%s.png' % self.counter)
+            if self.save_plot_per_iteration:
+                fig = self.ax
+                if not os.path.exists('Figures'):
+                    os.makedirs('Figures')
+                plt.savefig('Figures/iteration_%s.png' % self.counter)
 
 
 class PlotComp(XYPlotComp):

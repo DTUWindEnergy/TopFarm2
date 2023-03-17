@@ -43,4 +43,11 @@ EasyDrivers
     
     .. automethod:: __init__
 
+**EasySGDDriver**
+
+.. autoclass:: topfarm.easy_drivers.EasySGDDriver
+    :members:
+    
+    .. automethod:: __init__
+
 
