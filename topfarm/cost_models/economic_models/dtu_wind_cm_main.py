@@ -87,10 +87,10 @@ class economic_evaluation():
         for i in range(self.project_duration + 1):
 
             if i == 0:
-                self.CWF.append(-self.project_costs_sums["DEVEX"] - self.project_costs_sums["CAPEX"])
+                self.CWF.append(float(-self.project_costs_sums["DEVEX"] - self.project_costs_sums["CAPEX"]))
 
             elif i == self.project_duration:
-                self.CWF.append(self.energy_price * sum(self.aep_vector) - self.project_costs_sums["ABEX"] - self.project_costs_sums["OPEX"])
+                self.CWF.append(float(self.energy_price * sum(self.aep_vector) - self.project_costs_sums["ABEX"] - self.project_costs_sums["OPEX"]))
 
             else:
                 self.CWF.append(self.energy_price * sum(self.aep_vector) - self.project_costs_sums["OPEX"])
