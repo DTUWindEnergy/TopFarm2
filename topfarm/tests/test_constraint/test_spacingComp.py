@@ -192,7 +192,7 @@ def test_partials_many_turbines(aggfunc):
                               form='central')
 
     fil = {'sc': {key: val for key, val in check['sc'].items()
-                  if 'penalty' not in key[0]}}
+                  if 'constraint_violation' not in key[0]}}
 
     atol = 1.e-6
     rtol = 1.e-6

@@ -58,7 +58,7 @@ def main():
         problem = TopFarmProblem(
             design_vars=dict(zip('xy', site.initial_position.T)),
             cost_comp=group,
-            driver=EasyRandomSearchDriver(randomize_func=RandomizeTurbinePosition_Circle(), max_iter=5),
+            driver=EasyRandomSearchDriver(randomize_func=RandomizeTurbinePosition_Circle(600), max_iter=5, max_time=10),
             constraints=[SpacingConstraint(200),
                          CircleBoundaryConstraint([0, 0], 1300.1)],
             plot_comp=plot_comp)

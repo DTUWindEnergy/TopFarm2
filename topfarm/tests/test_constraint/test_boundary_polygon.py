@@ -117,7 +117,7 @@ def testDistanceRelaxation():
     relaxation = tf.model.constraint_components[0].calc_relaxation() \
         + tf.model.constraint_components[0].relaxation[0]
     assert tf.cost_comp.n_grad_eval <= 10
-    assert tf.model.pre_constraints.xy_bound_comp == tf.model.constraint_components[0]
+    assert tf.model.constraint_group.xy_bound_comp == tf.model.constraint_components[0]
     # distances in the 2 lower corners should be the same
     assert tf.model.constraint_components[0].distances(np.array([0]), np.array([0])) \
         == tf.model.constraint_components[0].distances(np.array([5]), np.array([0]))

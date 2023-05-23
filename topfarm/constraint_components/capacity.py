@@ -25,8 +25,8 @@ class CapacityConstraint(Constraint):
     def _setup(self, problem):
         self.n_wt = problem.n_wt
         self.capacity_comp = CapacityComp(self.n_wt, self.max_capacity, self.rated_power_array, self.const_id)
-        problem.model.pre_constraints.add_subsystem(self.const_id, self.capacity_comp, promotes=[
-            topfarm.type_key, 'penalty_' + self.const_id, 'totalcapacity'])
+        problem.model.constraint_group.add_subsystem(self.const_id, self.capacity_comp, promotes=[
+            topfarm.type_key, 'constraint_violation_' + self.const_id, 'totalcapacity'])
 
     def setup_as_constraint(self, problem):
         self._setup(problem)
@@ -50,7 +50,7 @@ class CapacityComp(ConstraintComponent):
 
     def setup(self):
         self.add_input(topfarm.type_key, np.zeros(self.n_wt, dtype=int))
-        self.add_output('penalty_' + self.const_id, val=0.0)
+        self.add_output('constraint_violation_' + self.const_id, val=0.0)
         self.add_output('totalcapacity', val=0.0,
                         desc='wind farm installed capacity')
         # Partial declaration is not needed for type or penalty in this case.
@@ -58,7 +58,7 @@ class CapacityComp(ConstraintComponent):
 
     def compute(self, inputs, outputs):
         outputs['totalcapacity'] = np.sum(self.rated_power_array[inputs[topfarm.type_key].astype(int)])
-        outputs['penalty_' + self.const_id] = np.maximum(0, outputs['totalcapacity'][0] - self.max_capacity)
+        outputs['constraint_violation_' + self.const_id] = np.maximum(0, outputs['totalcapacity'][0] - self.max_capacity)
 
     def satisfy(self):
         pass

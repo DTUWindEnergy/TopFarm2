@@ -22,7 +22,7 @@ class ConstraintAggregation(Constraint):
         return self.constraint_aggregation_comp
 
     def _setup(self, problem):
-        self.constraint_aggregation_comp = ConstraintAggregationComp(**self.kwargs['component_args'])
+        self.constraint_aggregation_comp = ConstraintAggregationComp(self.constraints, **self.kwargs['component_args'])
         for constraint in self.constraints:
             constraint._setup(problem)
         problem.model.add_subsystem(self.const_id, self.constraint_aggregation_comp,
@@ -37,11 +37,16 @@ class ConstraintAggregation(Constraint):
 
 
 class ConstraintAggregationComp(CostModelComponent, ConstraintComponent):
-    def __init__(self, **kwargs):
+    def __init__(self, constraints, **kwargs):
+        self.constraints = constraints
         CostModelComponent.__init__(self, **kwargs)
 
     def satisfy(self, state):
         pass
+
+    def plot(self, ax):
+        for constraint in self.constraints:
+            constraint.constraintComponent.plot(ax)
 
 
 class DistanceConstraintAggregation(ConstraintAggregation):
@@ -84,7 +89,8 @@ class DistanceConstraintAggregation(ConstraintAggregation):
                                     'cost_gradient_function': constr_aggr_grad,
                                     'objective': False,
                                     'output_keys': [(name, 0)],
-                                    'use_penalty': False}
+                                    'use_constraint_violation': False
+                                    }
         kwargs['constraint_args'] = {'name': name, 'lower': 0}
 
         ConstraintAggregation.__init__(self, constraints, **kwargs)

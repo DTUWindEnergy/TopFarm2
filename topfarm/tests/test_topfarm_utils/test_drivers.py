@@ -98,7 +98,7 @@ def test_optimizers(driver, tol, topfarm_generator_scalable):
     assert tb_pos[1][0] < 6 + tol  # check within border
     tf.plot_comp.show()
     if isinstance(driver, EasySimpleGADriver):
-        assert cost == recorder['cost'].min()
+        assert cost == recorder['final_cost'].min()
     else:
         np.testing.assert_array_almost_equal(tb_pos, optimal[:, :2], -int(np.log10(tol)))
 

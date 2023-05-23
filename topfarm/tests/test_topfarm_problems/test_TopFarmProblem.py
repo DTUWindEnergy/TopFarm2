@@ -175,7 +175,7 @@ def testTopFarmProblem_check_gradients_Income(turbineXYZOptimizationProblem_gene
 
 def testTopFarmProblem_evaluate_gradients(turbineXYZOptimizationProblem_generator):
     tf = turbineXYZOptimizationProblem_generator(gradients)
-    np.testing.assert_array_equal(tf.evaluate_gradients(disp=True)['aggr_cost']['x'], [[-6., -14., -8., -6.]])
+    np.testing.assert_array_equal(tf.evaluate_gradients(disp=True)['final_cost']['x'], [[-6., -14., -8., -6.]])
 
 
 def testTopFarmProblem_as_component(turbineTypeOptimizationProblem):
@@ -298,3 +298,8 @@ def testTopFarmProblem_approx_totols():
 def testTopFarmProblem_expected_cost():
     tf = xy3tb.get_tf(expected_cost=None)
     np.testing.assert_array_equal(tf.turbine_positions, xy3tb.initial)
+
+
+def testTopFarmProblem_update_reports(turbineTypeOptimizationProblem):
+    tf = turbineTypeOptimizationProblem
+    tf._update_reports(DOEDriver(FullFactorialGenerator(3)))

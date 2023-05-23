@@ -195,6 +195,10 @@ try:
     if pyipoptcore is None:
         setattr(sys.modules[__name__], 'EasyPyOptSparseIPOPT', PyOptSparseMissingDriver)
 
+    # Test if the SNOPT optimizer is available in the installation. This gives an exception even if pyOptSparseDriver is successfully instantiated with 'SNOPT'
+    _tmp = __import__('pyoptsparse', globals(), locals(), ['SNOPT'], 0)
+    getattr(_tmp, 'SNOPT')()
+
     class EasyPyOptSparseSNOPT(pyOptSparseDriver, EasyDriverBase):
         def __init__(self, major_iteration_limit=200, major_feasibility_tolerance=1e-6, major_optimality_tolerance=1e-6,
                      difference_interval=1e-6, function_precision=1e-8,
@@ -202,6 +206,7 @@ try:
             """For information about the arguments see
             https://web.stanford.edu/group/SOL/software/snoptHelp/whgdata/whlstt9.htm#9
             """
+
             pyOptSparseDriver.__init__(self)
             self.options.update({'optimizer': 'SNOPT', 'print_results': print_results})
             self.opt_settings.update({
@@ -225,7 +230,7 @@ try:
             return kwargs
 
 
-except ModuleNotFoundError:
+except (ModuleNotFoundError, Exception):
     for n in ['EasyPyOptSparseSLSQP', 'EasyPyOptSparseIPOPT', 'EasyPyOptSparseSNOPT']:
         setattr(sys.modules[__name__], n, PyOptSparseMissingDriver)
 

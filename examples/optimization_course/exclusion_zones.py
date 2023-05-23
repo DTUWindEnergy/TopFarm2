@@ -49,14 +49,16 @@ cost_comp = CostModelComponent(input_keys=[('x', x_init),('y', y_init)],
                                           )
 problem = TopFarmProblem(design_vars={'x': x_init, 'y': y_init},
                         constraints=[XYBoundaryConstraint(boundary),
-                                      SpacingConstraint(min_spacing)],
-                            post_constraints=[('water_depth', {'lower': np.ones(n_wt) * maximum_water_depth})],
+                                      SpacingConstraint(min_spacing),
+                                      ('water_depth', {'lower': np.ones(n_wt) * maximum_water_depth})],
+                            # post_constraints=[('water_depth', {'lower': np.ones(n_wt) * maximum_water_depth})],
                           cost_comp=cost_comp,
                             driver=EasyScipyOptimizeDriver(optimizer='SLSQP', maxiter=maxiter, tol=tol),
                             # driver=EasyRandomSearchDriver(RandomizeTurbinePosition()),
                           plot_comp=XYPlotComp(),
                           expected_cost=ec)
-
+from openmdao.api import n2
+n2(problem)
 if 1:
     tic = time.time()
     cost, state, recorder = problem.optimize()

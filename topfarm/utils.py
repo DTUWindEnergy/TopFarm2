@@ -124,23 +124,23 @@ def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, random_pct=0, plot=Fal
         ys.append(y0)
 
         if plot:
-            if types:
-                for typ in types:
-                    plt.figure()
-                    c = plt.scatter(arr[0, :, typ], arr[1, :, typ], c=arr[2, :, typ])
-                    plt.colorbar(c)
-                    plt.plot(xs, ys, '2k', ms=10)
-                    plt.plot(xs[-1], ys[-1], '2r', ms=10)
-                    plt.axis('equal')
-                    plt.show()
-            else:
-                plt.figure()
-                c = plt.scatter(arr[0], arr[1], c=z)
-                plt.colorbar(c)
-                plt.plot(xs, ys, '2k', ms=10)
-                plt.plot(xs[-1], ys[-1], '2r', ms=10)
-                plt.axis('equal')
-                plt.show()
+            # if types:
+            #     for typ in types:
+            #         plt.figure()
+            #         c = plt.scatter(arr[0, :, typ], arr[1, :, typ], c=arr[2, :, typ])
+            #         plt.colorbar(c)
+            #         plt.plot(xs, ys, '2k', ms=10)
+            #         plt.plot(xs[-1], ys[-1], '2r', ms=10)
+            #         plt.axis('equal')
+            #         plt.show()
+            # else:
+            plt.figure()
+            c = plt.scatter(arr[0], arr[1], c=z)
+            plt.colorbar(c)
+            plt.plot(xs, ys, '2k', ms=10)
+            plt.plot(xs[-1], ys[-1], '2r', ms=10)
+            plt.axis('equal')
+            plt.show()
 
         # Remove all point within min_space from the newly added wt
         if types:

@@ -344,15 +344,15 @@ class MongoRecorder(CaseRecorder):
         if isinstance(recording_requester, Driver):
             system = recording_requester._problem().model
             driver = recording_requester
-        elif isinstance(recording_requester, System):
-            system = recording_requester
-            driver = None
-        elif isinstance(recording_requester, Problem):
-            system = recording_requester.model
-            driver = recording_requester.driver
-        elif isinstance(recording_requester, Solver):
-            system = recording_requester._system()
-            driver = None
+        # elif isinstance(recording_requester, System):
+        #     system = recording_requester
+        #     driver = None
+        # elif isinstance(recording_requester, Problem):
+        #     system = recording_requester.model
+        #     driver = recording_requester.driver
+        # elif isinstance(recording_requester, Solver):
+        #     system = recording_requester._system()
+        #     driver = None
         else:
             raise ValueError('Driver encountered a recording_requester it cannot handle'
                              ': {0}'.format(recording_requester))
@@ -362,15 +362,16 @@ class MongoRecorder(CaseRecorder):
         if self.connection:
 
             if driver is None:
-                desvars = system.get_design_vars(True, get_sizes=False, use_prom_ivc=False)
-                responses = system.get_responses(True, get_sizes=False)
-                constraints = OrderedDict()
-                objectives = OrderedDict()
-                for name, data in responses.items():
-                    if data['type'] == 'con':
-                        constraints[name] = data
-                    else:
-                        objectives[name] = data
+                pass
+                # desvars = system.get_design_vars(True, get_sizes=False, use_prom_ivc=False)
+                # responses = system.get_responses(True, get_sizes=False)
+                # constraints = OrderedDict()
+                # objectives = OrderedDict()
+                # for name, data in responses.items():
+                #     if data['type'] == 'con':
+                #         constraints[name] = data
+                #     else:
+                #         objectives[name] = data
             else:
                 desvars = driver._designvars.copy()
                 responses = driver._responses.copy()
@@ -489,12 +490,12 @@ class MongoRecorder(CaseRecorder):
 
         if isinstance(recording_requester, Driver):
             self.record_iteration_driver(recording_requester, data, metadata)
-        elif isinstance(recording_requester, System):
-            self.record_iteration_system(recording_requester, data, metadata)
-        elif isinstance(recording_requester, Solver):
-            self.record_iteration_solver(recording_requester, data, metadata)
-        elif isinstance(recording_requester, Problem):
-            self.record_iteration_problem(recording_requester, data, metadata)
+        # elif isinstance(recording_requester, System):
+        #     self.record_iteration_system(recording_requester, data, metadata)
+        # elif isinstance(recording_requester, Solver):
+        #     self.record_iteration_solver(recording_requester, data, metadata)
+        # elif isinstance(recording_requester, Problem):
+        #     self.record_iteration_problem(recording_requester, data, metadata)
         else:
             raise ValueError("Recorders must be attached to Drivers, Systems, or Solvers.")
 

@@ -12,8 +12,10 @@ from topfarm.constraint_components.spacing import SpacingConstraint
 from topfarm.utils import regular_generic_layout, regular_generic_layout_gradients
 
 
-def main():
-    if __name__ == '__main__':
+# def main():
+#     if __name__ == '__main__':
+if 1:
+    if 1:
         site = Hornsrev1Site()
         wt = V80()
         D = wt.diameter()
@@ -37,7 +39,7 @@ def main():
                                       cost_gradient_function = reg_grad,
                                       output_keys= [('x', np.zeros(n_wt)), ('y', np.zeros(n_wt))],
                                       objective=False,
-                                      use_penalty=False,
+                                      use_constraint_violation=False,
                                       )
 
         # AEP function 
@@ -79,4 +81,4 @@ def main():
         # problem.evaluate()
         cost, state, recorder = problem.optimize()
 
-main()
+# main()

@@ -47,5 +47,9 @@ class ParqueFicticioOffshore(WaspGridSite, XRSite):
         self.initial_position = np.array([wt_x, wt_y]).T
 
 
-if __name__ == '__main__':
-    site = ParqueFicticioOffshore()
+def main():
+    if __name__ == '__main__':
+        ParqueFicticioOffshore()
+
+
+main()

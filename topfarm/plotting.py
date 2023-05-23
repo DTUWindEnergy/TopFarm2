@@ -288,105 +288,96 @@ class TurbineTypePlotComponent(XYPlotComp):
             self.ax.plot(x_, y_, m + 'k', markeredgecolor=c, markeredgewidth=1, ms=20)
 
 
-class TurbineCablePlotComponent(XYPlotComp):
-    """Plotting component for electrical colletion system"""
-    colors = ['b', 'r', 'm', 'c', 'g', 'y', 'orange', 'indigo', 'grey'] * 100
+# class TurbineCablePlotComponent(XYPlotComp):
+#     """Plotting component for electrical colletion system"""
+#     colors = ['b', 'r', 'm', 'c', 'g', 'y', 'orange', 'indigo', 'grey'] * 100
 
-    def __init__(self, ecsga, **kwargs):
-        """Initialize component for plotting turbine types
+#     def __init__(self, ecsga, **kwargs):
+#         """Initialize component for plotting turbine types
 
-        Parameters
-        ----------
-        turbine_type_names : list of str
-            Names of turbine types for legend
-        **kwargs : keyword arguments, optional
-            Keyword arguments that can be passed into XYPlotComp
-        """
-        self.ecsga = ecsga
-        XYPlotComp.__init__(self, **kwargs)
+#         Parameters
+#         ----------
+#         turbine_type_names : list of str
+#             Names of turbine types for legend
+#         **kwargs : keyword arguments, optional
+#             Keyword arguments that can be passed into XYPlotComp
+#         """
+#         self.ecsga = ecsga
+#         XYPlotComp.__init__(self, **kwargs)
 
-    def setup(self):
-        XYPlotComp.setup(self)
-        self.add_input('tree', np.zeros((self.n_wt, 5)))
+#     def setup(self):
+#         XYPlotComp.setup(self)
+#         self.add_input('tree', np.zeros((self.n_wt, 5)))
 
-    def compute(self, inputs, outputs):
-        self.tree = np.asarray(inputs['tree'])
-        XYPlotComp.compute(self, inputs, outputs)
+#     def compute(self, inputs, outputs):
+#         self.tree = np.asarray(inputs['tree'])
+#         XYPlotComp.compute(self, inputs, outputs)
 
-    def init_plot(self, limits):
-        XYPlotComp.init_plot(self, limits)
-        for n, cable_type in enumerate(self.ecsga.Cable.ID):
-            index = self.tree[:, 3] == n
-            if index.any():
-                self.ax.plot([], [], self.colors[n], label='Cable: {} mm2'.format(self.ecsga.Cable.CrossSection[n]))
-        self.ax.legend()
+#     def init_plot(self, limits):
+#         XYPlotComp.init_plot(self, limits)
+#         for n, cable_type in enumerate(self.ecsga.Cable.ID):
+#             index = self.tree[:, 3] == n
+#             if index.any():
+#                 self.ax.plot([], [], self.colors[n], label='Cable: {} mm2'.format(self.ecsga.Cable.CrossSection[n]))
+#         self.ax.legend()
 
-    def plot_current_position(self, x, y):
-        CoordX = self.ecsga.CoordX
-        CoordY = self.ecsga.CoordY
-        CoordX[1:] = x
-        CoordY[1:] = y
-        self.ax.plot(CoordX[0], CoordY[0], 'ro', markersize=10, label='OSS')
-#        if (self.tree[0].shape)[1] == 2: # If no feasible solution was found
-#            n1xs = CoordX[(self.tree[0].T[0:1]-1).astype(int)].ravel().T
-#            n2xs = CoordX[(self.tree[0].T[1:2]-1).astype(int)].ravel().T
-#            n1ys = CoordY[(self.tree[0].T[0:1]-1).astype(int)].ravel().T
-#            n2ys = CoordY[(self.tree[0].T[1:2]-1).astype(int)].ravel().T
-#            xs = np.vstack([n1xs,n2xs])
-#            ys = np.vstack([n1ys,n2ys])
-#            plt.plot(xs,ys,'{}'.format(self.colors[0]))
-#        else:
-        for n, cable_type in enumerate(self.ecsga.Cable.ID):
-            index = self.tree[:, 3].astype(int) == n
-            if index.any():
-                xs = CoordX[(self.tree[index].T[:2] - 1).astype(int)]
-                ys = CoordY[(self.tree[index].T[:2] - 1).astype(int)]
-                self.ax.plot(xs, ys, self.colors[n])
+#     def plot_current_position(self, x, y):
+#         CoordX = self.ecsga.CoordX
+#         CoordY = self.ecsga.CoordY
+#         CoordX[1:] = x
+#         CoordY[1:] = y
+#         self.ax.plot(CoordX[0], CoordY[0], 'ro', markersize=10, label='OSS')
+#         for n, cable_type in enumerate(self.ecsga.Cable.ID):
+#             index = self.tree[:, 3].astype(int) == n
+#             if index.any():
+#                 xs = CoordX[(self.tree[index].T[:2] - 1).astype(int)]
+#                 ys = CoordY[(self.tree[index].T[:2] - 1).astype(int)]
+#                 self.ax.plot(xs, ys, self.colors[n])
 
 
-class AggregatedConstraintsPlotComponent(XYPlotComp):
+# class AggregatedConstraintsPlotComponent(XYPlotComp):
 
-    colors = np.array(['b', 'r', 'm', 'c', 'g', 'y', 'orange', 'indigo', 'grey'] * 10)
-    markers = np.array(list("123v^<>.o48spP*hH+xXDd|_"))
+#     colors = np.array(['b', 'r', 'm', 'c', 'g', 'y', 'orange', 'indigo', 'grey'] * 10)
+#     markers = np.array(list("123v^<>.o48spP*hH+xXDd|_"))
 
-    def show(self):
-        pass
+#     def show(self):
+#         pass
 
-    def plot_constraints(self):
-        if len(self.problem.model.aggr_comp.constraints) != 0:
-            for constr in self.problem.model.aggr_comp.constraints[0].constraints:
-                constr.constraintComponent.plot(self.ax)
-        else:
-            for constr in self.problem.model.constraint_components:
-                constr.plot(self.ax)
+#     def plot_constraints(self):
+#         # if len(self.problem.model.aggr_comp.constraints) != 0:
+#         #     for constr in self.problem.model.aggr_comp.constraints[0].constraints:
+#         #         constr.constraintComponent.plot(self.ax)
+#         # else:
+#         for constr in self.problem.model.constraint_components:
+#             constr.plot(self.ax)
 
-    def plot_history(self, x, y):
-        rec = self.problem.recorder
-        if rec.num_cases > 0:
-            def get(xy, xy_key, pw):
-                rec_xy = pw[xy_key][-self.memory:]
-                if len(rec_xy.shape) == 1:
-                    rec_xy = rec_xy[:, np.newaxis]
-                return np.r_[rec_xy, [xy]]
-            pw = self.problem.get_vars_from_recorder()
-            x = get(x, topfarm.x_key, pw)
-            y = get(y, topfarm.y_key, pw)
-            for c, x_, y_ in zip(self.colors, x.T, y.T):
-                self.ax.plot(x_, y_, '--', color=c)
+#     def plot_history(self, x, y):
+#         rec = self.problem.recorder
+#         if rec.num_cases > 0:
+#             def get(xy, xy_key, pw):
+#                 rec_xy = pw[xy_key][-self.memory:]
+#                 if len(rec_xy.shape) == 1:
+#                     rec_xy = rec_xy[:, np.newaxis]
+#                 return np.r_[rec_xy, [xy]]
+#             pw = self.problem.get_vars_from_recorder()
+#             x = get(x, topfarm.x_key, pw)
+#             y = get(y, topfarm.y_key, pw)
+#             for c, x_, y_ in zip(self.colors, x.T, y.T):
+#                 self.ax.plot(x_, y_, '--', color=c)
 
-    def plot_initial2current(self, x0, y0, x, y):
-        rec = self.problem.recorder
-        if rec.num_cases > 0:
-            pw = self.problem.get_vars_from_recorder()
-            x0 = np.atleast_1d(pw['x0'])
-            y0 = np.atleast_1d(pw['y0'])
-            for c, x0_, y0_, x_, y_ in zip(self.colors, x0, y0, x, y):
-                self.ax.plot(x0_, y0_, '>', markerfacecolor=c, markeredgecolor='k')
-                self.ax.plot((x0_, x_), (y0_, y_), '-', color=c)
-            self.ax.plot([], [], '>k', markerfacecolor="#00000000", markeredgecolor='k', label='Initial position')
+#     def plot_initial2current(self, x0, y0, x, y):
+#         rec = self.problem.recorder
+#         if rec.num_cases > 0:
+#             pw = self.problem.get_vars_from_recorder()
+#             x0 = np.atleast_1d(pw['x0'])
+#             y0 = np.atleast_1d(pw['y0'])
+#             for c, x0_, y0_, x_, y_ in zip(self.colors, x0, y0, x, y):
+#                 self.ax.plot(x0_, y0_, '>', markerfacecolor=c, markeredgecolor='k')
+#                 self.ax.plot((x0_, x_), (y0_, y_), '-', color=c)
+#             self.ax.plot([], [], '>k', markerfacecolor="#00000000", markeredgecolor='k', label='Initial position')
 
-    def plot_current_position(self, x, y):
-        for c, x_, y_ in zip(self.colors, x, y):
-            self.ax.plot(x_, y_, 'o', color=c, ms=5)
-            self.ax.plot(x_, y_, 'xk', ms=4)
-        self.ax.plot([], [], 'xk', label='Current position')
+#     def plot_current_position(self, x, y):
+#         for c, x_, y_ in zip(self.colors, x, y):
+#             self.ax.plot(x_, y_, 'o', color=c, ms=5)
+#             self.ax.plot(x_, y_, 'xk', ms=4)
+#         self.ax.plot([], [], 'xk', label='Current position')

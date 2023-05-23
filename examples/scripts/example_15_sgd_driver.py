@@ -8,15 +8,17 @@ from py_wake.utils.gradients import autograd
 from py_wake.examples.data.hornsrev1 import Hornsrev1Site, HornsrevV80
 from topfarm.cost_models.cost_model_wrappers import CostModelComponent
 from topfarm.easy_drivers import EasySGDDriver, EasyScipyOptimizeDriver
-from topfarm.plotting import AggregatedConstraintsPlotComponent, XYPlotComp
+from topfarm.plotting import XYPlotComp #AggregatedConstraintsPlotComponent, 
 from topfarm.constraint_components.spacing import SpacingConstraint
 from topfarm import TopFarmProblem
 from topfarm.constraint_components.boundary import XYBoundaryConstraint
 from topfarm.recorders import TopFarmListRecorder
 
 
-def main():
-    if __name__ == '__main__':
+# def main():
+#     if __name__ == '__main__':
+if 1:
+    if 1:
         plt.close('all')
 
         site = LillgrundSite()
@@ -116,7 +118,8 @@ def main():
                           'cost_gradient_function': constr_aggr_grad,
                           'objective': False,
                           'output_keys': [(name, 0)],
-                          'use_penalty': False}
+                          'use_constraint_violation': False
+                          }
         constraint_args = {'name': name, 'lower': 0}
         from topfarm.constraint_components.constraint_aggregation import ConstraintAggregation
 
@@ -131,7 +134,8 @@ def main():
                 cost_comp=cost_comps[driver_no], # using dummy cost model
                 constraints=constraints[driver_no], # constraint set up for the boundary type provided)
                 driver=drivers[driver_no],
-                plot_comp=[XYPlotComp(), AggregatedConstraintsPlotComponent()][driver_no],
+                # plot_comp=[XYPlotComp(), AggregatedConstraintsPlotComponent()][driver_no],
+                plot_comp=[XYPlotComp(), XYPlotComp()][driver_no],
                 expected_cost=ecs[driver_no],
                 )
         #tf.driver.learning_rate = windTurbines.diameter() / 5
@@ -158,4 +162,4 @@ def main():
             plt.clf()
             # plt.plot()
 
-main()
+# main()

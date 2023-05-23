@@ -32,14 +32,14 @@ from topfarm.recorders import NestedTopFarmListRecorder,\
     TopFarmListRecorder, split_record_id
 from topfarm.mongo_recorder import MongoRecorder
 from topfarm.plotting import NoPlot
-from topfarm.easy_drivers import EasyScipyOptimizeDriver, EasySimpleGADriver, EasyDriverBase
+from topfarm.easy_drivers import EasyScipyOptimizeDriver, EasySimpleGADriver, EasyDriverBase, EasySGDDriver
 from topfarm.utils import smart_start
 from topfarm.constraint_components.spacing import SpacingComp, SpacingTypeComp
 from topfarm.constraint_components.boundary import BoundaryBaseComp
-from topfarm.constraint_components.penalty_component import PenaltyComponent, PostPenaltyComponent
-from topfarm.cost_models.aggregated_cost import AggregatedCost
+# from topfarm.constraint_components.penalty_component import ConstraintViolationComponent, PenaltyComponent #, PostPenaltyComponent
+from topfarm.cost_models.topfarm_components import ObjectiveComponent, DummyObjectiveComponent, ConstraintViolationComponent
 from topfarm.cost_models.cost_model_wrappers import CostModelComponent
-from topfarm.constraint_components.post_constraint import PostConstraint
+# from topfarm.constraint_components.post_constraint import PostConstraint
 from topfarm.constraint_components import Constraint
 
 
@@ -79,9 +79,9 @@ class TopFarmProblem(Problem):
 
     def __init__(self, design_vars, cost_comp=None, driver=EasyScipyOptimizeDriver(),
                  constraints=[], plot_comp=NoPlot(), record_id=None,
-                 expected_cost=1, ext_vars={}, post_constraints=[], approx_totals=False,
+                 expected_cost=1, ext_vars={}, approx_totals=False,
                  recorder=None, additional_recorders=None,
-                 n_wt=0, grid_layout_comp=None):
+                 n_wt=0, grid_layout_comp=None, penalty_comp=None, **kwargs):
         """Initialize TopFarmProblem
 
         Parameters
@@ -109,8 +109,13 @@ class TopFarmProblem(Problem):
         driver : openmdao Driver, optinal
             Driver used to solve the optimization driver. For an example, see the
             ``EasyScipyOptimizeDriver`` class in ``topfarm.easy_drivers``.
-        constraints : list of Constraint-objects
-            E.g. XYBoundaryConstraint, SpacingConstraint
+        constraints : list of Constraint-objects or tuples
+            Constraint-objects are e.g. XYBoundaryConstraint, SpacingConstraint
+            Tuples have the form (variable to constrain, {dict with options passed to the the OpenMDAO method add_constraint})
+        penalty_comp : ExplicitComponent, optional
+            Component that converts constraints into penalty both for drivers that do and do not support constraints.
+            Constraints are automatically converted to penalty for drivers that do not support constraints and the default magnitude of the
+            penalty that is added to the objective is the sum of the constraint violations + 10**10.
         plot_comp : ExplicitComponent, optional
             OpenMDAO ExplicitComponent used to plot the state (during
             optimization).
@@ -132,9 +137,6 @@ class TopFarmProblem(Problem):
             Used for nested problems to propagate variables from parent problem\n
             Ex. {'type': [1,2,3]}\n
             Ex. [('type', [1,2,3])]\n
-        post_constraints : list of Constraint-objects that needs the cost component to be
-            evaluated, unlike (pre-)constraints which are evaluated before the cost component.
-            E.g. LoadConstraint
         approx_totals : bool or dict
             If True, approximates the total derivative of the cost_comp group,
             skipping the partial ones. If it is a dictionary, it's elements
@@ -164,7 +166,17 @@ class TopFarmProblem(Problem):
 
         self.main_recorder = recorder
         self._additional_recorders = additional_recorders
+        if not isinstance(constraints, list):
+            constraints = [constraints]
+        if 'post_constraints' in kwargs:
+            warnings.warn("""post_constraints keyword is deprecated. Both Constraint objects and
+                          constraint tuples of type (keyword, {constraint options}) can be included in the constriants list.""",
+                          DeprecationWarning, stacklevel=2)
 
+            post_constraints = kwargs['post_constraints']
+        else:
+            post_constraints = [constraint for constraint in constraints if isinstance(constraint, dict) or isinstance(constraint, tuple)]
+            constraints = [constraint for constraint in constraints if isinstance(constraint, Constraint)]
         Problem.__init__(self, comm=comm)
         if cost_comp:
             if isinstance(cost_comp, TopFarmProblem):
@@ -190,8 +202,6 @@ class TopFarmProblem(Problem):
         self.load_recorder()
         if not isinstance(approx_totals, dict) and approx_totals:
             approx_totals = {'method': 'fd'}
-        if not isinstance(constraints, list):
-            constraints = [constraints]
         if not isinstance(design_vars, dict):
             design_vars = dict(design_vars)
         self.design_vars = design_vars
@@ -224,26 +234,29 @@ class TopFarmProblem(Problem):
         if grid_layout_comp:
             self.model.add_subsystem('grid_layout_comp', grid_layout_comp, promotes=['*'])
 
-        if cost_comp and isinstance(cost_comp, PostConstraint):
-            post_constraints = post_constraints + [cost_comp]
+        if cost_comp and hasattr(cost_comp, 'post_constraint'):
+            post_constraints = post_constraints + [cost_comp.post_constraint]
 
-        constraints_as_penalty = ((not self.driver.supports['inequality_constraints'] or
-                                   isinstance(self.driver, SimpleGADriver) or
-                                   isinstance(self.driver, EasySimpleGADriver)) and
-                                  len(constraints) + len(post_constraints) > 0)
+        constraints_as_penalty = ((((not self.driver.supports['inequality_constraints'] or
+                                     isinstance(self.driver, SimpleGADriver) or
+                                     isinstance(self.driver, EasySimpleGADriver)) and
+                                    len(constraints) + len(post_constraints) > 0) or
+                                   (penalty_comp is not None)) and not
+                                  isinstance(self.driver, EasySGDDriver))
 
         if len(constraints) > 0:
-            self.model.add_subsystem('pre_constraints', ParallelGroup(), promotes=['*'])
+            self.model.add_subsystem('constraint_group', ParallelGroup(), promotes=['*'])
             for constr in constraints:
                 if constraints_as_penalty:
                     constr.setup_as_penalty(self)
                 else:
                     constr.setup_as_constraint(self)
-            penalty_comp = PenaltyComponent(constraints, constraints_as_penalty)
-            self.model.add_subsystem('penalty_comp', penalty_comp, promotes=['*'])
+            constraint_violation_comp = ConstraintViolationComponent(constraints)
+            self.model.add_subsystem('constraint_violation_comp', constraint_violation_comp, promotes=['*'])
         else:
+            constraint_violation_comp = None
             if isinstance(self.cost_comp, (CostModelComponent, TopFarmGroup)):
-                self.indeps.add_output('penalty', val=0.0)
+                self.indeps.add_output('constraint_violation', val=0.0)
 
         self.model.constraint_components = [constr.constraintComponent for constr in constraints]
 
@@ -258,36 +271,30 @@ class TopFarmProblem(Problem):
             self.model.add_subsystem('cost_comp', cost_comp, promotes=['*'])
 
         if len(post_constraints) > 0:
-            if constraints_as_penalty:
-                penalty_comp = PostPenaltyComponent(post_constraints, constraints_as_penalty)
-                self.model.add_subsystem('post_penalty_comp', penalty_comp, promotes=['*'])
-            else:
+            if not constraints_as_penalty:
                 for constr in post_constraints:
                     if isinstance(constr, Constraint):
-                        if 'post_constraints' not in self.model._subsystems_allprocs and 'post_constraints' not in self.model._static_subsystems_allprocs:
+                        if 'constraints_group2' not in self.model._subsystems_allprocs and 'post_constraints' not in self.model._static_subsystems_allprocs:
                             self.model.add_subsystem('post_constraints', ParallelGroup(), promotes=['*'])
                         constr.setup_as_constraint(self, group='post_constraints')
 
                     elif isinstance(constr[-1], dict):
                         self.model.add_constraint(str(constr[0]), **constr[-1])
-                    elif len(constr) == 2:  # assuming only name and upper value is specified and value is per turbine
-                        if len(constr[1]) == 1:
-                            self.model.add_constraint(constr[0], upper=np.full(self.n_wt, constr[1]))
-                        else:
-                            self.model.add_constraint(constr[0], upper=constr[1])
-                    elif len(constr) == 3:  # four arguments are: key, lower, upper ,shape
-                        lower = None if constr[1] is None else constr[1]
-                        upper = None if constr[2] is None else constr[2]
-                        self.model.add_constraint(
-                            constr[0], lower=lower, upper=upper)
-                    elif len(constr) == 4:  # four arguments are: key, lower, upper ,shape
-                        lower = None if constr[1] is None else np.full(constr[3], constr[1])
-                        upper = None if constr[2] is None else np.full(constr[3], constr[2])
-                        self.model.add_constraint(
-                            constr[0], lower=lower, upper=upper)
-
-        aggr_comp = AggregatedCost(constraints_as_penalty, constraints, post_constraints)
-        self.model.add_subsystem('aggr_comp', aggr_comp, promotes=['*'])
+                    else:
+                        warnings.warn("""constraint tuples should be of type (keyword, {constraint options}).""",
+                                      DeprecationWarning, stacklevel=2)
+        if constraints_as_penalty:
+            if penalty_comp is None:
+                if constraint_violation_comp:
+                    constraints_for_aggregation = post_constraints + [constraint_violation_comp]
+                else:
+                    constraints_for_aggregation = post_constraints
+                objective_comp = ObjectiveComponent(constraints_for_aggregation)
+            else:
+                objective_comp = penalty_comp
+        else:
+            objective_comp = DummyObjectiveComponent()
+        self.model.add_subsystem('objective_comp', objective_comp, promotes=['*'])
         if cost_comp:
             if expected_cost is None:
                 expected_cost = self.evaluate()[0]
@@ -305,7 +312,7 @@ class TopFarmProblem(Problem):
         else:
             self.indeps.add_output('cost')
 
-        self.model.add_objective('aggr_cost', scaler=1 / abs(expected_cost))
+        self.model.add_objective('final_cost', scaler=1 / abs(expected_cost))
 
         if plot_comp and not isinstance(plot_comp, NoPlot):
             self.model.add_subsystem('plot_comp', plot_comp, promotes=['*'])
@@ -314,9 +321,20 @@ class TopFarmProblem(Problem):
 
         self.setup()
 
+    # This is needed to avoid an error from interaction between creation of coloring reports and parametrizised pytests in openmdao 3.23-3.26
+    def _update_reports(self, driver):
+        try:
+            from openmdao.utils.reports_system import activate_reports, clear_reports
+            if self._driver is not None:
+                clear_reports(self._driver)
+            driver._set_problem(self)
+            activate_reports(self._reports, driver)
+        except ModuleNotFoundError:
+            pass
+
     @property
     def cost(self):
-        return self['aggr_cost'][0]
+        return self['final_cost'][0]
 
     def __getitem__(self, name):
         return Problem.__getitem__(self, name).copy()
@@ -427,7 +445,7 @@ class TopFarmProblem(Problem):
         t = time.time()
         rec = TopFarmListRecorder()
         self.driver.add_recorder(rec)
-        res = self.compute_totals(['aggr_cost'], wrt=[topfarm.x_key, topfarm.y_key], return_format='dict')
+        res = self.compute_totals(['final_cost'], wrt=[topfarm.x_key, topfarm.y_key], return_format='dict')
         self.driver._rec_mgr._recorders.remove(rec)
         if disp:
             print("Gradients evaluated in\t%.3fs" % (time.time() - t))
@@ -482,7 +500,7 @@ class TopFarmProblem(Problem):
         if self.driver._rec_mgr._recorders != []:  # in openmdao<2.4 cleanup does not delete recorders
             self.driver._rec_mgr._recorders.remove(self.recorder)
         if isinstance(self.driver, DOEDriver) or isinstance(self.driver, SimpleGADriver):
-            costs = self.recorder['aggr_cost']
+            costs = self.recorder['final_cost']
             best_case_index = int(np.argmin(costs))
             best_state = {k: self.recorder[k][best_case_index] for k in self.design_vars}
             self.evaluate(best_state)
@@ -504,8 +522,10 @@ class TopFarmProblem(Problem):
         for comp in comp_name_lst:
             var_pair = [(x, dx) for x, dx in res[comp].keys()
                         if (x not in ['cost_comp_eval'] and
-                            not x.startswith('penalty') and
-                            not dx.startswith('penalty'))]
+                            # not x.startswith('penalty') and
+                            # not dx.startswith('penalty'))]
+                            not x.startswith('constraint_violation') and
+                            not dx.startswith('constraint_violation'))]
             worst = var_pair[np.argmax([res[comp][k]['rel error'].forward for k in var_pair])]
             err = res[comp][worst]['rel error'].forward
             if err > tol:
@@ -574,7 +594,7 @@ class ProblemComponent(ExplicitComponent):
         self.additional_inputs = additional_inputs
 
     def setup(self):
-        missing_in_problem_exceptions = ['penalty']
+        missing_in_problem_exceptions = ['constraint_violation']
         parent_temp = {}
         parent_temp.update(self.parent.indeps._static_var_rel2meta)
         parent_temp.update(self.parent.indeps._var_rel2meta)

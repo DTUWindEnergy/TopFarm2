@@ -41,7 +41,7 @@ class XYBoundaryConstraint(Constraint):
         else:
             self.boundary = np.asarray(boundary)
         self.boundary_type = boundary_type
-        self.const_id = 'xyboundary_comp_{}_{}'.format(boundary_type, int(self.boundary.sum()))
+        self.const_id = 'xyboundary_comp_{}'.format(boundary_type)
         self.units = units
         self.relaxation = relaxation
 
@@ -77,7 +77,7 @@ class XYBoundaryConstraint(Constraint):
                 else:
                     design_vars[k] = (design_vars[k][0], l, u, design_vars[k][-1])
 
-    def _setup(self, problem, group='pre_constraints'):
+    def _setup(self, problem, group='constraint_group'):
         n_wt = problem.n_wt
         self.boundary_comp = self.get_comp(n_wt)
         self.boundary_comp.problem = problem
@@ -86,11 +86,15 @@ class XYBoundaryConstraint(Constraint):
         problem.indeps.add_output('xy_boundary', self.boundary_comp.xy_boundary)
         getattr(problem.model, group).add_subsystem('xy_bound_comp', self.boundary_comp, promotes=['*'])
 
-    def setup_as_constraint(self, problem, group='pre_constraints'):
+    def setup_as_constraint(self, problem, group='constraint_group'):
         self._setup(problem, group=group)
-        problem.model.add_constraint('boundaryDistances', lower=self.boundary_comp.zeros)
+        if problem.n_wt == 1:
+            lower = 0
+        else:
+            lower = self.boundary_comp.zeros
+        problem.model.add_constraint('boundaryDistances', lower=lower)
 
-    def setup_as_penalty(self, problem, group='pre_constraints'):
+    def setup_as_penalty(self, problem, group='constraint_group'):
         self._setup(problem, group=group)
 
 
@@ -148,7 +152,7 @@ class BoundaryBaseComp(ConstraintComponent):
             self.add_input('time', 0)
         if hasattr(self, 'types'):
             self.add_input('type', np.zeros(self.n_wt))
-        self.add_output('penalty_' + self.const_id, val=0.0)
+        self.add_output('constraint_violation_' + self.const_id, val=0.0)
         # Explicitly size output array
         # (vector with positive elements if turbines outside of hull)
         self.add_output('boundaryDistances', self.zeros,
@@ -164,7 +168,7 @@ class BoundaryBaseComp(ConstraintComponent):
         args = {x: inputs[x] for x in [topfarm.x_key, topfarm.y_key, topfarm.type_key] if x in inputs}
         boundaryDistances = self.distances(**args)
         outputs['boundaryDistances'] = boundaryDistances
-        outputs['penalty_' + self.const_id] = np.sum(np.minimum(boundaryDistances, 0) ** 2)
+        outputs['constraint_violation_' + self.const_id] = np.sum(np.minimum(boundaryDistances, 0) ** 2)
 
     def compute_partials(self, inputs, partials):
         # return Jacobian dict
