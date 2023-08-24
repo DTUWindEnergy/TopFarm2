@@ -7,6 +7,7 @@ import topfarm
 from shapely.geometry import Polygon, MultiPolygon, LineString
 from shapely.ops import unary_union
 import warnings
+from tqdm import tqdm
 
 
 class XYBoundaryConstraint(Constraint):
@@ -152,7 +153,7 @@ class BoundaryBaseComp(ConstraintComponent):
             self.add_input('time', 0)
         if hasattr(self, 'types'):
             self.add_input('type', np.zeros(self.n_wt))
-        self.add_output('constraint_violation_' + self.const_id, val=0.0)
+        # self.add_output('constraint_violation_' + self.const_id, val=0.0)
         # Explicitly size output array
         # (vector with positive elements if turbines outside of hull)
         self.add_output('boundaryDistances', self.zeros,
@@ -168,7 +169,7 @@ class BoundaryBaseComp(ConstraintComponent):
         args = {x: inputs[x] for x in [topfarm.x_key, topfarm.y_key, topfarm.type_key] if x in inputs}
         boundaryDistances = self.distances(**args)
         outputs['boundaryDistances'] = boundaryDistances
-        outputs['constraint_violation_' + self.const_id] = np.sum(np.minimum(boundaryDistances, 0) ** 2)
+        # outputs['constraint_violation_' + self.const_id] = np.sum(np.minimum(boundaryDistances, 0) ** 2)
 
     def compute_partials(self, inputs, partials):
         # return Jacobian dict
@@ -578,18 +579,21 @@ class MultiPolygonBoundaryComp(PolygonBoundaryComp):
         PolygonBoundaryComp.__init__(self, n_wt, xy_boundary=xy_boundaries[0], const_id=const_id, units=units, relaxation=relaxation)
         # self.bounds_poly = [Polygon(x) for x in xy_boundaries]
         self.incl_excls = [x.incl for x in zones]
-        self._setup_boundaries()
+        self._setup_boundaries(self.bounds_poly, self.incl_excls)
         self.relaxation = relaxation
         self.method = method
         if simplify_geometry:
             self.simplify(simplify_geometry)
 
     def simplify(self, simplify_geometry):
+        bounds = [bi[0] for bi in self.boundaries]
+        self.incl_excls = [bi[1] for bi in self.boundaries]
+        polygons = [Polygon(b) for b in bounds]
         if isinstance(simplify_geometry, dict):
-            self.bounds_poly = [rp.simplify(**simplify_geometry) for rp in self.bounds_poly]
+            self.bounds_poly = [rp.simplify(**simplify_geometry) for rp in polygons]
         else:
-            self.bounds_poly = [rp.simplify(simplify_geometry) for rp in self.bounds_poly]
-        self._setup_boundaries()
+            self.bounds_poly = [rp.simplify(simplify_geometry) for rp in polygons]
+        self._setup_boundaries(self.bounds_poly, self.incl_excls)
 
     # def line_to_xy_boundary(self, line, buffer):
     #     return np.asarray(Polygon(LineString(line).buffer(buffer, join_style=2).exterior).exterior.coords)
@@ -610,8 +614,8 @@ class MultiPolygonBoundaryComp(PolygonBoundaryComp):
             bounds.append(np.asarray(poly.exterior.coords))
         return polygons, bounds
 
-    def _setup_boundaries(self):
-        self.res_poly = self._calc_resulting_polygons(self.bounds_poly)
+    def _setup_boundaries(self, bounds_poly, incl_excl):
+        self.res_poly = self._calc_resulting_polygons(bounds_poly, incl_excl)
         self.boundaries = self._poly_to_bound(self.res_poly)
 
         boundary_properties_list_all = list(zip(*[self.get_boundary_properties(bound, incl_excl)[1:]
@@ -630,7 +634,7 @@ class MultiPolygonBoundaryComp(PolygonBoundaryComp):
                 boundaries.append((np.asarray([x, y]).T[:-1, :], 0))
         return boundaries
 
-    def _calc_resulting_polygons(self, boundary_polygons):
+    def _calc_resulting_polygons(self, boundary_polygons, incl_excls):
         '''
         Parameters
         ----------
@@ -641,16 +645,16 @@ class MultiPolygonBoundaryComp(PolygonBoundaryComp):
         list of merged shapely polygons. Resolves issues arrising if any are overlapping, touching or contained in each other
         '''
         domain = []
-        for i in range(len(boundary_polygons)):
+        for i in tqdm(range(len(boundary_polygons))):
             b = boundary_polygons[i]
             if len(domain) == 0:
-                if self.incl_excls[i]:
+                if incl_excls[i]:
                     domain.append(b)
                 else:
                     warnings.warn("First boundary should be an inclusion zone or it will be ignored")
                     pass
             else:
-                if self.incl_excls[i]:
+                if incl_excls[i]:
                     temp = []
                     for j, d in enumerate(domain):
                         if d.intersects(b):
@@ -782,7 +786,7 @@ class MultiPolygonBoundaryComp(PolygonBoundaryComp):
             else:
                 pb = p.buffer(self.calc_relaxation(iteration_no), join_style=2)
                 relaxed_poly.append(pb)
-        merged_poly = self._calc_resulting_polygons(relaxed_poly)
+        merged_poly = self._calc_resulting_polygons(relaxed_poly, booleans)
         return self._poly_to_bound(merged_poly)
 
 
@@ -866,7 +870,7 @@ class TurbineSpecificBoundaryComp(MultiPolygonBoundaryComp):
     #     return temp
 
     def merge_boundaries(self):
-        return [self._calc_resulting_polygons(bounds) for bounds in self.ts_polygon_boundaries]
+        return [self._calc_resulting_polygons(bounds, self.incl_excls) for bounds in self.ts_polygon_boundaries]
 
     def get_ts_boundary_properties(self,):
         return [[self.get_boundary_properties(bound) for bound, _ in bounds] for bounds in self.ts_merged_xy_boundaries]

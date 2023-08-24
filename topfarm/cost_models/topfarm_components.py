@@ -3,6 +3,9 @@ from openmdao.core.explicitcomponent import ExplicitComponent
 # from topfarm.constraint_components.post_constraint import PostConstraint
 import numpy as np
 import warnings
+from topfarm.constraint_components.boundary import BoundaryBaseComp
+from topfarm.constraint_components.spacing import SpacingComp, SpacingTypeComp
+from topfarm.constraint_components.capacity import CapacityComp
 
 
 class ConstraintViolationComponent(ExplicitComponent):
@@ -12,12 +15,55 @@ class ConstraintViolationComponent(ExplicitComponent):
 
     def setup(self):
         for comp in self.constraint_comps:
-            self.add_input('constraint_violation_' + comp.const_id, val=0.0)
+            if isinstance(comp.constraintComponent, BoundaryBaseComp):
+                self.add_input('boundaryDistances', val=comp.constraintComponent.zeros)
+                self.declare_partials('constraint_violation', 'boundaryDistances')
+            elif isinstance(comp.constraintComponent, SpacingTypeComp):
+                self.add_input('wtRelativeSeparationSquared', val=np.zeros(comp.constraintComponent.veclen))
+                self.declare_partials('constraint_violation', 'wtRelativeSeparationSquared')
+            elif isinstance(comp.constraintComponent, SpacingComp):
+                self.add_input('wtSeparationSquared', val=np.zeros(comp.constraintComponent.veclen))
+                self.declare_partials('constraint_violation', 'wtSeparationSquared')
+            elif isinstance(comp.constraintComponent, CapacityComp):
+                self.add_input('totalcapacity', val=0.0)
+                self.declare_partials('constraint_violation', 'totalcapacity')
         self.add_output('constraint_violation', val=0.0)
 
     def compute(self, inputs, outputs):
-        constraint_violations = np.array([inputs[x] for x in inputs])
+        constraint_violations = []
+        for comp in self.constraint_comps:
+            if isinstance(comp.constraintComponent, BoundaryBaseComp):
+                constraint_violations.append(np.sum(np.minimum(inputs['boundaryDistances'], 0) ** 2))
+            elif isinstance(comp.constraintComponent, SpacingTypeComp):
+                constraint_violations.append(-np.minimum(inputs['wtRelativeSeparationSquared'], 0).sum())
+            elif isinstance(comp.constraintComponent, SpacingComp):
+                constraint_violations.append(-np.minimum(inputs['wtSeparationSquared'] - comp.constraintComponent.min_spacing ** 2, 0).sum())
+            elif isinstance(comp.constraintComponent, CapacityComp):
+                constraint_violations.append(np.maximum(0, inputs['totalcapacity'][0] - comp.constraintComponent.max_capacity))
         outputs['constraint_violation'] = sum(constraint_violations)
+
+    def compute_partials(self, inputs, partials):
+        for comp in self.constraint_comps:
+            if isinstance(comp.constraintComponent, BoundaryBaseComp):
+                dcdb = np.zeros_like(inputs['boundaryDistances'])
+                index = np.where(inputs['boundaryDistances'] < 0)
+                dcdb[index] = 2 * inputs['boundaryDistances'][index]
+                partials['constraint_violation', 'boundaryDistances'] = dcdb
+            elif isinstance(comp.constraintComponent, SpacingTypeComp):
+                dcdsr = np.zeros_like(inputs['wtRelativeSeparationSquared'])
+                index = np.where(inputs['wtRelativeSeparationSquared'] < 0)
+                dcdsr[index] = -1
+                partials['constraint_violation', 'wtRelativeSeparationSquared'] = dcdsr
+            elif isinstance(comp.constraintComponent, SpacingComp):
+                dcds = np.zeros_like(inputs['wtSeparationSquared'])
+                index = np.where(inputs['wtSeparationSquared'] - comp.constraintComponent.min_spacing ** 2 < 0)
+                dcds[index] = -1
+                partials['constraint_violation', 'wtSeparationSquared'] = dcds
+            elif isinstance(comp.constraintComponent, CapacityComp):
+                dcds = np.zeros_like(inputs['totalcapacity'])
+                index = np.where(inputs['totalcapacity'] - comp.constraintComponent.max_capacity > 0)
+                dcds[index] = 1
+                partials['constraint_violation', 'totalcapacity'] = dcds
 
 
 class ObjectiveComponent(ExplicitComponent):

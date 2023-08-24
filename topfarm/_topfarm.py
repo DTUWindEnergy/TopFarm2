@@ -22,6 +22,7 @@ import time
 import numpy as np
 import warnings
 import copy
+import inspect
 from openmdao.api import Problem, IndepVarComp, Group, ParallelGroup,\
     ExplicitComponent, ListGenerator, DOEDriver, SimpleGADriver, OpenMDAOWarning
 from openmdao.drivers.doe_generators import DOEGenerator
@@ -81,7 +82,7 @@ class TopFarmProblem(Problem):
                  constraints=[], plot_comp=NoPlot(), record_id=None,
                  expected_cost=1, ext_vars={}, approx_totals=False,
                  recorder=None, additional_recorders=None,
-                 n_wt=0, grid_layout_comp=None, penalty_comp=None, **kwargs):
+                 n_wt=0, grid_layout_comp=None, penalty_comp=None, reports=None, **kwargs):
         """Initialize TopFarmProblem
 
         Parameters
@@ -177,7 +178,10 @@ class TopFarmProblem(Problem):
         else:
             post_constraints = [constraint for constraint in constraints if isinstance(constraint, dict) or isinstance(constraint, tuple)]
             constraints = [constraint for constraint in constraints if isinstance(constraint, Constraint)]
-        Problem.__init__(self, comm=comm)
+        if 'reports' not in inspect.getfullargspec(Problem.__init__).args:
+            Problem.__init__(self, comm=comm)
+        else:
+            Problem.__init__(self, comm=comm, reports=reports)
         if cost_comp:
             if isinstance(cost_comp, TopFarmProblem):
                 cost_comp = cost_comp.as_component()
@@ -274,9 +278,9 @@ class TopFarmProblem(Problem):
             if not constraints_as_penalty:
                 for constr in post_constraints:
                     if isinstance(constr, Constraint):
-                        if 'constraints_group2' not in self.model._subsystems_allprocs and 'post_constraints' not in self.model._static_subsystems_allprocs:
-                            self.model.add_subsystem('post_constraints', ParallelGroup(), promotes=['*'])
-                        constr.setup_as_constraint(self, group='post_constraints')
+                        if 'constraints_group2' not in self.model._subsystems_allprocs:  # and 'post_constraints' not in self.model._static_subsystems_allprocs:
+                            self.model.add_subsystem('constraints_group2', ParallelGroup(), promotes=['*'])
+                        constr.setup_as_constraint(self, group='constraints_group2')
 
                     elif isinstance(constr[-1], dict):
                         self.model.add_constraint(str(constr[0]), **constr[-1])
@@ -524,9 +528,11 @@ class TopFarmProblem(Problem):
                         if (x not in ['cost_comp_eval'] and
                             # not x.startswith('penalty') and
                             # not dx.startswith('penalty'))]
-                            not x.startswith('constraint_violation') and
-                            not dx.startswith('constraint_violation'))]
-            worst = var_pair[np.argmax([res[comp][k]['rel error'].forward for k in var_pair])]
+                            not (x.startswith('constraint_violation') and
+                                 comp != 'constraint_violation_comp')
+                            )
+                        ]
+            worst = var_pair[np.argmax(np.nan_to_num([res[comp][k]['rel error'].forward for k in var_pair]))]
             err = res[comp][worst]['rel error'].forward
             if err > tol:
                 raise Warning("Mismatch between finite difference derivative of '%s' wrt. '%s' and derivative computed in '%s' is: %f" %

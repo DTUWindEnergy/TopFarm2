@@ -32,7 +32,7 @@ class SpacingConstraint(Constraint):
                                         aggregation_function=self.aggregation_function,
                                         full_aggregation=self.full_aggregation)
         problem.model.constraint_group.add_subsystem(self.const_id, self.spacing_comp,
-                                                     promotes=[topfarm.x_key, topfarm.y_key, 'constraint_violation_' + self.const_id, 'wtSeparationSquared'])
+                                                     promotes=[topfarm.x_key, topfarm.y_key, 'wtSeparationSquared'])
 
     def setup_as_constraint(self, problem):
         self._setup(problem)
@@ -71,7 +71,7 @@ class SpacingComp(ConstraintComponent):
                        desc='x coordinates of turbines in wind dir. ref. frame', units=self.units)
         self.add_input(topfarm.y_key, val=np.zeros(self.n_wt),
                        desc='y coordinates of turbines in wind dir. ref. frame', units=self.units)
-        self.add_output('constraint_violation_' + self.const_id, val=0.0)
+        # self.add_output('constraint_violation_' + self.const_id, val=0.0)
         # Explicitly size output array
         self.add_output(self.constraint_key, val=np.zeros(self.veclen),
                         desc='spacing of all turbines in the wind farm')
@@ -106,7 +106,7 @@ class SpacingComp(ConstraintComponent):
                 # print(outputs[self.constraint_key])
         else:
             outputs[self.constraint_key] = separation_squared
-        outputs['constraint_violation_' + self.const_id] = -np.minimum(separation_squared - self.min_spacing**2, 0).sum()
+        # outputs['constraint_violation_' + self.const_id] = -np.minimum(separation_squared - self.min_spacing**2, 0).sum()
 
     def _compute(self, x, y):
         n_wt = self.n_wt
@@ -241,8 +241,7 @@ class SpacingTypeConstraint(SpacingConstraint):
                                             aggregation_function=self.aggregation_function,
                                             full_aggregation=self.full_aggregation)
         problem.model.constraint_group.add_subsystem(self.const_id, self.spacing_comp,
-                                                     promotes=[topfarm.x_key, topfarm.y_key, topfarm.type_key,
-                                                               'constraint_violation_' + self.const_id, 'wtRelativeSeparationSquared'])
+                                                     promotes=[topfarm.x_key, topfarm.y_key, topfarm.type_key, 'wtRelativeSeparationSquared'])
 
     def setup_as_constraint(self, problem):
         self._setup(problem)
@@ -280,7 +279,7 @@ class SpacingTypeComp(SpacingComp):
                 # print(outputs[self.constraint_key])
         else:
             outputs[self.constraint_key] = relative_separation_squared
-        outputs['constraint_violation_' + self.const_id] = -np.minimum(relative_separation_squared, 0).sum()
+        # outputs['constraint_violation_' + self.const_id] = -np.minimum(relative_separation_squared, 0).sum()
 
     def get_min_eff_spacing(self, t):
         return (self.min_spacing[np.atleast_1d(t).astype(int)][:, na] + self.min_spacing[np.atleast_1d(t).astype(int)][na, :]) / 2

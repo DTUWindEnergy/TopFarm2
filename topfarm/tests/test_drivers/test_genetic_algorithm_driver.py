@@ -13,7 +13,7 @@ from topfarm.drivers.genetic_algorithm_driver import SimpleGADriver,\
     GeneticAlgorithm
 from openmdao.test_suite.components.branin import Branin
 from openmdao.test_suite.components.three_bar_truss import ThreeBarTruss
-from openmdao.utils.assert_utils import assert_rel_error
+# from openmdao.utils.assert_utils import assert_rel_error
 from openmdao.utils.mpi import MPI
 
 
@@ -68,9 +68,9 @@ class TestSimpleGA(unittest.TestCase):
 
         # TODO: Satadru listed this solution, but I get a way better one.
         # Solution: xopt = [0.2857, -0.8571], fopt = 23.2933
-        assert_rel_error(self, prob['obj.f'], 12.37341703, 1e-4)
-        assert_rel_error(self, prob['px.x'][0], 0.2, 1e-4)
-        assert_rel_error(self, prob['px.x'][1], -0.88654333, 1e-4)
+        np.testing.assert_allclose(prob['obj.f'], 12.37341703, 1e-4)
+        np.testing.assert_allclose(prob['px.x'][0], 0.2, 1e-4)
+        np.testing.assert_allclose(prob['px.x'][1], -0.88654333, 1e-4)
 
     def test_mixed_integer_branin(self):
         np.random.seed(1)
@@ -98,7 +98,7 @@ class TestSimpleGA(unittest.TestCase):
         prob.run_driver()
 
         # Optimal solution
-        assert_rel_error(self, prob['comp.f'], 0.49398, 1e-4)
+        np.testing.assert_allclose(prob['comp.f'], 0.49398, 1e-4)
         self.assertTrue(int(prob['p2.xI']) in [3, -3])
 
     def test_mixed_integer_3bar(self):
@@ -160,8 +160,8 @@ class TestSimpleGA(unittest.TestCase):
         # as much as we can. Objective is still rather random, but it is close. GA does a great job
         # of picking the correct values for the integer desvars though.
         self.assertLess(prob['mass'], 6.0)
-        assert_rel_error(self, prob['mat1'], 3, 1e-5)
-        assert_rel_error(self, prob['mat2'], 3, 1e-5)
+        np.testing.assert_allclose(prob['mat1'], 3, 1e-5)
+        np.testing.assert_allclose(prob['mat2'], 3, 1e-5)
         # Material 3 can be anything
 
     def test_mixed_integer_3bar_default_bits(self):
@@ -226,8 +226,8 @@ class TestSimpleGA(unittest.TestCase):
         # as much as we can. Objective is still rather random, but it is close. GA does a great job
         # of picking the correct values for the integer desvars though.
         self.assertLess(prob['mass'], 6.0)
-        assert_rel_error(self, prob['mat1'], 3, 1e-5)
-        assert_rel_error(self, prob['mat2'], 3, 1e-5)
+        np.testing.assert_allclose(prob['mat1'], 3, 1e-5)
+        np.testing.assert_allclose(prob['mat2'], 3, 1e-5)
         # Material 3 can be anything
 
     def test_analysis_error(self):
@@ -626,7 +626,7 @@ class MPITestSimpleGA(unittest.TestCase):
         prob.run_driver()
 
         # Optimal solution
-        assert_rel_error(self, prob['comp.f'], 0.49398, 1e-4)
+        np.testing.assert_allclose(prob['comp.f'], 0.49398, 1e-4)
         self.assertTrue(int(prob['p2.xI']) in [3, -3])
 
     def test_two_branin_parallel_model(self):
@@ -668,7 +668,7 @@ class MPITestSimpleGA(unittest.TestCase):
         prob.run_driver()
 
         # Optimal solution
-        assert_rel_error(self, prob['comp.f'], 0.98799098, 1e-4)
+        np.testing.assert_allclose(prob['comp.f'], 0.98799098, 1e-4)
         self.assertTrue(int(prob['p2.xI']) in [3, -3])
 
     def test_mixed_integer_3bar_default_bits(self):
@@ -732,8 +732,8 @@ class MPITestSimpleGA(unittest.TestCase):
         # as much as we can. Objective is still rather random, but it is close. GA does a great job
         # of picking the correct values for the integer desvars though.
         self.assertLess(prob['mass'], 6.0)
-        assert_rel_error(self, prob['mat1'], 3, 1e-5)
-        assert_rel_error(self, prob['mat2'], 3, 1e-5)
+        np.testing.assert_allclose(prob['mat1'], 3, 1e-5)
+        np.testing.assert_allclose(prob['mat2'], 3, 1e-5)
         # Material 3 can be anything
 
 
@@ -782,7 +782,7 @@ class MPITestSimpleGA4Procs(unittest.TestCase):
         prob.run_driver()
 
         # Optimal solution
-        assert_rel_error(self, prob['comp.f'], 0.98799098, 1e-4)
+        np.testing.assert_allclose(prob['comp.f'], 0.98799098, 1e-4)
         self.assertTrue(int(prob['p2.xI']) in [3, -3])
 
     def test_indivisible_error(self):
@@ -901,7 +901,7 @@ class TestFeatureSimpleGA(unittest.TestCase):
         prob.run_driver()
 
         # Optimal solution
-        assert_rel_error(self, prob['comp.f'], 0.49399549, 1e-4)
+        np.testing.assert_allclose(prob['comp.f'], 0.49399549, 1e-4)
 
     def test_option_max_gen(self):
         from openmdao.api import Problem, Group, IndepVarComp, SimpleGADriver

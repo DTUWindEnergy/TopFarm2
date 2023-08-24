@@ -32,10 +32,10 @@ def test_capacity_tf():
     tf.evaluate()
     # case above the maximum allowed installed capacity, yes penalty
     assert tf["totalcapacity"] == 82.5
-    assert tf['constraint_violation_comp.constraint_violation_capacity_comp_50'] == 32.5
+    assert tf['constraint_violation_comp.constraint_violation'] == 32.5
 
     # set all turbines type 0, still 15 turbines and re-run the problem
     tf.evaluate({'type': inputtypes * 0})
     # case below the maximum allowed installed capacity, no penalty
     assert tf["totalcapacity"] == 15
-    assert tf['constraint_violation_comp.constraint_violation_capacity_comp_50'][0] == 0.0
+    assert tf['constraint_violation_comp.constraint_violation'][0] == 0.0
