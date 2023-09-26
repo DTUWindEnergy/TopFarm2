@@ -5,11 +5,15 @@ Setup file for Topfarm2
 
 
 import os
-from git_utils import write_vers
 from setuptools import setup, find_packages
 
 repo = os.path.dirname(__file__)
-version = write_vers(vers_file='topfarm/__init__.py', repo=repo, skip_chars=1)
+try:
+    from git_utils import write_vers
+    version = write_vers(vers_file='topfarm/__init__.py', repo=repo, skip_chars=1)
+except Exception:
+    version = '999'
+
 
 
 def read(fname):
