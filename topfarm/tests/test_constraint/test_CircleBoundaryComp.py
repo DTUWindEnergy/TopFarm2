@@ -1,13 +1,12 @@
 import os
+import numpy as np
 
 from openmdao.drivers.genetic_algorithm_driver import SimpleGADriver
 import pytest
 
-import numpy as np
 from topfarm._topfarm import TopFarmProblem
-from topfarm.constraint_components.boundary import ConvexBoundaryComp,\
-    CircleBoundaryConstraint, CircleBoundaryComp
-from topfarm.cost_models.dummy import DummyCost, DummyCostPlotComp
+from topfarm.constraint_components.boundary import CircleBoundaryConstraint, CircleBoundaryComp
+from topfarm.cost_models.dummy import DummyCost
 from topfarm.plotting import NoPlot, PlotComp
 from topfarm.tests import npt
 
