@@ -475,7 +475,9 @@ class PolygonBoundaryComp(BoundaryBaseComp):
         return distance, ddist_dX, ddist_dY
 
     def calc_distance_and_gradients(self, x, y):
-        if np.all(np.array([x, y]) == self._cache_input):
+        if not np.shape([x, y]) == np.shape(self._cache_input):
+            pass
+        elif np.all(np.array([x, y]) == self._cache_input):
             return self._cache_output
         distance, ddist_dX, ddist_dY = self._calc_distance_and_gradients(x, y)
         closest_edge_index = np.argmin(np.abs(distance), 1)
@@ -719,7 +721,9 @@ class MultiPolygonBoundaryComp(PolygonBoundaryComp):
             Jacobian of the distance matrix D_ij with respect to x and y.
 
         '''
-        if np.all(np.array([x, y]) == self._cache_input) & (not self.relaxation):
+        if not np.shape([x, y]) == np.shape(self._cache_input):
+            pass
+        elif np.all(np.array([x, y]) == self._cache_input) & (not self.relaxation):
             return self._cache_output
 
         Dist_ij, ddist_dX, ddist_dY = self._calc_distance_and_gradients(x, y, self.boundary_properties_list_all)
@@ -887,10 +891,13 @@ class TurbineSpecificBoundaryComp(MultiPolygonBoundaryComp):
         return temp
 
     def calc_distance_and_gradients(self, x, y, types=None):
-        if not isinstance(self._cache_input, type(None)):
-            if np.all(np.array([x, y]) == self._cache_input[0]) & (not self.relaxation) & np.all(np.asarray([types]) == self._cache_input[1]):
-                return self._cache_output
-        if isinstance(types, type(None)):
+        if self._cache_input is None:
+            pass
+        elif not np.shape([x, y]) == np.shape(self._cache_input[0]) or not np.shape(types) == np.shape(self._cache_input[1]):
+            pass
+        elif np.all(np.array([x, y]) == self._cache_input[0]) & (not self.relaxation) & np.all(np.asarray([types]) == self._cache_input[1]):
+            return self._cache_output
+        if types is None:
             types = np.zeros(self.n_wt)
         Dist_i = np.zeros(self.n_wt)
         sign_i = np.zeros(self.n_wt)

@@ -148,3 +148,27 @@ def testDistanceRelaxationPolygons():
                                                     [0.8, 1.2],
                                                     [0.8, 0.8],
                                                     [1.45, 0.8]]))
+
+
+def testChangingNumberOfTurbines():
+    zones = [InclusionZone([(0, 0), (5, 0), (5, 2), (3, 2), (3, 1), (2, 1), (2, 2), (0, 2), (0, 0)]),
+             InclusionZone([(3.5, 0.5), (4.5, 0.5), (4.5, 1.5), (3.5, 1.5)]),
+             ExclusionZone([(0.5, 0.5), (1.75, 0.5), (1.75, 1.5), (0.5, 1.5)]),
+             ExclusionZone([(0.75, 0.75), (1.25, 0.75), (1.25, 1.25), (0.75, 1.25)]),
+             ]
+
+    MPBC = MultiPolygonBoundaryComp(1, zones)
+
+    xs, ys = np.linspace(0, 5, 5), np.linspace(0, 2, 5)
+    XS, YS = np.meshgrid(xs, ys)
+    X, Y = XS.ravel(), YS.ravel()
+    _, _, sign = MPBC.calc_distance_and_gradients(X, Y)
+    sign_ref = np.array([0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, -1, 0, 1, 0, 0, 0, -1, 1, 0, 0, 0, -1, 0, 0])
+    np.testing.assert_allclose(sign, sign_ref)
+
+    xs2, ys2 = np.linspace(0, 5, 2), np.linspace(0, 2, 1)
+    XS2, YS2 = np.meshgrid(xs2, ys2)
+    X2, Y2 = XS2.ravel(), YS2.ravel()
+    _, _, sign2 = MPBC.calc_distance_and_gradients(X2, Y2)
+    sign_ref2 = np.array([0, 0])
+    np.testing.assert_allclose(sign2, sign_ref2)
