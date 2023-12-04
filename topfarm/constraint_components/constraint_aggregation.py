@@ -7,6 +7,8 @@ Created on Thu Oct  6 13:55:21 2022
 import numpy as np
 from topfarm.constraint_components import Constraint, ConstraintComponent
 from topfarm.cost_models.cost_model_wrappers import CostModelComponent
+from topfarm.constraint_components.spacing import SpacingConstraint
+from topfarm.constraint_components.boundary import XYBoundaryConstraint
 
 
 class ConstraintAggregation(Constraint):
@@ -82,8 +84,17 @@ class DistanceConstraintAggregation(ConstraintAggregation):
             J_distance[np.where(boundaryDistances < 0)] = 2 * boundaryDistances[np.where(boundaryDistances < 0)]
             return [[J_separation], [J_distance]]
 
-        kwargs['component_args'] = {'input_keys': [('wtSeparationSquared', np.zeros(int(n_wt * (n_wt - 1) / 2))),
-                                                   ('boundaryDistances', np.zeros((n_wt, 4)))],
+        input_keys = []
+        for cons in constraints:
+            if isinstance(cons, XYBoundaryConstraint):
+                comp = cons.get_comp(n_wt)
+                zeros = comp.zeros
+                input_keys.append(('boundaryDistances', zeros))
+            elif isinstance(cons, SpacingConstraint):
+                zeros = np.zeros(int(n_wt * (n_wt - 1) / 2))
+                input_keys.append(('wtSeparationSquared', zeros))
+
+        kwargs['component_args'] = {'input_keys': input_keys,
                                     'n_wt': n_wt,
                                     'cost_function': constr_aggr_func,
                                     'cost_gradient_function': constr_aggr_grad,
