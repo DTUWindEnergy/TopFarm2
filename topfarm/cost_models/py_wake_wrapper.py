@@ -133,6 +133,76 @@ class PyWakeAEPCostModelComponent(AEPCostModelComponent):
         return aep4smart_start
 
 
+class PyWakeAEPCostModelComponentAdditionalTurbines(PyWakeAEPCostModelComponent):
+    '''PyWake AEP component that allows for including additional turbine positions that are not
+    considered design variables but still considered for wake effect. Note that this functionality
+    can be limited by your wind farm models ability to predict long distance wakes.'''
+    def __init__(self, windFarmModel, n_wt, add_wt_x, add_wt_y, add_wt_type=0, add_wt_h=None, wd=None, ws=None, max_eval=None, grad_method=autograd, n_cpu=1, **kwargs):
+        self.x2, self.y2 = add_wt_x, add_wt_y
+        self.windFarmModel = windFarmModel
+        self.n_cpu = n_cpu
+
+        def aep(**kwargs):
+            x = np.concatenate([kwargs[topfarm.x_key], self.x2])
+            y = np.concatenate([kwargs[topfarm.y_key], self.y2])
+            if add_wt_h is not None:
+                h_primary = np.full_like(kwargs[topfarm.x_key], kwargs.get(topfarm.z_key, None))
+                h_secondary = np.full_like(add_wt_x)
+                h = np.concatenate((h_primary, h_secondary))
+            else:
+                h = None
+            type_primary = np.ones_like(kwargs[topfarm.x_key]) * kwargs.get(topfarm.type_key, 0)
+            type_secondary = np.ones_like(add_wt_x) * add_wt_type
+            type = np.concatenate([type_primary, type_secondary])
+            try:
+                return self.windFarmModel(x=x,
+                                          y=y,
+                                          h=h,
+                                          type=type,
+                                          wd=wd, ws=ws,
+                                          n_cpu=n_cpu).aep().sum(['wd', 'ws']).values[:n_wt].sum()
+            except ValueError as e:
+                if 'are at the same position' in str(e):
+                    return 0
+
+        if grad_method:
+            if hasattr(self.windFarmModel, 'dAEPdxy'):
+                # for backward compatibility
+                dAEPdxy = self.windFarmModel.dAEPdxy(grad_method)
+            else:
+                def dAEPdxy(**kwargs):
+                    return self.windFarmModel.aep_gradients(
+                        gradient_method=grad_method, wrt_arg=['x', 'y'], n_cpu=n_cpu, **kwargs)
+
+            def daep(**kwargs):
+                x = np.concatenate([kwargs[topfarm.x_key], self.x2])
+                y = np.concatenate([kwargs[topfarm.y_key], self.y2])
+                if add_wt_h is not None:
+                    h_primary = np.full_like(kwargs[topfarm.x_key], kwargs.get(topfarm.z_key, None))
+                    h_secondary = np.full_like(add_wt_x)
+                    h = np.concatenate((h_primary, h_secondary))
+                else:
+                    h = None
+                type_primary = np.ones_like(kwargs[topfarm.x_key]) * kwargs.get(topfarm.type_key, 0)
+                type_secondary = np.ones_like(add_wt_x) * add_wt_type
+                type = np.concatenate([type_primary, type_secondary])
+                grad = dAEPdxy(x=x,
+                               y=y,
+                               h=h,
+                               type=type,
+                               wd=wd, ws=ws)[:, :n_wt]
+                return grad
+        else:
+            daep = None
+        AEPCostModelComponent.__init__(self,
+                                       input_keys=[topfarm.x_key, topfarm.y_key],
+                                       n_wt=n_wt,
+                                       cost_function=aep,
+                                       cost_gradient_function=daep,
+                                       output_unit='GWh',
+                                       max_eval=max_eval, **kwargs)
+
+
 def main():
     if __name__ == '__main__':
         n_wt = 16
