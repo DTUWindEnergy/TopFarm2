@@ -94,7 +94,7 @@ Linux/OSX: conda install -c conda-forge cyipopt
 
         self.options.update({'optimizer': optimizer, 'maxiter': self.max_iter or maxiter, 'tol': tol, 'disp': disp})
         if kwargs:
-            self.options.update(kwargs)
+            self.opt_settings.update(kwargs)
 
     def get_desvar_kwargs(self, model, desvar_name, desvar_values):
         kwargs = super().get_desvar_kwargs(model, desvar_name, desvar_values)
