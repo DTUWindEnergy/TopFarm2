@@ -38,7 +38,7 @@ setup(name='topfarm',
               'pycodestyle',  # for testing
               'pytest-cov',  # for calculating coverage
               'py_wake>=2',  # for calculating AEP
-              'pyDOE2',  # for GA driver
+              'pyDOE3',  # for GA driver
               'pymongo[srv]',  # for mongo_recorder
               'scipy',  # constraints
               'sphinx',  # generating documentation
