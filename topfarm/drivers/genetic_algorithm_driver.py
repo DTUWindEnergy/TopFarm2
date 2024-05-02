@@ -27,7 +27,10 @@ from six import iteritems, itervalues, next
 from six.moves import range, zip
 
 import numpy as np
-from pyDOE2 import lhs
+try:
+    from pyDOE2 import lhs
+except ModuleNotFoundError:
+    from pyDOE3 import lhs
 
 import openmdao
 from openmdao.core.driver import Driver, RecordingDebugging
