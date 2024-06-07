@@ -1,7 +1,6 @@
 import numpy as np
 from openmdao.api import n2
 from py_wake.examples.data.iea37._iea37 import IEA37_WindTurbines, IEA37Site
-from py_wake.aep_calculator import AEPCalculator
 from topfarm.cost_models.economic_models.dtu_wind_cm_main import economic_evaluation
 from topfarm.cost_models.cost_model_wrappers import CostModelComponent
 from topfarm import TopFarmGroup, TopFarmProblem

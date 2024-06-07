@@ -1,14 +1,11 @@
 from topfarm.tests.test_files.example_data.floris.NREL5MW import NREL5MWREF, ct_curve, power_curve, cp_curve_spline, cp_curve, Amalia1Site
 from py_wake.deficit_models.noj import NOJ
-from py_wake.aep_calculator import AEPCalculator
 import matplotlib.pyplot as plt
 import numpy as np
-from openmdao.api import n2, IndepVarComp
 from topfarm import TopFarmGroup, TopFarmProblem
 from topfarm.constraint_components.boundary import XYBoundaryConstraint
-from topfarm.cost_models.cost_model_wrappers import CostModelComponent, AEPCostModelComponent
+from topfarm.cost_models.cost_model_wrappers import CostModelComponent
 from topfarm.easy_drivers import EasyRandomSearchDriver
-from topfarm.easy_drivers import EasyScipyOptimizeDriver
 from topfarm.drivers.random_search_driver import RandomizeTurbinePosition_Square
 from topfarm.plotting import XYPlotComp, NoPlot
 from topfarm.constraint_components.spacing import SpacingConstraint

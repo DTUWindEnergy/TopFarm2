@@ -1,7 +1,6 @@
 import numpy as np
 from openmdao.api import n2
 from py_wake.examples.data.iea37._iea37 import IEA37_WindTurbines, IEA37Site
-from py_wake.aep_calculator import AEPCalculator
 from topfarm.cost_models.economic_models.turbine_cost import economic_evaluation
 from topfarm.cost_models.cost_model_wrappers import CostModelComponent
 from topfarm import TopFarmGroup, TopFarmProblem
@@ -11,7 +10,6 @@ from topfarm.constraint_components.boundary import CircleBoundaryConstraint
 from topfarm.plotting import XYPlotComp, NoPlot
 from topfarm.constraint_components.spacing import SpacingConstraint
 from py_wake.deficit_models.gaussian import IEA37SimpleBastankhahGaussian
-from topfarm.cost_models.py_wake_wrapper import PyWakeAEPCostModelComponent
 
 
 def main():

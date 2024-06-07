@@ -1,6 +1,5 @@
 import numpy as np
 from py_wake.deficit_models.gaussian import IEA37SimpleBastankhahGaussian
-from py_wake.aep_calculator import AEPCalculator
 from topfarm.cost_models.economic_models.turbine_cost import economic_evaluation
 from topfarm.cost_models.cost_model_wrappers import CostModelComponent
 from topfarm import TopFarmGroup, TopFarmProblem

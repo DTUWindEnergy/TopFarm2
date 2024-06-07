@@ -1,4 +1,3 @@
-from py_wake.aep_calculator import AEPCalculator
 from py_wake.examples.data.iea37._iea37 import IEA37_WindTurbines, IEA37Site
 from topfarm._topfarm import TopFarmProblem
 from topfarm.constraint_components.boundary import CircleBoundaryConstraint
@@ -9,49 +8,8 @@ from topfarm.drivers.random_search_driver import RandomizeTurbinePosition_Circle
 from py_wake.deficit_models.gaussian import IEA37SimpleBastankhahGaussian
 import topfarm
 import numpy as np
-from scipy.interpolate import RegularGridInterpolator
-import warnings
 from py_wake.flow_map import Points
 from py_wake.utils.gradients import autograd
-
-
-class PyWakeAEP(AEPCalculator):
-    """TOPFARM wrapper for PyWake AEP calculator"""
-
-    def __init__(self, wake_model):
-        warnings.warn('PyWakeAEP is deprecated. Use PyWakeAEPCostModelComponent instead', DeprecationWarning)
-        AEPCalculator.__init__(self, wake_model)
-
-    def get_TopFarm_cost_component(self, n_wt, wd=None, ws=None):
-        """Create topfarm-style cost component
-
-        Parameters
-        ----------
-        n_wt : int
-            Number of wind turbines
-        """
-        return AEPCostModelComponent(
-            input_keys=['x', 'y'],
-            n_wt=n_wt,
-            cost_function=lambda **kwargs:
-                self.calculate_AEP(x_i=kwargs[topfarm.x_key],
-                                   y_i=kwargs[topfarm.y_key],
-                                   h_i=kwargs.get(topfarm.z_key, None),
-                                   type_i=kwargs.get(topfarm.type_key, 0),
-                                   wd=wd, ws=ws).sum(),
-            output_unit='GWh')
-
-    def get_aep4smart_start(self, ws=[6, 8, 10, 12, 14], wd=np.arange(360)):
-        def aep4smart_start(X, Y, wt_x, wt_y, T=0, wt_t=0):
-            x = np.sort(np.unique(X))
-            y = np.sort(np.unique(Y))
-            X_j, Y_j, aep_map = self.aep_map(x, y, T, wt_x, wt_y, wd=wd, ws=ws, wt_type=wt_t)
-#             import matplotlib.pyplot as plt
-#             c = plt.contourf(X_j, Y_j, aep_map[:, :, 0], 100)
-#             plt.colorbar(c)
-#             plt.show()
-            return RegularGridInterpolator((y, x), aep_map.values)(np.array([Y, X]).T)
-        return aep4smart_start
 
 
 class PyWakeAEPCostModelComponent(AEPCostModelComponent):
@@ -137,7 +95,9 @@ class PyWakeAEPCostModelComponentAdditionalTurbines(PyWakeAEPCostModelComponent)
     '''PyWake AEP component that allows for including additional turbine positions that are not
     considered design variables but still considered for wake effect. Note that this functionality
     can be limited by your wind farm models ability to predict long distance wakes.'''
-    def __init__(self, windFarmModel, n_wt, add_wt_x, add_wt_y, add_wt_type=0, add_wt_h=None, wd=None, ws=None, max_eval=None, grad_method=autograd, n_cpu=1, **kwargs):
+
+    def __init__(self, windFarmModel, n_wt, add_wt_x, add_wt_y, add_wt_type=0, add_wt_h=None,
+                 wd=None, ws=None, max_eval=None, grad_method=autograd, n_cpu=1, **kwargs):
         self.x2, self.y2 = add_wt_x, add_wt_y
         self.windFarmModel = windFarmModel
         self.n_cpu = n_cpu
