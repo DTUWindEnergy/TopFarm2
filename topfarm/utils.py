@@ -5,10 +5,13 @@ import multiprocessing
 import threading
 import time
 from tqdm import tqdm
-from openmdao.core.explicitcomponent import ExplicitComponent
-import topfarm
+# from openmdao.core.explicitcomponent import ExplicitComponent
+# import topfarm
 from abc import abstractmethod, ABC
 import gc
+from scipy.special import gamma
+from scipy.optimize import fsolve
+import pandas as pd
 
 
 def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, random_pct=0, plot=False, seed=None, types=None):
@@ -502,6 +505,53 @@ def regular_generic_layout_gradients(n_wt, sx, sy, stagger, rotation, x0=0, y0=0
     dx_dr, dy_dr = np.matmul(dRdr, np.array([x, y])) * np.pi / 180
 
     return [dx_dsx, dy_dsx, dx_dsy, dy_dsy, dx_dr, dy_dr]
+
+
+def downsample_ts(ws, wd, timestamps, start=None, end=None, freq='D'):
+    if start is None:
+        start = timestamps[0]
+    if end is None:
+        end = timestamps[-1]
+    df = pd.DataFrame({'WS': ws, 'WD': wd}, index=timestamps)
+    df['WD_R'] = 180 - df.WD
+    df['WD_a'] = np.cos(np.radians(df.WD_R))
+    df['WD_b'] = np.sin(np.radians(df.WD_R))
+    bins = pd.date_range(start=start, end=end, freq=freq)
+    df2 = df.groupby(pd.cut(df.index, bins=bins, labels=bins.astype(str).values[:-1]), observed=False).mean()
+    df2['WD'] = 180 - np.degrees(np.arctan2(df2.WD_b, df2.WD_a))
+    df2 = df2[['WS', 'WD']]
+    df2.index = pd.to_datetime(df2.index)
+    return df2
+
+
+def fit_sectorwise_weib(ws, wd, n_sectors=12):
+    sector_width = 360 / n_sectors
+    bins = np.linspace(0, 360, n_sectors + 1) - sector_width / 2
+    wd[wd > 360 - sector_width / 2] = wd[wd > 360 - sector_width / 2] - 360
+    df = pd.DataFrame({'WS': ws, 'WD': wd})
+    df['sector'] = pd.cut(df.WD, bins=bins, labels=np.arange(n_sectors))
+    As, ks, ps = [], [], []
+    for sector in range(n_sectors):
+        A, k = fit_weib(df.WS[df.sector == sector])
+        p = df.WD[df.sector == sector].size / df.WD.size
+        As.append(A)
+        ks.append(k)
+        ps.append(p)
+    return As, ks, ps
+
+
+def fit_weib(u):
+    u_bar = np.mean(u)
+    u3_bar = np.mean(u**3)
+
+    def moments(p):
+        A, k = p
+        u_est = A * gamma(1 / k + 1)
+        u3_est = A**3 * gamma(3 / k + 1)
+        return (u_est - u_bar, u3_est - u3_bar)
+
+    A, k = fsolve(moments, (u_bar, 2.0))
+    return A, k
 
 
 def main():

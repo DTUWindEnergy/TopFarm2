@@ -32,3 +32,6 @@ In this section, more complex configurations for wind farm optimization are show
     notebooks/sgd_slsqp_comparison
     notebooks/smart_start_types
     notebooks/neighbouring_turbines
+    notebooks/wind_farm_cluster
+    
+    
