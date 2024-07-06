@@ -49,4 +49,7 @@ setup(name='topfarm',
               'shapely>=1.8.2',  # for multiple polygon boundaries and exclusion zones
               'memory_profiler',  # memory profiling
       ],
+      package_data={
+          'topfarm': [
+            'examples/input_ts.csv',]},
       zip_safe=True)
