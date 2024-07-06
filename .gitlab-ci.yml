@@ -60,17 +60,14 @@ pages:  # "pages" is a job specifically for GitLab pages [1]
   stage:  # build, test, deploy defined by default [2]
     deploy
   script:  # use sphinx to build docs, move to public page
-  - apt-get update
+  - pip install --upgrade git+https://gitlab.windenergy.dtu.dk/TOPFARM/PyWake.git
+  - pip install -e .
   - apt-get -y install make pandoc
-  - pip install --upgrade pip
   - pip install pypandoc
   - pip install sphinx --upgrade
   - pip install nbsphinx --upgrade
   - pip install nbconvert --upgrade
   - pip install sphinx_rtd_theme
-  - pip install git+https://github.com/vidartf/nbsphinx-link.git
-  - pip install --upgrade git+https://gitlab.windenergy.dtu.dk/TOPFARM/PyWake.git
-  - pip install -e .
   - cd docs; make html
   - cd ../; mv docs/build/html public/
   artifacts:  # required for GitLab pages [1]
