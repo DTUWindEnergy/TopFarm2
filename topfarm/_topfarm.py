@@ -23,13 +23,13 @@ import numpy as np
 import warnings
 import copy
 import inspect
-from openmdao.api import Problem, IndepVarComp, Group, ParallelGroup,\
+from openmdao.api import Problem, IndepVarComp, Group, ParallelGroup, \
     ExplicitComponent, ListGenerator, DOEDriver, SimpleGADriver, OpenMDAOWarning
 from openmdao.drivers.doe_generators import DOEGenerator
 from openmdao.utils import mpi
 from openmdao.core.constants import _SetupStatus
 import topfarm
-from topfarm.recorders import NestedTopFarmListRecorder,\
+from topfarm.recorders import NestedTopFarmListRecorder, \
     TopFarmListRecorder, split_record_id
 from topfarm.mongo_recorder import MongoRecorder
 from topfarm.plotting import NoPlot
@@ -657,7 +657,7 @@ def main():
         optimal = np.array([[2.5, -3], [6, -7], [4.5, -3]])  # optimal turbine layouts
         boundary = np.array([(0, 0), (6, 0), (6, -10), (0, -10)])  # turbine boundaries
         desired = np.array([[3, -3], [7, -7], [4, -3]])  # desired turbine layouts
-        drivers = [EasySimpleGADriver(max_gen=10, pop_size=100, bits={'x': [12] * 3, 'y':[12] * 3}, random_state=1),
+        drivers = [EasySimpleGADriver(max_gen=10, pop_size=100, bits={'x': [12] * 3, 'y': [12] * 3}, random_state=1),
                    EasyScipyOptimizeDriver()]
         plot_comp = DummyCostPlotComp(optimal)
         tf = TopFarmProblem(

@@ -1,4 +1,4 @@
-from openmdao.drivers.doe_generators import FullFactorialGenerator,\
+from openmdao.drivers.doe_generators import FullFactorialGenerator, \
     ListGenerator
 from openmdao.drivers.doe_driver import DOEDriver
 from topfarm.cost_models.dummy import DummyCost

@@ -12,10 +12,8 @@ from topfarm.constraint_components.spacing import SpacingConstraint
 from topfarm.utils import regular_generic_layout, regular_generic_layout_gradients
 
 
-# def main():
-#     if __name__ == '__main__':
-if 1:
-    if 1:
+def main():
+    if __name__ == '__main__':
         site = Hornsrev1Site()
         wt = V80()
         D = wt.diameter()
@@ -81,4 +79,4 @@ if 1:
         # problem.evaluate()
         cost, state, recorder = problem.optimize()
 
-# main()
+main()

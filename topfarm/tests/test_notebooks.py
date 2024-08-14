@@ -27,7 +27,8 @@ def test_notebooks(notebook):
             'layout_and_loads.ipynb',  # gives error from tensorflow on synnefo machine
             # 'problems.ipynb',  # ok
             'roads_and_cables.ipynb',  # fails
-            'wake_steering_and_loads.ipynb']:  # ok but many warnings from tensorflow
+            'wake_steering_and_loads.ipynb',  # ok but many warnings from tensorflow
+            'wind_farm_cluster.ipynb', ]:  # too long runtime
         pytest.xfail("Notebook, %s, has known issues" % notebook)
     import matplotlib.pyplot as plt
 

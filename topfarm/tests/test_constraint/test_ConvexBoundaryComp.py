@@ -3,7 +3,7 @@ from topfarm import TopFarm
 import pytest
 from topfarm.tests import npt
 from openmdao.drivers.genetic_algorithm_driver import SimpleGADriver
-from topfarm.constraint_components.boundary import XYBoundaryConstraint,\
+from topfarm.constraint_components.boundary import XYBoundaryConstraint, \
     ConvexBoundaryComp
 from topfarm._topfarm import TopFarmProblem
 

@@ -15,10 +15,8 @@ from topfarm.constraint_components.boundary import XYBoundaryConstraint
 from topfarm.recorders import TopFarmListRecorder
 
 
-# def main():
-#     if __name__ == '__main__':
-if 1:
-    if 1:
+def main():
+    if __name__ == '__main__':
         plt.close('all')
 
         site = LillgrundSite()
@@ -162,4 +160,4 @@ if 1:
             plt.clf()
             # plt.plot()
 
-# main()
+main()

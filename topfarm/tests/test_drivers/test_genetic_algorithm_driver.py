@@ -9,7 +9,7 @@ import numpy as np
 
 from openmdao.api import Problem, Group, IndepVarComp, ExplicitComponent, ExecComp, \
     PETScVector, ParallelGroup
-from topfarm.drivers.genetic_algorithm_driver import SimpleGADriver,\
+from topfarm.drivers.genetic_algorithm_driver import SimpleGADriver, \
     GeneticAlgorithm
 from openmdao.test_suite.components.branin import Branin
 from openmdao.test_suite.components.three_bar_truss import ThreeBarTruss

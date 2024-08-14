@@ -1,6 +1,6 @@
 import numpy as np
 from topfarm import TurbineXYZOptimizationProblem
-from topfarm.constraint_components.boundary_component import BoundaryComp,\
+from topfarm.constraint_components.boundary_component import BoundaryComp, \
     ConvexBoundaryComp
 from topfarm.tests import npt
 from openmdao.drivers.genetic_algorithm_driver import SimpleGADriver

@@ -1,5 +1,5 @@
 import numpy as np
-from topfarm.cost_models.cost_model_wrappers import CostModelComponent,\
+from topfarm.cost_models.cost_model_wrappers import CostModelComponent, \
     AEPCostModelComponent, AEPMaxLoadCostModelComponent
 from topfarm.constraint_components.spacing import SpacingConstraint
 from topfarm.constraint_components.boundary import XYBoundaryConstraint, CircleBoundaryComp, CircleBoundaryConstraint

@@ -3,7 +3,7 @@ Created on 17. jul. 2018
 
 @author: mmpe
 '''
-from topfarm.recorders import TopFarmListRecorder, split_record_id,\
+from topfarm.recorders import TopFarmListRecorder, split_record_id, \
     recordid2filename
 import numpy as np
 from openmdao.drivers.doe_generators import ListGenerator

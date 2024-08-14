@@ -3,7 +3,7 @@ import pytest
 import numpy as np
 from topfarm.cost_models.dummy import DummyCost
 from topfarm.tests import npt, uta
-from topfarm.constraint_components.constrained_generator import ConstrainedXYZGenerator,\
+from topfarm.constraint_components.constrained_generator import ConstrainedXYZGenerator, \
     ConstrainedDiscardXYZGenerator
 from topfarm.constraint_components.boundary import XYBoundaryConstraint
 from topfarm.constraint_components.spacing import SpacingConstraint

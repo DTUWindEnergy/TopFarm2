@@ -19,7 +19,7 @@ from topfarm.examples import examples_filepath
 
 
 class EnergyIsland(TopFarmCluster):
-    def __init__(self):
+    def __init__(self, **kwargs):
         ts_raw = pd.read_csv(os.path.join(examples_filepath, 'input_ts.csv'), sep=',', index_col=0, parse_dates=True)
         ws = ts_raw.WS_150.values
         wd = ts_raw.WD_150.values
@@ -272,4 +272,5 @@ class EnergyIsland(TopFarmCluster):
                                 site,
                                 ws_sim,
                                 wd_sim,
-                                time_stamps,)
+                                time_stamps,
+                                **kwargs)

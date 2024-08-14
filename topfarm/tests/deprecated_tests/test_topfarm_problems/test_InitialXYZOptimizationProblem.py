@@ -1,5 +1,5 @@
 from openmdao.drivers.doe_driver import DOEDriver
-from openmdao.drivers.doe_generators import FullFactorialGenerator,\
+from openmdao.drivers.doe_generators import FullFactorialGenerator, \
     ListGenerator, UniformGenerator
 import pytest
 from topfarm import InitialXYZOptimizationProblem

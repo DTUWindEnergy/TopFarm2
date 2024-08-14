@@ -3,7 +3,7 @@ from topfarm.cost_models.dummy import DummyCost, DummyCostPlotComp
 
 from topfarm.plotting import NoPlot, XYPlotComp
 from topfarm.easy_drivers import EasyScipyOptimizeDriver
-from topfarm.constraint_components.boundary import XYBoundaryConstraint,\
+from topfarm.constraint_components.boundary import XYBoundaryConstraint, \
     PolygonBoundaryComp, InclusionZone, ExclusionZone, MultiPolygonBoundaryComp
 from topfarm._topfarm import TopFarmProblem
 

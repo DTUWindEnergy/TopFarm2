@@ -17,37 +17,37 @@ from py_wake.tests.check_speed import timeit
 from openmdao.core.problem import Problem
 
 
-def get_site():
-    f = [0.035972, 0.039487, 0.051674, 0.070002, 0.083645, 0.064348,
-         0.086432, 0.117705, 0.151576, 0.147379, 0.10012, 0.05166]
-    A = [9.176929, 9.782334, 9.531809, 9.909545, 10.04269, 9.593921,
-         9.584007, 10.51499, 11.39895, 11.68746, 11.63732, 10.08803]
-    k = [2.392578, 2.447266, 2.412109, 2.591797, 2.755859, 2.595703,
-         2.583984, 2.548828, 2.470703, 2.607422, 2.626953, 2.326172]
-    ti = 0.001
-    h_ref = 100
-    alpha = .1
-    site = UniformWeibullSite(f, A, k, ti, shear=PowerShear(h_ref=h_ref, alpha=alpha))
-    spacing = 2000
-    N = 5
-    theta = 76  # deg
-    dx = np.tan(np.radians(theta))
-    x = np.array([np.linspace(0, (N - 1) * spacing, N) + i * spacing / dx for i in range(N)])
-    y = np.array(np.array([N * [i * spacing] for i in range(N)]))
-    initial_positions = np.column_stack((x.ravel(), y.ravel()))
-    eps = 2000
-    delta = 5
-    site.boundary = np.array([(0 - delta, 0 - delta),
-                              ((N - 1) * spacing + eps, 0 - delta),
-                              ((N - 1) * spacing * (1 + 1 / dx) + eps * (1 + np.cos(np.radians(theta))),
-                               (N - 1) * spacing + eps * np.sin(np.radians(theta)) - delta),
-                              ((N - 1) * spacing / dx + eps * np.cos(np.radians(theta)), (N - 1) * spacing + eps * np.sin(np.radians(theta)))])
-    site.initial_position = initial_positions
-    return site
-
-
 def main():
     if __name__ == '__main__':
+        def get_site():
+            f = [0.035972, 0.039487, 0.051674, 0.070002, 0.083645, 0.064348,
+                 0.086432, 0.117705, 0.151576, 0.147379, 0.10012, 0.05166]
+            A = [9.176929, 9.782334, 9.531809, 9.909545, 10.04269, 9.593921,
+                 9.584007, 10.51499, 11.39895, 11.68746, 11.63732, 10.08803]
+            k = [2.392578, 2.447266, 2.412109, 2.591797, 2.755859, 2.595703,
+                 2.583984, 2.548828, 2.470703, 2.607422, 2.626953, 2.326172]
+            ti = 0.001
+            h_ref = 100
+            alpha = .1
+            site = UniformWeibullSite(f, A, k, ti, shear=PowerShear(h_ref=h_ref, alpha=alpha))
+            spacing = 2000
+            N = 5
+            theta = 76  # deg
+            dx = np.tan(np.radians(theta))
+            x = np.array([np.linspace(0, (N - 1) * spacing, N) + i * spacing / dx for i in range(N)])
+            y = np.array(np.array([N * [i * spacing] for i in range(N)]))
+            initial_positions = np.column_stack((x.ravel(), y.ravel()))
+            eps = 2000
+            delta = 5
+            site.boundary = np.array([(0 - delta, 0 - delta),
+                                      ((N - 1) * spacing + eps, 0 - delta),
+                                      ((N - 1) * spacing * (1 + 1 / dx) + eps * (1 + np.cos(np.radians(theta))),
+                                       (N - 1) * spacing + eps * np.sin(np.radians(theta)) - delta),
+                                      ((N - 1) * spacing / dx + eps * np.cos(np.radians(theta)), (N - 1) * spacing + eps * np.sin(np.radians(theta)))])
+            site.initial_position = initial_positions
+            return site
+
+
         plot_comp = XYPlotComp()
         site = get_site()
         n_wt = len(site.initial_position)

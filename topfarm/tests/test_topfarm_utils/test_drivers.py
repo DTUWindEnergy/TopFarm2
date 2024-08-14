@@ -3,10 +3,10 @@ import pytest
 import numpy as np
 
 from topfarm.cost_models.dummy import DummyCost, DummyCostPlotComp
-from topfarm.drivers.random_search_driver import RandomizeTurbinePosition_Circle, RandomizeTurbinePosition_Square,\
-    RandomizeTurbineTypeAndPosition, RandomizeTurbinePosition_Normal,\
+from topfarm.drivers.random_search_driver import RandomizeTurbinePosition_Circle, RandomizeTurbinePosition_Square, \
+    RandomizeTurbineTypeAndPosition, RandomizeTurbinePosition_Normal, \
     RandomizeAllUniform, RandomizeAllRelativeMaxStep, RandomizeNUniform
-from topfarm.easy_drivers import EasyScipyOptimizeDriver, EasySimpleGADriver, EasyRandomSearchDriver, EasyPyOptSparseSNOPT, EasyPyOptSparseIPOPT,\
+from topfarm.easy_drivers import EasyScipyOptimizeDriver, EasySimpleGADriver, EasyRandomSearchDriver, EasyPyOptSparseSNOPT, EasyPyOptSparseIPOPT, \
     EasyIPOPTScipyOptimizeDriver
 from topfarm.plotting import NoPlot
 from topfarm.tests import uta, npt
@@ -79,7 +79,7 @@ except ImportError:
     (EasyScipyOptimizeDriver(tol=1e-3, disp=False), 1e-2),
     (EasyScipyOptimizeDriver(maxiter=14, disp=False), 1e-1),
     (EasyScipyOptimizeDriver(optimizer='COBYLA', tol=1e-3, disp=False), 1e-2),
-    (EasySimpleGADriver(max_gen=10, pop_size=100, bits={'x': [12] * 3, 'y':[12] * 3}, random_state=1), 1e-1),
+    (EasySimpleGADriver(max_gen=10, pop_size=100, bits={'x': [12] * 3, 'y': [12] * 3}, random_state=1), 1e-1),
     (EasyPyOptSparseIPOPT(), 1e-4),
     (EasyPyOptSparseSNOPT(), 1e-4),
     (easyIPOPTScipyOptimizeDriver, 1e-4)
