@@ -66,6 +66,7 @@ class ElNetCost(CostModelComponent):
 
 class XYElPlotComp(XYPlotComp):
     """Plotting component for turbine locations"""
+
     def plot_current_position(self, x, y):
         elnet_layout = mst(x, y)
         indices = np.array(list(elnet_layout.keys())).T

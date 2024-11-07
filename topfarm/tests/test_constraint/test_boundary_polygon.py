@@ -1,11 +1,11 @@
 import numpy as np
-from topfarm.cost_models.dummy import DummyCost, DummyCostPlotComp
-
-from topfarm.plotting import NoPlot, XYPlotComp
+from topfarm.cost_models.dummy import DummyCost
+from topfarm.plotting import NoPlot
 from topfarm.easy_drivers import EasyScipyOptimizeDriver
 from topfarm.constraint_components.boundary import XYBoundaryConstraint, \
     PolygonBoundaryComp, InclusionZone, ExclusionZone, MultiPolygonBoundaryComp
 from topfarm._topfarm import TopFarmProblem
+from topfarm.tests.utils import __assert_equal_unordered
 
 
 def get_tf(initial, optimal, boundary, plot_comp=NoPlot(), boundary_type='polygon'):
@@ -32,7 +32,7 @@ def testPolygon():
 def testPolygonConcave():
     optimal = [(1.5, 1.3), (4, 1)]
     boundary = [(0, 0), (5, 0), (5, 2), (3, 2), (3, 1), (2, 1), (2, 2), (0, 2), (0, 0)]
-    plot_comp = NoPlot()  # DummyCostPlotComp(optimal)
+    plot_comp = NoPlot()
     initial = [(-0, .1), (4, 1.5)][::-1]
     tf = get_tf(initial, optimal, boundary, plot_comp)
     tf.optimize()
@@ -43,7 +43,7 @@ def testPolygonConcave():
 def testPolygonTwoRegionsStartInWrong():
     optimal = [(1, 1), (4, 1)]
     boundary = [(0, 0), (5, 0), (5, 2), (3, 2), (3, 0), (2, 0), (2, 2), (0, 2), (0, 0)]
-    plot_comp = NoPlot()  # DummyCostPlotComp(optimal, delay=.1)
+    plot_comp = NoPlot()
     initial = [(3.5, 1.5), (0.5, 1.5)]
     tf = get_tf(initial, optimal, boundary, plot_comp)
     tf.optimize()
@@ -69,7 +69,7 @@ def testMultiPolygon():
                               [0., 0.]])
 
     bound_dist_ref = np.array([0, 1])
-    plot_comp = NoPlot()  # DummyCostPlotComp(optimal)
+    plot_comp = NoPlot()
     initial = np.asarray([(-0, .1), (4, 1.5)][::-1])
     tf = get_tf(initial, optimal, boundary, plot_comp, boundary_type='multi_polygon')
     tf.evaluate()
@@ -134,20 +134,21 @@ def testDistanceRelaxationPolygons():
              ]
     MPBC = MultiPolygonBoundaryComp(1, zones, relaxation=(0.1, 10))
     (rp1, rp2) = MPBC.relaxed_polygons(7)
-    bp1 = MPBC.get_boundary_properties(rp1)
-    bp2 = MPBC.get_boundary_properties(rp2)
-    np.testing.assert_allclose(bp1[0][0], np.array([[2.3, 1.3],
-                                                    [2.7, 1.3],
-                                                    [2.7, 2.3],
-                                                    [5.3, 2.3],
-                                                    [5.3, -0.3],
-                                                    [-0.3, -0.3],
-                                                    [-0.3, 2.3],
-                                                    [2.3, 2.3]]))
-    np.testing.assert_allclose(bp2[0][0], np.array([[1.45, 1.2],
-                                                    [0.8, 1.2],
-                                                    [0.8, 0.8],
-                                                    [1.45, 0.8]]))
+    bp1 = MPBC.get_boundary_properties(*rp1)
+    bp2 = MPBC.get_boundary_properties(*rp2)
+    # order does not matter
+    __assert_equal_unordered(bp1[0], np.array([[2.3, 1.3],
+                                               [2.7, 1.3],
+                                               [2.7, 2.3],
+                                               [5.3, 2.3],
+                                               [5.3, -0.3],
+                                               [-0.3, -0.3],
+                                               [-0.3, 2.3],
+                                               [2.3, 2.3]]))
+    __assert_equal_unordered(bp2[0], np.array([[1.45, 1.2],
+                                               [0.8, 1.2],
+                                               [0.8, 0.8],
+                                               [1.45, 0.8]]))
 
 
 def testChangingNumberOfTurbines():

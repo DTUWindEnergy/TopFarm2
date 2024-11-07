@@ -109,6 +109,10 @@ if not importlib.util.find_spec("topfarm"):
         for x in module_imports:
             lines.remove(x)
 
+        def no_show(*args, **kwargs):
+            pass
+        plt.show = no_show  # disable plt show that requires the user to close the plot
+
         if len(lines) == 1 and lines[0] == '':
             return
         try:

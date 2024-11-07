@@ -31,7 +31,6 @@ from openmdao.core.constants import _SetupStatus
 import topfarm
 from topfarm.recorders import NestedTopFarmListRecorder, \
     TopFarmListRecorder, split_record_id
-from topfarm.mongo_recorder import MongoRecorder
 from topfarm.plotting import NoPlot
 from topfarm.easy_drivers import EasyScipyOptimizeDriver, EasySimpleGADriver, EasyDriverBase, EasySGDDriver
 from topfarm.utils import smart_start
@@ -42,6 +41,7 @@ from topfarm.cost_models.topfarm_components import ObjectiveComponent, DummyObje
 from topfarm.cost_models.cost_model_wrappers import CostModelComponent
 # from topfarm.constraint_components.post_constraint import PostConstraint
 from topfarm.constraint_components import Constraint
+from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
 
 
 class TopFarmBaseGroup(Group):
@@ -657,8 +657,7 @@ def main():
         optimal = np.array([[2.5, -3], [6, -7], [4.5, -3]])  # optimal turbine layouts
         boundary = np.array([(0, 0), (6, 0), (6, -10), (0, -10)])  # turbine boundaries
         desired = np.array([[3, -3], [7, -7], [4, -3]])  # desired turbine layouts
-        drivers = [EasySimpleGADriver(max_gen=10, pop_size=100, bits={'x': [12] * 3, 'y': [12] * 3}, random_state=1),
-                   EasyScipyOptimizeDriver()]
+        drivers = [EasyScipyOptimizeDriver()]
         plot_comp = DummyCostPlotComp(optimal)
         tf = TopFarmProblem(
             design_vars=dict(zip('xy', initial.T)),
@@ -666,7 +665,7 @@ def main():
             constraints=[XYBoundaryConstraint(boundary),
                          SpacingConstraint(2)
                          ],
-            driver=drivers[1],
+            driver=drivers[0],
             plot_comp=plot_comp
         )
         cost, _, recorder = tf.optimize()

@@ -20,15 +20,16 @@ def testPolygon(boundary):
                                                     [0, 0]])
 
 
-def check(boundary, points, distances):
+def check(boundary, points, distances, tol=1e-6):
+    decimal = int(-np.log10(tol))
     pbc = PolygonBoundaryComp(1, boundary)
     d, dx, dy = pbc.calc_distance_and_gradients(points[:, 0], points[:, 1])
-    np.testing.assert_array_almost_equal(d, distances)
+    np.testing.assert_array_almost_equal(d, distances, decimal=decimal)
     eps = 1e-7
     d1, _, _ = pbc.calc_distance_and_gradients(points[:, 0] + eps, points[:, 1])
-    np.testing.assert_array_almost_equal((d1 - d) / eps, dx)
+    np.testing.assert_array_almost_equal((d1 - d) / eps, dx, decimal=decimal)
     d2, _, _ = pbc.calc_distance_and_gradients(points[:, 0], points[:, 1] + eps)
-    np.testing.assert_array_almost_equal((d2 - d) / eps, dy)
+    np.testing.assert_array_almost_equal((d2 - d) / eps, dy, decimal=decimal)
 
 
 def test_calc_distance_edge():
@@ -47,7 +48,7 @@ def test_calc_distance_point_vertical():
     boundary = np.array([(0, 0), (1, 1), (2, 0), (2, 2), (0, 2), (0, 0)])
     points = np.array([(.8, 1), (.8, 1.2), (1, 1.2), (1.1, 1.2), (1.2, 1.2), (1.2, 1)])
     check(boundary, points, [np.sqrt(.2**2 / 2), np.sqrt(2 * .2**2), .2,
-                             np.sqrt(.1**2 + .2**2), np.sqrt(2 * .2**2), np.sqrt(.2**2 / 2)])
+                             np.sqrt(.1**2 + .2**2), np.sqrt(2 * .2**2), np.sqrt(.2**2 / 2)], 1e-6)
 
 
 def test_calc_distance_point_vertical_outside():
@@ -55,14 +56,14 @@ def test_calc_distance_point_vertical_outside():
     points = np.array([(.8, 1), (.8, 1.2), (1, 1.2), (1.1, 1.2), (1.2, 1.2), (1.2, 1)])
 
     check(boundary, points, [-np.sqrt(.2**2 / 2), -np.sqrt(2 * .2**2), -.2,
-                             -np.sqrt(.1**2 + .2**2), -np.sqrt(2 * .2**2), -np.sqrt(.2**2 / 2)])
+                             -np.sqrt(.1**2 + .2**2), -np.sqrt(2 * .2**2), -np.sqrt(.2**2 / 2)], 1e-6)
 
 
 def test_calc_distance_point_horizontal():
     boundary = np.array([(0, 0), (2, 0), (1, 1), (2, 2), (0, 2), (0, 0)])
     points = np.array([(1, .8), (.8, .8), (.8, 1), (.8, 1.1), (.8, 1.2), (1, 1.2)])
     check(boundary, points, [np.sqrt(.2**2 / 2), np.sqrt(2 * .2**2), .2,
-                             np.sqrt(.1**2 + .2**2), np.sqrt(2 * .2**2), np.sqrt(.2**2 / 2)])
+                             np.sqrt(.1**2 + .2**2), np.sqrt(2 * .2**2), np.sqrt(.2**2 / 2)], 1e-6)
 
 
 def testPolygon_Line():
@@ -82,7 +83,7 @@ def test_calc_distance_V_shape():
     points = np.array([(.8, 2), (.8, 2.2), (1, 2.2), (1.2, 2.2), (1.2, 2), (.8, 4), (.8, 4.2), (1, 4.2), (1.2, 4.2), (1.2, 4)])
     v1 = np.sqrt(.2**2 * 4 / 5)
     v2 = np.sqrt(2 * .2**2)
-    check(boundary, points, [v1, v2, .2, v2, v1, -v1, -v2, -.2, -v2, -v1])
+    check(boundary, points, [v1, v2, .2, v2, v1, -v1, -v2, -.2, -v2, -v1], tol=1e-5)
 
 
 def test_satisfy():

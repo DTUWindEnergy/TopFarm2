@@ -116,3 +116,17 @@ venv.bak/
 __pycache__
 *.egg-info
 /topfarm/use_cases
+
+# pixi environments
+.pixi
+*.egg-info
+
+reports/
+recordings/
+*html
+**.out
+**.mp4
+examples/scripts/figures/
+note.txt
+topfarm/_version.py
+.vscode/

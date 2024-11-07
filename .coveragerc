@@ -1,7 +1,0 @@
-[run]
-omit = 
-	*/Colonel/*
-	topfarm/tests/*
-	topfarm/workshop.py
-[report]
-fail_under = 90

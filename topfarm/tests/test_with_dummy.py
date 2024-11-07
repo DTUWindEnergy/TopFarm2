@@ -26,9 +26,6 @@ def test_optimize_3tb():
 
 
 def testDummyCostPlotComp():
-    if os.name == 'posix' and "DISPLAY" not in os.environ:
-        pytest.xfail("No display")
-
     tf = xy3tb.get_tf(plot_comp=DummyCostPlotComp(xy3tb.desired))
     tf.evaluate()
     tf.optimize()

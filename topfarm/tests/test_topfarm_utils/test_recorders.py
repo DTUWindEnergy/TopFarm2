@@ -20,7 +20,6 @@ from topfarm.constraint_components.boundary import XYBoundaryConstraint
 from topfarm.constraint_components.spacing import SpacingConstraint
 from topfarm._topfarm import TopFarmProblem
 from topfarm.tests.test_fuga.test_pyfuga import get_fuga
-from topfarm.mongo_recorder import MongoRecorder
 import subprocess
 
 
@@ -284,9 +283,11 @@ def test_TopFarmListRecorder_save(tf_generator, rec_id, sn, fn):
     remove_file()
 
 
+@pytest.mark.skip(reason="mongodb support is being dropped")
 @pytest.mark.parametrize('dn, ci, cu', [('data22', 'test', True), ])
 def test_MongoRecorder(tf_generator, dn, ci, cu):
-    subprocess.Popen(['mongod'])
-    tf = tf_generator(recorder=MongoRecorder(db_name=dn, case_id=ci, clean_up=cu))
-    _, _, recorder = tf.optimize()
-    recorder.animate_turbineXY(duration=10, tail=5, cost='cost', anim_options={'interval': 20, 'blit': True})
+    # subprocess.Popen(['mongod'])
+    # tf = tf_generator(recorder=MongoRecorder(db_name=dn, case_id=ci, clean_up=cu))
+    # _, _, recorder = tf.optimize()
+    # recorder.animate_turbineXY(duration=10, tail=5, cost='cost', anim_options={'interval': 20, 'blit': True})
+    pass

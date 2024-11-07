@@ -1,12 +1,12 @@
 import numpy as np
-from topfarm.cost_models.dummy import DummyCost, DummyCostPlotComp
-
+from topfarm.cost_models.dummy import DummyCost
 from topfarm.plotting import NoPlot
-from openmdao.drivers.genetic_algorithm_driver import SimpleGADriver
 from topfarm.tests import npt
 from topfarm.constraint_components.boundary import XYBoundaryConstraint
 from topfarm.easy_drivers import EasyScipyOptimizeDriver
 from topfarm import TopFarmProblem
+from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
+from openmdao.drivers.genetic_algorithm_driver import SimpleGADriver
 
 
 initial = np.array([[0, 0, 0], [6, 0, 0], [6, -10, 0]])  # initial turbine layouts
@@ -75,10 +75,10 @@ def test_setup_as_penalty_xy():
 
 def test_setup_as_penalty_none():
     driver = SimpleGADriver()
-    tf = TopFarmProblem(
-        dict(zip('xy', initial.T)),
-        DummyCost(desired),
-        driver=driver)
+    design_vars = dict(zip("xy", initial.T))
+    for k, v in design_vars.items():
+        design_vars[k] = (v, 0, 10)
+    tf = TopFarmProblem(design_vars, DummyCost(desired), driver=driver)
 
     # check that it does not fail if xy and z is not specified
     assert tf.evaluate()[0] == 121

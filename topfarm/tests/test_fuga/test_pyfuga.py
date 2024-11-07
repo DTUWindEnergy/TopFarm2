@@ -5,7 +5,7 @@ import time
 import pytest
 
 import numpy as np
-from topfarm import TopFarm
+import topfarm
 from topfarm.cost_models import fuga
 from topfarm.tests import uta
 from topfarm.plotting import NoPlot

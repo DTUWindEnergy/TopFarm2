@@ -3,7 +3,6 @@
 Installation Guide
 ===========================
 
-
 Pre-Installation
 ----------------------------
 Before you can install the software, you must first have a working Python distribution with a package manager. For all platforms we recommend that you download and install Anaconda - a professional grade, full-blown scientific Python distribution.
@@ -22,9 +21,8 @@ To set up Anaconda, you should:
 
 It is recommended to create a new environment to install TOPFARM if you have other Python programs. This ensures that the dependencies for the different packages do not conflict with one another. In the command prompt, create and active an environment with::
 
-   conda create --name topfarm python=3.8
-   activate topfarm
-
+   conda create --name topfarm "python<3.12"
+   conda activate topfarm
 
 Simple Installation
 ----------------------------
@@ -33,14 +31,12 @@ TOPFARM’s base code is open-sourced and freely available on `GitLab
 <https://gitlab.windenergy.dtu.dk/TOPFARM/TopFarm2>`_ (MIT license).
 
 * Install from PyPi.org (official releases)::
-  
+
     pip install topfarm
 
-* Install from GitLab  (includes latest updates)::
-  
-    pip install git+https://gitlab.windenergy.dtu.dk/TOPFARM/TopFarm2.git
-        
+* Install from GitLab  (includes latest updates, use with caution as it may contain bugs)::
 
+    pip install git+https://gitlab.windenergy.dtu.dk/TOPFARM/TopFarm2.git
 
 Developer Installation
 -------------------------------

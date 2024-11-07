@@ -1,49 +1,51 @@
-# ===== DEFINE DEFAULT DOCKER IMAGE =====
-image: dtuwindenergy/topfarm2:latest
+# [1] GitLab page: https://docs.gitlab.com/ee/ci/yaml/#pages
+# [2] CI stages: https://docs.gitlab.com/ee/ci/yaml/#stages
+# [3] Tags: https://docs.gitlab.com/ee/ci/yaml/#tags
 
+.mr_or_topfarm_group_rules: &mr_or_topfarm_group_rules
+  rules:
+    - if: '$CI_PROJECT_NAMESPACE == "TOPFARM" || $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH'
+      when: on_success
+    - when: never
 
-# ===== TEST TOPFARM =====
-test_topfarm:  # name the job what we like
-  stage:  # build, test, deploy defined by default [2]
+# ===== CHECK FORMATTING =====
+test_topfarm_pep8: # name the job what we like
+  image: ghcr.io/prefix-dev/pixi:latest
+  stage: # build, test, deploy defined by default [2]
     test
   script:
-  - pip install --upgrade git+https://gitlab.windenergy.dtu.dk/TOPFARM/PyWake.git
-  - pip install -e .
-  - mkdir -p /data/db
-  - py.test
-  tags:  # only runners with this tag can do the job [3]
-  - linux
+    - pixi run -e default pycodestyle --ignore=E501,W504 --exclude="*Colonel*" topfarm
+  tags: # only runners with this tag can do the job [3]
+    - linux
+  <<: *mr_or_topfarm_group_rules
 
-  
 # ===== TEST TOPFARM =====
-test_topfarm_pep8:  # name the job what we like
-  stage:  # build, test, deploy defined by default [2]
+test_topfarm:
+  image: ghcr.io/prefix-dev/pixi:latest
+  stage: # build, test, deploy defined by default [2]
     test
   script:
-  - pip install -e .
-  - pycodestyle --ignore=E501,W504 --exclude="*Colonel*" topfarm
-  tags:  # only runners with this tag can do the job [3]
-  - linux
+    - pixi run pixi run test-all
+  tags: # only runners with this tag can do the job [3]
+    - linux
+  <<: *mr_or_topfarm_group_rules
 
-# ===== TEST TOPFARM on Windows =====
-test_topfarm_windows:  # name the job what we like
+# ===== TEST TOPFARM ON WINDOWS =====
+test_topfarm_windows: # name the job what we like
   variables:
     GIT_SUBMODULE_STRATEGY: normal
-  stage:  # build, test, deploy defined by default [2]
+  stage: # build, test, deploy defined by default [2]
     test
   coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
-  script:  # runs on windows machine due to tag below
-  - conda init powershell
-  - "if (test-path $PROFILE.CurrentUserAllHosts) { & $PROFILE.CurrentUserAllHosts}"
-  - conda activate tf231
-  - pip install --upgrade git+https://gitlab.windenergy.dtu.dk/TOPFARM/PyWake.git --no-deps
-  - pip install -e .  --no-deps
-  - python -m pytest --cov-report term-missing:skip-covered --cov=topfarm --cov-config .coveragerc --ignore=topfarm/cost_models/fuga/Colonel
-  tags:  # tag for shared runner on windows machine
-  - ANMH_old
+  script: # runs on windows machine due to tag below
+    - setx PIXI_CACHE_DIR D:\.pixi_cache
+    - $env:PIXI_CACHE_DIR = [System.Environment]::GetEnvironmentVariable("PIXI_CACHE_DIR","User") # update PIXI_CACHE_DIR in current shell
+    - C:\Users\ernim\.pixi\bin\pixi.exe run test-all
+  tags: # tag for shared runner on windows machine
+    - ANMH_old
+  <<: *mr_or_topfarm_group_rules
 
-
-# ===== Trigger TriggerHub pipeline =====
+# ===== TRIGGER TRIGGERHUB PIPELINE =====
 trigger_hub_test:
   stage: test
   variables:
@@ -54,49 +56,43 @@ trigger_hub_test:
   only:
     - master
 
-
-# ===== BUILD DOCS AND PUSH TO PUBLIC WEBSITE =====
-pages:  # "pages" is a job specifically for GitLab pages [1]
-  stage:  # build, test, deploy defined by default [2]
+# ===== TEST TOPFARM DEPLOY =====
+test_topfarm_deploy:
+  image: ghcr.io/prefix-dev/pixi:latest
+  stage: # build, test, deploy defined by default [2]
     deploy
-  script:  # use sphinx to build docs, move to public page
-  - pip install --upgrade git+https://gitlab.windenergy.dtu.dk/TOPFARM/PyWake.git
-  - pip install -e .
-  - apt-get -y install make pandoc
-  - pip install pypandoc
-  - pip install sphinx --upgrade
-  - pip install nbsphinx --upgrade
-  - pip install nbconvert --upgrade
-  - pip install sphinx_rtd_theme
-  - cd docs; make html
-  - cd ../; mv docs/build/html public/
-  artifacts:  # required for GitLab pages [1]
-    paths:
-    - public
-  only:  # only run for these branches
-  - master
-  - /^test_doc.*/ 
-
-  tags:  # only runners with this tag can do the job [3]
-  - linux
+  script:
+    - pixi run -e default hatch build
+    - pixi run -e default hatch publish -r test -u $HATCH_INDEX_USER -a $HATCH_INDEX_AUTH
+  tags: # only runners with this tag can do the job [3]
+    - linux
+  <<: *mr_or_topfarm_group_rules
 
 # ===== BUILD WHEELS AND UPLOAD TO PYPI =====
-pypi:
-  stage:  
-    deploy
+pypi_deploy:
+  image: ghcr.io/prefix-dev/pixi:latest
+  stage: deploy
+  script:
+    - pixi run -e default hatch build
+    - pixi run -e default hatch publish -u $TWINE_USERNAME -a $TWINE_PASSWORD
+  tags:
+    - linux
   only:
     - tags
-#    - master
-  script:
-    - python3 -m pip install -U setuptools wheel
-    - python3 setup.py sdist bdist_wheel
-    - python3 -m pip install -U twine
-    # - twine upload --repository-url https://test.pypi.org/legacy/ dist/* -u $TWINE_USERNAME -p $TWINE_PASSWORD # for testing purposes
-    - twine upload dist/* -u $TWINE_USERNAME -p $TWINE_PASSWORD
-  tags:  
+
+# ===== BUILD DOCS AND PUSH TO PUBLIC WEBSITE =====
+pages: # "pages" is a job specifically for GitLab pages [1]
+  image: ghcr.io/prefix-dev/pixi:latest
+  stage: # build, test, deploy defined by default [2]
+    deploy
+  script: # use sphinx to build docs, move to public page
+    - pixi run -e default "cd docs; make html"
+    - mv docs/build/html public/
+  artifacts: # required for GitLab pages [1]
+    paths:
+      - public
+  only:
+    - master
+    - /^test_doc.*/
+  tags: # only runners with this tag can do the job [3]
     - linux
-
-
-# [1] GitLab page: https://docs.gitlab.com/ee/ci/yaml/#pages
-# [2] CI stages: https://docs.gitlab.com/ee/ci/yaml/#stages
-# [3] Tags: https://docs.gitlab.com/ee/ci/yaml/#tags

@@ -18,7 +18,7 @@ capacit = {"max_capacity": 5000, "rated_power_array": [3000, 1000, 500]}
 
 def get_tf(plot=False, **kwargs):
     k = {'cost_comp': DummyCost(desired[:, :2], [topfarm.x_key, topfarm.y_key]),
-         'design_vars': {topfarm.x_key: initial[:, 0], topfarm.y_key: initial[:, 1]},
+         'design_vars': {topfarm.x_key: (initial[:, 0], -1e4, 1e4), topfarm.y_key: (initial[:, 1], -1e4, 1e4)},
          'driver': EasyScipyOptimizeDriver(disp=False, tol=1e-8),
          'plot_comp': NoPlot(),
          'constraints': [SpacingConstraint(2), XYBoundaryConstraint(boundary), CapacityConstraint(**capacit)]}

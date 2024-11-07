@@ -56,7 +56,7 @@ def get_iea37_cost(n_wt=9):
 def main():
     if __name__ == '__main__':
         from topfarm import TopFarmProblem
-        from topfarm import EasyRandomSearchDriver
+        from topfarm.easy_drivers import EasyRandomSearchDriver
         from topfarm.drivers.random_search_driver import RandomizeTurbinePosition_Circle
         from topfarm.plotting import XYPlotComp
         n_wt = 16

@@ -150,7 +150,7 @@ class TopFarmListRecorder(SqliteRecorder):
                 ln[i].set_data(x[max(0, frame - tail):frame + 1, i], y[max(0, frame - tail):frame + 1, i])
                 if plot_initial:
                     ln[i + n_wt].set_data(np.r_[x[0, i], x[frame, i]], np.r_[y[0, i], y[frame, i]])
-                ln[i + 2 * n_wt].set_data(x[frame, i], y[frame, i])
+                ln[i + 2 * n_wt].set_data([x[frame, i]], [y[frame, i]])
 
             return ln
 

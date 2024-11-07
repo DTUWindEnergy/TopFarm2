@@ -19,16 +19,12 @@ notebooks = get_notebooks()
 @pytest.mark.parametrize("notebook", notebooks, ids=[os.path.basename(nb.filename) for nb in notebooks])
 def test_notebooks(notebook):
     if os.path.basename(notebook.filename) in [
-            # 'bathymetry.ipynb',  # ok
-            # 'constraints.ipynb',  # ok
-            # 'cost_models.ipynb',  # ok
-            # 'drivers.ipynb',  #  ok
-            # 'exclusion_zones.ipynb',  # ok
-            'layout_and_loads.ipynb',  # gives error from tensorflow on synnefo machine
-            # 'problems.ipynb',  # ok
-            'roads_and_cables.ipynb',  # fails
-            'wake_steering_and_loads.ipynb',  # ok but many warnings from tensorflow
-            'wind_farm_cluster.ipynb', ]:  # too long runtime
+        "layout_and_loads.ipynb",  # gives error from tensorflow on synnefo machine
+        "roads_and_cables.ipynb",  # fails
+        "wake_steering_and_loads.ipynb",  # ok but many warnings from tensorflow
+        "wind_farm_cluster.ipynb",  # too long runtime
+        "MongoDB_recorder.ipynb",  # deprecated
+    ]:
         pytest.xfail("Notebook, %s, has known issues" % notebook)
     import matplotlib.pyplot as plt
 

@@ -18,6 +18,10 @@ def get_main_modules():
             warnings.simplefilter("ignore")
             if 'Colonel' in modname:
                 continue
+            if "deprecated" in modname:
+                continue
+            if "test" in modname:
+                continue
             m = importlib.import_module(modname)
 
         if 'main' in dir(m):
@@ -31,10 +35,6 @@ def print_main_modules():
 
 @pytest.mark.parametrize("module", get_main_modules())
 def test_main(module):
-    # check that all main module examples run without errors
-    if os.name == 'posix' and "DISPLAY" not in os.environ:
-        pytest.xfail("No display")
-
     def no_show(*args, **kwargs):
         pass
     plt.show = no_show  # disable plt show that requires the user to close the plot

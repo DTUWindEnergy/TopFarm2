@@ -203,7 +203,8 @@ class MongoRecorder(CaseRecorder):
         self.driver_iteration_dict = {}
 
         # Generating a random id
-        random.seed(datetime.now())
+        import time
+        random.seed(int(time.time()))
         self.run_id = int(random.random() * 10000000)
 
         if with_mpi:

@@ -203,6 +203,7 @@ class CostModelComponent(ExplicitComponent):
 
 class AEPCostModelComponent(CostModelComponent):
     """Wrapper for pure-Python cost functions"""
+
     def __init__(self, input_keys, n_wt, cost_function, cost_gradient_function=None,
                  output_unit="", additional_input=[], additional_output=[], max_eval=None,
                  output_key="AEP", **kwargs):
@@ -243,6 +244,7 @@ class AEPCostModelComponent(CostModelComponent):
 
 class AEPMaxLoadCostModelComponent(CostModelComponent):
     """Wrapper for pure-Python cost functions"""
+
     def __init__(self, input_keys, n_wt, aep_load_function, max_loads,
                  aep_load_gradient=None, output_keys=["AEP", 'loads'], step={},
                  maximize=True, **kwargs):

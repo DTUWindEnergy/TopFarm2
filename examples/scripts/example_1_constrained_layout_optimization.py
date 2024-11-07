@@ -94,6 +94,7 @@ def main():
 
             # save the png
             folder, file = os.path.split(__file__)
+            os.makedirs(folder + "/figures/", exist_ok=True)
             fig.savefig(folder + "/figures/" + file.replace('.py', '.png'))
 
 #        except RuntimeError:

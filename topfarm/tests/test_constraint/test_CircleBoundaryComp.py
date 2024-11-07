@@ -64,8 +64,6 @@ def test_TopFarmProblem_with_cirleboundary_constraint_and_limits():
 
 
 def test_TopFarmProblem_with_cirleboundary_plot():
-    if os.name == 'posix' and "DISPLAY" not in os.environ:
-        pytest.xfail("No display")
     optimal = np.array([(0, 0)])
     desvar = dict(zip('xy', optimal.T))
     plot_comp = PlotComp()

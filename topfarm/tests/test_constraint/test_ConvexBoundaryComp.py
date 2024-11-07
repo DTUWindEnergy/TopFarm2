@@ -1,14 +1,11 @@
 import numpy as np
-from topfarm import TopFarm
 import pytest
 from topfarm.tests import npt
-from openmdao.drivers.genetic_algorithm_driver import SimpleGADriver
+from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
 from topfarm.constraint_components.boundary import XYBoundaryConstraint, \
     ConvexBoundaryComp
 from topfarm._topfarm import TopFarmProblem
-
-from topfarm.cost_models.dummy import DummyCost, DummyCostPlotComp
-from topfarm.easy_drivers import EasyScipyOptimizeDriver
+from topfarm.cost_models.dummy import DummyCost
 
 
 def testSquare():
@@ -52,9 +49,11 @@ def test_z_boundary():
     tf = TopFarmProblem(
         {'z': (optimal, 70, 90)},
         DummyCost(optimal, 'z'),
-        driver=SimpleGADriver())
+        driver=pyOptSparseDriver(**{"optimizer": "NSGA2"})
+    )
 
     desvars = tf.driver._designvars
+    print(desvars)
     np.testing.assert_array_equal(desvars['indeps.z']['lower'], [70, 70])
     np.testing.assert_array_equal(desvars['indeps.z']['upper'], [90, 90])
 
@@ -69,7 +68,7 @@ def test_xyz_boundary():
         desvar,
         DummyCost(optimal, 'xyz'),
         constraints=[b],
-        driver=SimpleGADriver())
+        driver=pyOptSparseDriver(**{"optimizer": "NSGA2"}))
 
     np.testing.assert_array_equal(b.constraintComponent.xy_boundary, [[0, 0],
                                                                       [1, 0],

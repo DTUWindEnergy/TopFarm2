@@ -58,6 +58,7 @@ def main():
         # save the figure
         if plot:
             folder, file = os.path.split(__file__)
+            os.makedirs(folder + "/figures/", exist_ok=True)
             plt.savefig(folder + "/figures/" + file.replace('.py', '.png'))
             plt.show()
 

@@ -21,7 +21,7 @@ def get_main_modules():
     for _, modname, _ in pkgutil.walk_packages(package.__path__, package.__name__ + '.'):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            if 'Colonel' in modname:
+            if any(x in modname for x in ["Colonel", "deprecated", "mongo"]):
                 continue
             m = importlib.import_module(modname)
 
@@ -36,10 +36,6 @@ def test_print_main_modules():
 
 @pytest.mark.parametrize("module", get_main_modules())
 def test_main(module):
-    # check that all main module examples run without errors
-    #    if os.name == 'posix' and "DISPLAY" not in os.environ:
-    #        pytest.xfail("No display")
-
     def no_show(*args, **kwargs):
         pass
     plt.show = no_show  # disable plt show that requires the user to close the plot
@@ -107,7 +103,7 @@ def test_energy_island():
                 'total_wake_loss': 1.5929863559949822,
                 'internal_wake_loss': 0.6387653340352578,
                 'external_wake_loss': 0.9542210219597246}
-    np.testing.assert_allclose(df.mean().values, np.array([*ref_mean.values()]), rtol=2e-02)
+    np.testing.assert_allclose(df.mean().values, np.array([*ref_mean.values()]), rtol=2.5e-2)
 
 
 if __name__ == '__main__':

@@ -16,6 +16,10 @@ from openmdao.test_suite.components.three_bar_truss import ThreeBarTruss
 # from openmdao.utils.assert_utils import assert_rel_error
 from openmdao.utils.mpi import MPI
 
+# # skip all tests in this file; The driver is deprecated
+# import pytest
+# pytestmark = pytest.mark.skip
+
 
 class TestSimpleGA(unittest.TestCase):
 

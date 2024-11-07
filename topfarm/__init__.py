@@ -1,5 +1,4 @@
 from ._topfarm import *
-from .deprectated_topfarm_problems import *
 import pkg_resources
 
 plugins = {

@@ -45,52 +45,56 @@ class EasyScipyOptimizeDriver(ScipyOptimizeDriver, EasyDriverBase):
         ScipyOptimizeDriver.__init__(self)
         self.auto_scale = auto_scale
 
-        def fmt_option(v):
-            if isinstance(v, str):
-                return v.encode()
-            else:
-                return v
+        if optimizer in ["IPOPT", "SGD"] or optimizer not in ["COBYLA", "SLSQP"]:
+            raise RuntimeError(
+                f"Optimizer '{optimizer}' is not supported. "
+                "For IPOPT use EasyPyOptSparseIPOPT, "
+                "for SGD use EasySGDDriver."
+            )
 
-        if optimizer == 'IPOPT':
-            try:
-                from cyipopt.scipy_interface import minimize_ipopt
-            except ImportError:
-                raise ImportError("""Cannot import ipopt wrapper. Please install cyipopt, e.g. via conda
-Windows: conda install -c pycalphad cyipopt
-Linux/OSX: conda install -c conda-forge cyipopt
-                """)
+#         # TODO: remove
+#         def fmt_option(v):
+#             if isinstance(v, str):
+#                 return v.encode()
+#             else:
+#                 return v
+#         if optimizer == 'IPOPT': # pragma: no cover
+#             try:
+#                 from cyipopt.scipy_interface import minimize_ipopt
+#             except ImportError:
+#                 raise ImportError("""Cannot import ipopt wrapper. Please install cyipopt, e.g. via conda
+# Windows: conda install -c pycalphad cyipopt
+# Linux/OSX: conda install -c conda-forge cyipopt
+#                 """)
+#             ipopt_options = {k: fmt_option(v) for k, v in kwargs.items()}
+#             def minimize_ipopt_wrapper(*args, maxiter=200, disp=True, **kwargs):
+#                 from cyipopt.scipy_interface import minimize_ipopt
+#                 ipopt_options.update({'max_iter': self.max_iter or maxiter, 'print_level': int(disp)})
+#                 return minimize_ipopt(*args, options=ipopt_options, **kwargs)
+#             kwargs = {}
+#             from openmdao.drivers import scipy_optimizer
+#             for lst in [scipy_optimizer._optimizers, scipy_optimizer._gradient_optimizers, scipy_optimizer._bounds_optimizers,
+#                         scipy_optimizer._all_optimizers, scipy_optimizer._constraint_optimizers, scipy_optimizer._constraint_grad_optimizers]:
+#                 lst.add(minimize_ipopt_wrapper)
+#             optimizer = minimize_ipopt_wrapper
+#         if optimizer == 'SGD': # pragma: no cover
+#             from topfarm.drivers.SGD import SGD
+#             from openmdao.drivers import scipy_optimizer
+#             from scipy.optimize.optimize import OptimizeResult
+#             sgd_options = {k: fmt_option(v) for k, v in kwargs.items()}
+#             sgd_opt = SGD(**kwargs)
 
-            ipopt_options = {k: fmt_option(v) for k, v in kwargs.items()}
-
-            def minimize_ipopt_wrapper(*args, maxiter=200, disp=True, **kwargs):
-                from cyipopt.scipy_interface import minimize_ipopt
-                ipopt_options.update({'max_iter': self.max_iter or maxiter, 'print_level': int(disp)})
-                return minimize_ipopt(*args, options=ipopt_options, **kwargs)
-            kwargs = {}
-            from openmdao.drivers import scipy_optimizer
-            for lst in [scipy_optimizer._optimizers, scipy_optimizer._gradient_optimizers, scipy_optimizer._bounds_optimizers,
-                        scipy_optimizer._all_optimizers, scipy_optimizer._constraint_optimizers, scipy_optimizer._constraint_grad_optimizers]:
-                lst.add(minimize_ipopt_wrapper)
-            optimizer = minimize_ipopt_wrapper
-
-        if optimizer == 'SGD':
-            from topfarm.drivers.SGD import SGD
-            from openmdao.drivers import scipy_optimizer
-            from scipy.optimize.optimize import OptimizeResult
-            sgd_options = {k: fmt_option(v) for k, v in kwargs.items()}
-            sgd_opt = SGD(**kwargs)
-
-            def minimize_sgd_wrapper(*args, maxiter=200, disp=True, **kwargs):
-                sgd_options.update({'max_iter': self.max_iter or maxiter, 'print_level': int(disp)})
-                s = sgd_opt.run(*args, options=sgd_options, **kwargs)
-                return OptimizeResult(x=s, fun=args[0](s), jac=kwargs['jac'](s), nit=int(sgd_opt.T),
-                                      nfev=None, njev=None, status=1,
-                                      message='hello world!', success=1)
-            kwargs = {}
-            for lst in [scipy_optimizer._optimizers, scipy_optimizer._gradient_optimizers, scipy_optimizer._bounds_optimizers,
-                        scipy_optimizer._all_optimizers, scipy_optimizer._constraint_optimizers, scipy_optimizer._constraint_grad_optimizers]:
-                lst.add(minimize_sgd_wrapper)
-            optimizer = minimize_sgd_wrapper
+#             def minimize_sgd_wrapper(*args, maxiter=200, disp=True, **kwargs):
+#                 sgd_options.update({'max_iter': self.max_iter or maxiter, 'print_level': int(disp)})
+#                 s = sgd_opt.run(*args, options=sgd_options, **kwargs)
+#                 return OptimizeResult(x=s, fun=args[0](s), jac=kwargs['jac'](s), nit=int(sgd_opt.T),
+#                                       nfev=None, njev=None, status=1,
+#                                       message='hello world!', success=1)
+#             kwargs = {}
+#             for lst in [scipy_optimizer._optimizers, scipy_optimizer._gradient_optimizers, scipy_optimizer._bounds_optimizers,
+#                         scipy_optimizer._all_optimizers, scipy_optimizer._constraint_optimizers, scipy_optimizer._constraint_grad_optimizers]:
+#                 lst.add(minimize_sgd_wrapper)
+#             optimizer = minimize_sgd_wrapper
 
         self.options.update({'optimizer': optimizer, 'maxiter': self.max_iter or maxiter, 'tol': tol, 'disp': disp})
         if kwargs:
@@ -133,7 +137,7 @@ Linux/OSX: conda install -c conda-forge cyipopt
         return "ScipyOptimize_" + str(self.options['optimizer'])
 
 
-class EasyIPOPTScipyOptimizeDriver(EasyScipyOptimizeDriver):
+class EasyIPOPTScipyOptimizeDriver(EasyScipyOptimizeDriver):  # pragma: no cover
     def __init__(self, maxiter=200, tol=1e-8, disp=True,
                  max_cpu_time=1e6,  # : Maximum number of CPU seconds.
                  # A limit on CPU seconds that Ipopt can use to solve one problem. If
@@ -161,6 +165,7 @@ class EasyIPOPTScipyOptimizeDriver(EasyScipyOptimizeDriver):
                  # The argument type must be correct (str, float or int)
                  **kwargs
                  ):
+        raise RuntimeError("Deprecated")
         EasyScipyOptimizeDriver.__init__(self, optimizer='IPOPT', maxiter=self.max_iter or maxiter, tol=tol, disp=disp,
                                          max_cpu_time=float(max_cpu_time),
                                          mu_strategy=mu_strategy,
@@ -168,33 +173,38 @@ class EasyIPOPTScipyOptimizeDriver(EasyScipyOptimizeDriver):
                                          ** kwargs)
 
 
-try:
-    class PyOptSparseMissingDriver(object):
-        options = {}
+class PyOptSparseMissingDriver(object):
+    options = {}
 
+
+try:
     from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
-#     Not working:
-#     capi_return is NULL
-#     Call-back cb_slfunc_in_slsqp__user__routines failed.
-#
-#     class EasyPyOptSparseSLSQP(pyOptSparseDriver):
-#         def __init__(self, maxit=200, acc=1e-6):
-#             pyOptSparseDriver.__init__(self)
-#             self.options.update({'optimizer': 'SLSQP'})
-#             self.opt_settings.update({'MAXIT': maxit, 'ACC': acc})
+    #     Not working:
+    #     capi_return is NULL
+    #     Call-back cb_slfunc_in_slsqp__user__routines failed.
+    #     class EasyPyOptSparseSLSQP(pyOptSparseDriver):
+    #         def __init__(self, maxit=200, acc=1e-6):
+    #             pyOptSparseDriver.__init__(self)
+    #             self.options.update({'optimizer': 'SLSQP'})
+    #             self.opt_settings.update({'MAXIT': maxit, 'ACC': acc})
 
     class EasyPyOptSparseIPOPT(pyOptSparseDriver):
         def __init__(self, max_iter=200):
             pyOptSparseDriver.__init__(self)
             self.options.update({'optimizer': 'IPOPT'})
-            self.opt_settings.update({'linear_solver': 'ma27', 'max_iter': max_iter,
-                                      'start_with_resto': 'yes',
-                                      'expect_infeasible_problem': 'yes'})
+            self.opt_settings.update(
+                {"max_iter": max_iter, "expect_infeasible_problem": "yes"}
+            )
 
     from pyoptsparse.pyIPOPT.pyIPOPT import pyipoptcore
     if pyipoptcore is None:
         setattr(sys.modules[__name__], 'EasyPyOptSparseIPOPT', PyOptSparseMissingDriver)
+except (ModuleNotFoundError, Exception) as e:
+    for n in ["EasyPyOptSparseSNOPT"]:
+        setattr(sys.modules[__name__], n, PyOptSparseMissingDriver)
 
+
+try:
     # Test if the SNOPT optimizer is available in the installation. This gives an exception even if pyOptSparseDriver is successfully instantiated with 'SNOPT'
     _tmp = __import__('pyoptsparse', globals(), locals(), ['SNOPT'], 0)
     getattr(_tmp, 'SNOPT')()
@@ -228,10 +238,8 @@ try:
                 l, u = desvar_values[1], desvar_values[2]
                 kwargs = {'ref0': ref0, 'ref': ref1, 'lower': l, 'upper': u}
             return kwargs
-
-
-except (ModuleNotFoundError, Exception):
-    for n in ['EasyPyOptSparseSLSQP', 'EasyPyOptSparseIPOPT', 'EasyPyOptSparseSNOPT']:
+except (ModuleNotFoundError, Exception) as e:
+    for n in ["EasyPyOptSparseSNOPT"]:
         setattr(sys.modules[__name__], n, PyOptSparseMissingDriver)
 
 

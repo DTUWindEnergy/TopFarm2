@@ -19,7 +19,8 @@ from py_wake.wind_farm_models.wind_farm_model import SimulationResult
 from topfarm._topfarm import TopFarmProblem
 from topfarm.plotting import XYPlotComp
 from topfarm.cost_models.py_wake_wrapper import PyWakeAEPCostModelComponent
-from topfarm import SpacingConstraint, XYBoundaryConstraint
+from topfarm.constraint_components.spacing import SpacingConstraint
+from topfarm.constraint_components.boundary import XYBoundaryConstraint
 
 
 class TopFarmCluster:

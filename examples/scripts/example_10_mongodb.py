@@ -1,5 +1,5 @@
 # %%
-from topfarm.mongo_recorder import MongoRecorder
+from topfarm.deprecated_mongo_recorder import MongoRecorder
 import matplotlib.pyplot as plt
 import numpy as np
 from py_wake.site.xrsite import GlobalWindAtlasSite
