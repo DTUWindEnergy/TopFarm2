@@ -83,6 +83,17 @@ pypi_deploy:
   only:
     - tags
 
+# ===== TEST BUILD DOCS =====
+test_docs_build: # "pages" is a job specifically for GitLab pages [1]
+  image: ghcr.io/prefix-dev/pixi:latest
+  stage: # build, test, deploy defined by default [2]
+    deploy
+  script: # use sphinx to build docs
+    - pixi run -e default "cd docs; make html"
+  <<: *run_tests_rules
+  tags: # only runners with this tag can do the job [3]
+    - linux
+
 # ===== BUILD DOCS AND PUSH TO PUBLIC WEBSITE =====
 pages: # "pages" is a job specifically for GitLab pages [1]
   image: ghcr.io/prefix-dev/pixi:latest

@@ -2,6 +2,8 @@ from ._topfarm import *
 import pkg_resources
 from ._version import __version__
 
+__release__ = __version__
+
 plugins = {
     entry_point.name: entry_point.load()
     for entry_point
