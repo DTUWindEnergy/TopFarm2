@@ -2,10 +2,10 @@
 # [2] CI stages: https://docs.gitlab.com/ee/ci/yaml/#stages
 # [3] Tags: https://docs.gitlab.com/ee/ci/yaml/#tags
 
-.mr_or_topfarm_group_rules: &mr_or_topfarm_group_rules
+.run_tests_rules: &run_tests_rules
   rules:
-    - if: '$CI_PROJECT_NAMESPACE == "TOPFARM" || $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH'
-      when: on_success
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
     - when: never
 
 # ===== CHECK FORMATTING =====
@@ -17,7 +17,7 @@ test_topfarm_pep8: # name the job what we like
     - pixi run -e default pycodestyle --ignore=E501,W504 --exclude="*Colonel*" topfarm
   tags: # only runners with this tag can do the job [3]
     - linux
-  <<: *mr_or_topfarm_group_rules
+  <<: *run_tests_rules
 
 # ===== TEST TOPFARM =====
 test_topfarm:
@@ -25,25 +25,27 @@ test_topfarm:
   stage: # build, test, deploy defined by default [2]
     test
   script:
-    - pixi run pixi run test-all
+    - pixi run test-all
   tags: # only runners with this tag can do the job [3]
     - linux
-  <<: *mr_or_topfarm_group_rules
+  <<: *run_tests_rules
 
 # ===== TEST TOPFARM ON WINDOWS =====
 test_topfarm_windows: # name the job what we like
   variables:
     GIT_SUBMODULE_STRATEGY: normal
+    GIT_CLEAN_FLAGS: -ffdx -e .pixi/
   stage: # build, test, deploy defined by default [2]
     test
   coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
   script: # runs on windows machine due to tag below
     - setx PIXI_CACHE_DIR D:\.pixi_cache
     - $env:PIXI_CACHE_DIR = [System.Environment]::GetEnvironmentVariable("PIXI_CACHE_DIR","User") # update PIXI_CACHE_DIR in current shell
+    - C:\Users\ernim\.pixi\bin\pixi.exe run pip install -e .
     - C:\Users\ernim\.pixi\bin\pixi.exe run test-all
   tags: # tag for shared runner on windows machine
     - ANMH_old
-  <<: *mr_or_topfarm_group_rules
+  <<: *run_tests_rules
 
 # ===== TRIGGER TRIGGERHUB PIPELINE =====
 trigger_hub_test:
@@ -66,7 +68,8 @@ test_topfarm_deploy:
     - pixi run -e default hatch publish -r test -u $HATCH_INDEX_USER -a $HATCH_INDEX_AUTH
   tags: # only runners with this tag can do the job [3]
     - linux
-  <<: *mr_or_topfarm_group_rules
+  only:
+    - master
 
 # ===== BUILD WHEELS AND UPLOAD TO PYPI =====
 pypi_deploy:

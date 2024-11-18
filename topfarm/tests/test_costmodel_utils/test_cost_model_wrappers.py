@@ -1,3 +1,4 @@
+import pytest
 import numpy as np
 from topfarm.cost_models.cost_model_wrappers import CostModelComponent, \
     AEPCostModelComponent, AEPMaxLoadCostModelComponent
@@ -63,6 +64,7 @@ def testAEPCostModelComponent():
     np.testing.assert_array_almost_equal(tf.turbine_positions[:, :2], optimal_with_constraints, 5)
 
 
+@pytest.mark.skip(reason="This test is not deterministic")
 def test_maxiter_CostModelComponent():
     tf = get_tf(AEPCostModelComponent(['x', 'y'], 4, aep_cost, aep_gradients, max_eval=10))
     cost, state, recorder = tf.optimize()

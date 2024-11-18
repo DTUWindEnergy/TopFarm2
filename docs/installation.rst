@@ -38,6 +38,10 @@ TOPFARM’s base code is open-sourced and freely available on `GitLab
 
     pip install git+https://gitlab.windenergy.dtu.dk/TOPFARM/TopFarm2.git
 
+* If your workflow requires `tensorflow`, you can install TOPFARM with an extra::
+
+    pip install topfarm[tensorflow]
+
 Developer Installation
 -------------------------------
 

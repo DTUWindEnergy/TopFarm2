@@ -11,7 +11,6 @@ dependencies = [
     "jupyterlab>=4.2.5,<5",
     "pydoe3>=1.0.4,<2",
     "pydoe2>=1.3.0,<2",
-    "tensorflow>=2.13.1,<3",
     "shapely>=2.0.6,<3",
     "openmdao<=3.26",
     "matplotlib>=3.7.5,<4",
@@ -20,6 +19,7 @@ dependencies = [
     "scipy>=1.10.1,<2",
     "scikit-learn>=1.3.2,<2",
 ]
+optional-dependencies = { tensorflow = ["tensorflow>=2.13.1,<3"] }
 
 [build-system]
 build-backend = "hatchling.build"
