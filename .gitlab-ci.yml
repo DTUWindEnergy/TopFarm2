@@ -77,8 +77,11 @@ pypi_deploy:
   image: ghcr.io/prefix-dev/pixi:latest
   stage: deploy
   script:
-    - pixi run -e default hatch build
-    - pixi run -e default hatch publish -u $TWINE_USERNAME -a $TWINE_PASSWORD
+    - eval "$(pixi shell-hook -e default)"
+    - export SETUPTOOLS_SCM_PRETEND_VERSION=$(hatch version | sed 's/\.post0$//') # remove post for pypi
+    - echo $SETUPTOOLS_SCM_PRETEND_VERSION # pypi version
+    - hatch build
+    - hatch publish -u $TWINE_USERNAME -a $TWINE_PASSWORD
   tags:
     - linux
   only:
