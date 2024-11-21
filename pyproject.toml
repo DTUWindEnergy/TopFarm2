@@ -41,7 +41,7 @@ packages = ["topfarm"]
 [tool.pytest.ini_options]
 norecursedirs = "topfarm/tests/deprecated_tests"
 testpaths = "topfarm/tests"
-addopts = "-n 8 --cov-report term-missing:skip-covered --cov=topfarm"
+addopts = "--cov-report term-missing:skip-covered --cov=topfarm"
 
 [tool.coverage.run]
 omit = [
@@ -87,15 +87,15 @@ topfarm = { path = ".", editable = true }
 
 [tool.pixi.feature.python39]
 dependencies = { python = "3.9.*" }
-tasks = { test39 = "pytest" }
+tasks = { test39 = "pytest -n auto" }
 
 [tool.pixi.feature.python310]
 dependencies = { python = "3.10.*" }
-tasks = { test310 = "pytest" }
+tasks = { test310 = "pytest -n auto" }
 
 [tool.pixi.feature.python311]
 dependencies = { python = "3.11.*" }
-tasks = { test311 = "pytest" }
+tasks = { test311 = "pytest -n auto" }
 
 [tool.pixi.environments]
 py39 = ["python39"]

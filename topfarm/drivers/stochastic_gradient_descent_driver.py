@@ -222,7 +222,8 @@ class SGDDriver(Driver):
                 obj = val
                 break
 
-            only_cons = self.alpha0 / alpha < self.options['sgd_thresh'] and self.options['speedupSGD']
+            # epsilon (1e-7) to avoid division by zero
+            only_cons = self.alpha0 / (alpha + 1e-7) < self.options['sgd_thresh'] and self.options['speedupSGD']
 
             if only_cons:
                 of_list = self.con_list

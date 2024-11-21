@@ -8,6 +8,8 @@ from shapely.geometry import Polygon, MultiPolygon, LineString
 from shapely.ops import unary_union
 import warnings
 from tqdm import tqdm
+from dataclasses import dataclass
+from typing import Dict, List, Optional
 
 
 class XYBoundaryConstraint(Constraint):
@@ -140,7 +142,7 @@ class BoundaryBaseComp(ConstraintComponent):
         self.const_id = const_id
         self.units = units
         self.relaxation = relaxation
-        if np.any(self.xy_boundary[0] != self.xy_boundary[-1]):
+        if xy_boundary is not None and np.any(self.xy_boundary[0] != self.xy_boundary[-1]):
             self.xy_boundary = np.r_[self.xy_boundary, self.xy_boundary[:1]]
 
     def setup(self):
@@ -347,6 +349,255 @@ class ConvexBoundaryComp(BoundaryBaseComp):
         return state
 
 
+@dataclass
+class Boundary(object):
+    _vertices: np.ndarray
+    design_var_mask: np.ndarray
+    is_inclusion: bool = True  # TODO: not implemented
+    normals: np.ndarray = None
+
+    @property
+    def n_turbines(self):
+        return self.design_var_mask.sum()
+
+    @property
+    def n_vertices(self):
+        if np.all(self.vertices[0] == self.vertices[-1]):
+            return self.vertices.shape[0] - 1
+        return self.vertices.shape[0]
+
+    @property
+    def vertices(self):
+        return self._vertices
+
+    @vertices.setter
+    def vertices(self, v):
+        self._vertices = v
+
+    def __post_init__(self):
+        self.__validate()
+
+    def __validate(self):
+        self.vertices = np.asarray(self.vertices)
+        assert self.vertices.ndim == 2, "Boundary must be a 2D array"
+        assert any(
+            [x for x in self.vertices.shape if x == 2]
+        ), "Boundary must have shape (n, 2) or (2, n)"
+        self.vertices = self.vertices.reshape(-1, 2)
+        assert self.vertices.shape[0] > 2, "Boundary must have at least 3 vertices"
+        assert isinstance(self.is_inclusion, bool), "is_inclusion must be a boolean"
+        assert self.design_var_mask.ndim == 1, "design_var_mask must 1 dimensional"
+        self.design_var_mask = np.asarray(self.design_var_mask, dtype=bool)
+
+
+class MultiXYBoundaryConstraint(Constraint):
+    def __init__(
+        self,
+        boundaries: list[Boundary],
+        boundary_type="convex_hull",
+        units=None,
+        relaxation=False,
+        **kwargs,
+    ):
+        if boundary_type != "convex_hull":
+            raise NotImplementedError("Only 'convex_hull' type is implemented")
+        if not isinstance(boundaries[0], Boundary):
+            boundaries = [Boundary(*b) for b in boundaries]
+        self.boundaries = boundaries
+        self.boundary_type = boundary_type
+        self.const_id = f"xyboundary_comp_{boundary_type}"
+        self.units = units
+        self.relaxation = relaxation
+
+    def get_comp(self, n_wt):
+        if hasattr(self, "boundary_comp"):
+            return self.boundary_comp
+        self.boundary_comp = MultiConvexBoundaryComp(
+            n_wt,
+            self.boundaries,
+            self.const_id,
+            self.units,
+        )
+        return self.boundary_comp
+
+    @property
+    def constraintComponent(self):
+        assert hasattr(
+            self, "boundary_comp"
+        ), "Boundary component not initialized, call setup first"
+        return self.boundary_comp
+
+    def set_design_var_limits(self, design_vars):
+        _ = design_vars
+
+    def _setup(self, problem, group="constraint_group"):
+        n_wt = problem.n_wt
+        self.boundary_comp = self.get_comp(n_wt)
+        self.boundary_comp.problem = problem
+        self.set_design_var_limits(problem.design_vars)
+        problem.indeps.add_output("xy_boundary", self.boundary_comp.xy_boundary)
+        getattr(problem.model, group).add_subsystem(
+            "xy_bound_comp", self.boundary_comp, promotes=["*"]
+        )
+
+    def setup_as_constraint(self, problem, group="constraint_group"):
+        self._setup(problem, group=group)
+        lower = 0 if problem.n_wt == 1 else self.boundary_comp.zeros
+        problem.model.add_constraint("boundaryDistances", lower=lower)
+
+    def setup_as_penalty(self, problem, group="constraint_group"):
+        self._setup(problem, group=group)
+
+
+class MultiConvexBoundaryComp(BoundaryBaseComp):
+    def __init__(
+        self,
+        n_wt,
+        xy_boundaries: list[Boundary],
+        const_id=None,
+        units=None,
+    ):
+        self.xy_boundaries = self.sort_boundaries(xy_boundaries)
+        self.xy_boundaries = self.calculate_boundary_and_normals(self.xy_boundaries)
+        super().__init__(n_wt, None, const_id, units)
+        self.turbine_vertice_prod = 0
+        total_n_active_turbines = 0
+        for b in self.xy_boundaries:
+            if np.any(b.vertices[0] != b.vertices[-1]):
+                b.vertices = np.r_[b.vertices, b.vertices[:1]]
+            self.turbine_vertice_prod += b.n_turbines * b.n_vertices
+            total_n_active_turbines += b.n_turbines
+        assert (
+            total_n_active_turbines == n_wt
+        ), "Number of active turbines in boundaries must match number of total turbines; Check that masks sum up to n_wt i.e. np.concatenate(all_masks).sum() == n_wt."
+        self.calculate_gradients()
+        self.zeros = np.zeros(self.turbine_vertice_prod)
+
+    def sort_boundaries(self, boundaries):
+        def centroid(boundary):  # fmt: skip
+            return tuple(np.mean(boundary.vertices, axis=0))
+        return sorted(boundaries, key=lambda b: centroid(b))
+
+    def calculate_boundary_and_normals(
+        self, xy_boundaries: list[Boundary]
+    ) -> list[Boundary]:
+        def __compute_normal(boundary_pts, ii, jj):
+            """Calculate the unit normal vector of the current face (taking points CCW)"""
+            normal = np.array(
+                [
+                    boundary_pts[ii, 1] - boundary_pts[jj, 1],
+                    -(boundary_pts[ii, 0] - boundary_pts[jj, 0]),
+                ]
+            )
+            return normal / np.linalg.norm(normal)
+
+        for boundary in xy_boundaries:
+            hull = ConvexHull(list(boundary.vertices))
+            # keep only vertices that actually comprise a convex hull and arrange in CCW order
+            boundary.vertices = boundary.vertices[hull.vertices]
+            # initialize normals array
+            unit_normals = np.zeros([boundary.n_vertices, 2])
+            # determine if point is inside or outside and distances from each face
+            nvtm1 = boundary.n_vertices - 1
+            for j in range(0, nvtm1):
+                # all but the points that close the shape
+                unit_normals[j] = __compute_normal(boundary.vertices, j + 1, j)
+            # points that close the shape
+            unit_normals[nvtm1] = __compute_normal(boundary.vertices, 0, nvtm1)
+            boundary.normals = unit_normals
+
+        return xy_boundaries
+
+    def calculate_gradients(self):
+        # this is flawed if the order of boundaries is switched;
+        # test with arbitrary number of vertices and arbitrary number
+        # of turbines in a boundary; For now it's sorted at the top..
+        final_dx = np.zeros([self.turbine_vertice_prod, self.n_wt])
+        final_dy = np.zeros([self.turbine_vertice_prod, self.n_wt])
+        for bi, boundary in enumerate(self.xy_boundaries):
+            assert (
+                boundary.design_var_mask is not None
+            ), "Design variable mask must be provided"
+            assert self.n_wt == len(
+                boundary.design_var_mask
+            ), "Design variable mask must must be the same length as the number of turbines"
+
+            unit_normals = boundary.normals
+            n_vertices = boundary.n_vertices
+            n_turbines = boundary.n_turbines
+            dfaceDistance_dx = np.zeros([n_turbines * n_vertices, n_turbines])
+            dfaceDistance_dy = np.zeros([n_turbines * n_vertices, n_turbines])
+            for i in range(0, n_turbines):
+                # determine if point is inside or outside of each face, and distances from each face
+                for j in range(0, n_vertices):
+                    # define the derivative vectors from the point of interest to the first point of the face
+                    dpa_dx = np.array([-1.0, 0.0])
+                    dpa_dy = np.array([0.0, -1.0])
+                    # find perpendicular distances derivatives from point to current surface (vector projection)
+                    ddistanceVec_dx = np.vdot(dpa_dx, unit_normals[j]) * unit_normals[j]
+                    ddistanceVec_dy = np.vdot(dpa_dy, unit_normals[j]) * unit_normals[j]
+                    # calculate derivatives for the sign of perpendicular distances from point to current face
+                    dfaceDistance_dx[i * n_vertices + j, i] = np.vdot(
+                        ddistanceVec_dx, unit_normals[j]
+                    )
+                    dfaceDistance_dy[i * n_vertices + j, i] = np.vdot(
+                        ddistanceVec_dy, unit_normals[j]
+                    )
+            seek = sum([(b.n_vertices * b.n_turbines) for b in self.xy_boundaries[:bi]])
+            final_dx[
+                seek: seek + (n_turbines * n_vertices), boundary.design_var_mask
+            ] = dfaceDistance_dx
+            final_dy[
+                seek: seek + (n_turbines * n_vertices), boundary.design_var_mask
+            ] = dfaceDistance_dy
+        dfaceDistance_dx = final_dx
+        dfaceDistance_dy = final_dy
+
+        def __wrap_sparse(m):  # fmt: skip
+            if m.size < 1e4:
+                return m
+            from scipy.sparse import csr_matrix  # fmt: skip
+            return csr_matrix(m)
+        # store Jacobians
+        self.dfaceDistance_dx = __wrap_sparse(dfaceDistance_dx)
+        self.dfaceDistance_dy = __wrap_sparse(dfaceDistance_dy)
+
+    def distances(self, x, y):
+        """
+        :param points: points that you want to calculate the distances from to the faces of the convex hull
+        :return face_distace: signed perpendicular distances from each point to each face; + is inside
+        """
+        points = np.array([x, y]).T
+        face_distances = np.zeros(self.turbine_vertice_prod)
+        for bi, boundary in enumerate(self.xy_boundaries):
+            mask = boundary.design_var_mask
+            vertices = boundary.vertices[:-1]
+            n_vertices = boundary.n_vertices
+            PA = vertices[:, na] - points[mask][na]
+            dist = np.sum(PA * boundary.normals[:, na], axis=2)
+            d_vec = dist[:, :, na] * boundary.normals[:, na]
+            seek = sum([(b.n_vertices * b.n_turbines) for b in self.xy_boundaries[:bi]])
+            face_distances[seek: seek + (boundary.n_turbines * n_vertices)] = np.sum(
+                d_vec * boundary.normals[:, na], axis=2
+            ).T.reshape(-1)
+        return face_distances
+
+    def gradients(self, x, y):
+        return self.dfaceDistance_dx, self.dfaceDistance_dy
+
+    def satisfy(self, state):
+        raise NotImplementedError("Not implemented for MultiConvexBoundaryComp")
+
+    def plot(self, ax):
+        for b in self.xy_boundaries:
+            ax.plot(
+                b.vertices[:, 0].tolist(),
+                b.vertices[:, 1].tolist(),
+                "k",
+                linewidth=1,
+            )
+
+
 class PolygonBoundaryComp(BoundaryBaseComp):
     def __init__(self, n_wt, xy_boundary, const_id=None, units=None, relaxation=False):
 
@@ -468,8 +719,9 @@ class PolygonBoundaryComp(BoundaryBaseComp):
         ddist_dxy = np.tile(edge_unit_normal, (1, len(x), 1))
 
         # Update gradient for points closer to A or B
-        ddist_dxy[:, use_A] = sign_use_A * (AP[:, use_A] / vec_len(AP[:, use_A]))
-        ddist_dxy[:, use_B] = sign_use_B * (BP[:, use_B] / vec_len(BP[:, use_B]))
+        eps = 1e-7  # avoid division by zero
+        ddist_dxy[:, use_A] = sign_use_A * (AP[:, use_A] / (vec_len(AP[:, use_A]) + eps))
+        ddist_dxy[:, use_B] = sign_use_B * (BP[:, use_B] / (vec_len(BP[:, use_B]) + eps))
         ddist_dX, ddist_dY = ddist_dxy
 
         return distance, ddist_dX, ddist_dY
@@ -944,6 +1196,253 @@ class TurbineSpecificBoundaryComp(MultiPolygonBoundaryComp):
         else:
             gradients = np.diagflat(dDdx_i), np.diagflat(dDdy_i)
         return gradients
+
+
+class MultiCircleBoundaryConstraint(XYBoundaryConstraint):
+    def __init__(self, center, radius, masks):
+        """Initialize CircleBoundaryConstraint
+
+        Parameters
+        ----------
+        center : (float, float)
+            center position (x,y)
+        radius : int or float
+            circle radius
+        """
+
+        self.center = np.array(center)
+        self.radius = np.array(radius)
+        self.masks = np.array(masks)
+        assert (
+            len(self.center) == len(self.radius) == len(self.masks)
+        ), f"Lenght of center, radius and masks must be equal"
+        assert len(self.center) > 1
+        self.const_id = f"circle_boundary_comp_{id(self)}"
+
+    def get_comp(self, n_wt):
+        if not hasattr(self, "boundary_comp"):
+            self.boundary_comp = MultiCircleBoundaryComp(
+                n_wt, self.center, self.radius, self.masks, self.const_id
+            )
+        return self.boundary_comp
+
+    def set_design_var_limits(self, design_vars):
+        _ = design_vars
+        return
+
+
+class MultiCircleBoundaryComp(PolygonBoundaryComp):
+
+    def __init__(self, n_wt, center, radius, masks, const_id=None, units=None):
+        self.center = center
+        self.radius = radius
+        self.masks = masks
+        xy_boundary = None  # TODO: redundant
+        BoundaryBaseComp.__init__(self, n_wt, xy_boundary, const_id, units)
+        self.zeros = np.zeros(self.n_wt)
+
+    def plot(self, ax=None):
+        from matplotlib.pyplot import Circle
+        import matplotlib.pyplot as plt
+
+        ax = ax or plt.gca()
+        for center, radius in zip(self.center, self.radius):
+            circle = Circle(center, radius, color="k", fill=False)
+            ax.add_artist(circle)
+
+    def distances(self, x, y):
+        assert (
+            x.shape == y.shape == self.masks[0].shape
+        ), f"{x.shape} != {y.shape} != {self.masks[0].shape}"
+        distances = np.zeros_like(x)
+        for center, radius, mask in zip(self.center, self.radius, self.masks):
+            distances += mask * (
+                radius - np.sqrt((x - center[0]) ** 2 + (y - center[1]) ** 2)
+            )
+        return distances
+
+    def gradients(self, x, y):
+        dx = np.zeros_like(x)
+        dy = np.zeros_like(x)
+        for center, radius, mask in zip(self.center, self.radius, self.masks):
+            theta = np.arctan2(y - center[1], x - center[0])
+            dx_tmp = -1 * np.ones_like(x)
+            dy_tmp = -1 * np.ones_like(x)
+            dist = radius - np.sqrt((x - center[0]) ** 2 + (y - center[1]) ** 2)
+            not_center = dist != radius
+            dx_tmp[not_center], dy_tmp[not_center] = mask[not_center] * -np.cos(
+                theta[not_center]
+            ), mask[not_center] * -np.sin(theta[not_center])
+            dx += dx_tmp
+            dy += dy_tmp
+        return np.diagflat(dx), np.diagflat(dy)
+
+
+class MultiWFPolygonBoundaryConstraint(XYBoundaryConstraint):
+    def __init__(self, boundaries, turbine_groups):
+        """Initialize CircleBoundaryConstraint
+
+        Parameters
+        ----------
+        center : (float, float)
+            center position (x,y)
+        radius : int or float
+            circle radius
+        """
+        self.boundaries = boundaries
+        self.turbine_groups = turbine_groups
+        self.const_id = f"polygon_boundary_comp_{id(self)}"
+
+    def get_comp(self, n_wt):
+        if not hasattr(self, "boundary_comp"):
+            self.boundary_comp = MultiWFPolygonBoundaryComp(
+                n_wt, self.boundaries, self.turbine_groups, const_id=self.const_id
+            )
+        return self.boundary_comp
+
+    def set_design_var_limits(self, design_vars):
+        _ = design_vars
+        return
+
+
+class MultiWFPolygonBoundaryComp(PolygonBoundaryComp):
+    def __init__(
+        self,
+        n_wt: int,
+        boundaries: Optional[Dict[int, np.ndarray]],
+        turbine_groups: Optional[Dict[int, List[int]]],
+        *args,
+        **kwargs,
+    ):
+        """Initialize boundary and group assignments.
+
+        Args:
+            num_turbines: Total number of turbines
+            boundaries: Dictionary mapping group IDs to boundary coordinates
+            turbine_groups: Dictionary mapping group IDs to lists of turbine indices
+        """
+        if n_wt <= 0:
+            raise ValueError("Number of turbines must be positive")
+
+        self.boundaries = {}  # group_id: boundary_coords
+        for group_id, boundary_coords in boundaries.items():
+            boundary_coords = self.__validate_boundary_coords(boundary_coords)
+            # close the boundary if needed
+            if not np.all(boundary_coords[0] == boundary_coords[-1]):
+                boundary_coords = np.vstack([boundary_coords, boundary_coords[0]])
+            self.boundaries[group_id] = boundary_coords
+
+        self.__validate_group_assignments(turbine_groups, n_wt)
+        self.turbine_groups = {i: -1 for i in range(n_wt)}  # turbine_idx: group_id
+        for group_id, indices in turbine_groups.items():
+            if group_id not in self.boundaries:
+                raise ValueError(f"No boundary defined for group {group_id}")
+            for idx in indices:
+                self.turbine_groups[idx] = group_id
+        # check that all turbines are assigned to a group
+        if -1 in self.turbine_groups.values():
+            raise ValueError(f"All turbines must be assigned to a group; All the -1 should be filled\n{self.turbine_groups}")
+
+        super().__init__(
+            n_wt=n_wt,
+            xy_boundary=np.array(list(boundaries.values())[0]).reshape(-1, 2),
+            *args,
+            **kwargs,
+        )
+
+    def __validate_boundary_coords(self, boundary_coords: np.ndarray) -> None:
+        if not isinstance(boundary_coords, (np.ndarray, list)):
+            raise TypeError(
+                "Boundary coordinates must be a numpy array or a list of lists"
+            )
+        try:
+            boundary_coords = np.array(boundary_coords).reshape(-1, 2)
+        except BaseException:
+            raise ValueError(
+                "Boundary coordinates must be a 2D array with shape (n,2)"
+            )
+        if boundary_coords.ndim != 2 or boundary_coords.shape[1] != 2:
+            raise ValueError("Boundary coordinates must be a 2D array with shape (n,2)")
+        if len(boundary_coords) < 3:
+            raise ValueError("Boundary must have at least 3 points")
+        return boundary_coords
+
+    def __validate_group_assignments(
+        self, groups: Dict[int, List[int]], num_turbines: int
+    ) -> None:
+        if not isinstance(groups, dict):
+            raise TypeError("Groups must be a dictionary")
+        valid_types = (int, np.integer)
+        for group_id, turbine_indices in groups.items():
+            if not isinstance(group_id, valid_types) or group_id < 0:
+                raise ValueError(
+                    f"Invalid group ID: {group_id}; Should be an integer >= 0"
+                )
+            if not all(
+                isinstance(idx, valid_types) and 0 <= idx < num_turbines
+                for idx in turbine_indices
+            ):
+                raise ValueError(
+                    f"Invalid turbine indices in group {group_id}; Should be integers in range [0, {num_turbines})"
+                )
+
+    def __dist_grad_wrapper(self, x, y, boundary_prop):
+        if not np.shape([x, y]) == np.shape(self._cache_input):
+            pass
+        elif np.all(np.array([x, y]) == self._cache_input):
+            return self._cache_output
+        distance, ddist_dX, ddist_dY = self._calc_distance_and_gradients(
+            x, y, boundary_prop
+        )
+        closest_edge_index = np.argmin(np.abs(distance), 1)
+        self._cache_input = np.array([x, y])
+        self._cache_output = [
+            np.choose(closest_edge_index, v.T) for v in [distance, ddist_dX, ddist_dY]
+        ]
+        return self._cache_output
+
+    def __calculate_group_distances_and_gradients(self, x, y):
+        """Helper method to calculate distances and gradients for all groups."""
+        n = len(x)
+        ds = np.zeros(n)
+        dx = np.zeros(n)
+        dy = np.zeros(n)
+
+        for group_id, boundary in self.boundaries.items():
+            group_turbines = [
+                i for i in range(n) if self.turbine_groups.get(i) == group_id
+            ]
+            if not group_turbines:
+                continue
+
+            x_group = x[group_turbines]
+            y_group = y[group_turbines]
+
+            boundary_properties = self.get_boundary_properties(boundary)[1:]
+            distances, dx_group, dy_group = self.__dist_grad_wrapper(
+                x_group, y_group, boundary_properties
+            )
+
+            ds[group_turbines] = distances
+            dx[group_turbines] = dx_group
+            dy[group_turbines] = dy_group
+
+        return ds, dx, dy
+
+    def distances(self, x, y):
+        ds, _, _ = self.__calculate_group_distances_and_gradients(x, y)
+        return ds
+
+    def gradients(self, x, y):
+        _, dx, dy = self.__calculate_group_distances_and_gradients(x, y)
+        return np.diagflat(dx), np.diagflat(dy)
+
+    def plot(self, ax=None):
+        import matplotlib.pyplot as plt  # fmt: skip
+        cmap = plt.cm.get_cmap("viridis", len(self.boundaries))
+        for ii, (group_id, boundary) in enumerate(self.boundaries.items()):
+            ax.plot(*boundary.T, c=cmap(ii), label=f"Group {group_id}", linewidth=1)
+        ax.legend()
 
 
 def main():

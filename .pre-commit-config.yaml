@@ -3,7 +3,13 @@ repos:
     hooks:
       - id: pep8
         name: check formatting
-        entry: autopep8 --recursive --ignore=E501,W504 --exclude="*Colonel*" --exit-code --in-place topfarm
+        entry: autopep8 --recursive --ignore=E501,W504 --exclude="*Colonel*" --exit-code --in-place --aggressive topfarm
         language: system
         pass_filenames: false
         stages: [pre-commit]
+  - repo: https://github.com/kynan/nbstripout
+    rev: 0.8.0
+    hooks:
+      - id: nbstripout
+        args: [--keep-output]
+        files: ^docs/notebooks/.*\.ipynb$

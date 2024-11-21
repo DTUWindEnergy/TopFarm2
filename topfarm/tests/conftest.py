@@ -1,7 +1,9 @@
 import matplotlib.pyplot as plt
 import pytest
-import matplotlib
+import matplotlib  # fmt: skip
 matplotlib.use("Agg")
+
+# TODO: requires higher openmdao version
 # from openmdao.utils.file_utils import clean_outputs
 # def cleanup_openmdao_outputs():
 #     clean_outputs(obj='.', recurse=True, prompt=False, pattern='*_out')

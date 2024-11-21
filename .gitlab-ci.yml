@@ -64,6 +64,7 @@ test_topfarm_deploy:
   stage: # build, test, deploy defined by default [2]
     deploy
   script:
+    - rm -rf topfarm/examples/input_ts.csv # reduce upload size 75%
     - pixi run -e default hatch build
     - pixi run -e default hatch publish -r test -u $HATCH_INDEX_USER -a $HATCH_INDEX_AUTH
   tags: # only runners with this tag can do the job [3]
@@ -90,9 +91,11 @@ test_docs_build: # "pages" is a job specifically for GitLab pages [1]
     deploy
   script: # use sphinx to build docs
     - pixi run -e default "cd docs; make html"
-  <<: *run_tests_rules
   tags: # only runners with this tag can do the job [3]
     - linux
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - when: never
 
 # ===== BUILD DOCS AND PUSH TO PUBLIC WEBSITE =====
 pages: # "pages" is a job specifically for GitLab pages [1]
