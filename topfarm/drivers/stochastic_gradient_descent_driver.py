@@ -39,6 +39,8 @@ class SGDDriver(Driver):
         """
         Declare options before kwargs are processed in the init method.
         """
+        self.options.declare('additional_constant_lr_iterations', 0,
+                             desc='Additional steps to run with the initial learning rate')
         self.options.declare('max_time', 5e10,
                              desc='Maximum time in seconds (set to None to disable)')
         self.options.declare('disp', True,
@@ -171,6 +173,8 @@ class SGDDriver(Driver):
         m = np.zeros(x0.size)
         v = np.zeros(x0.size)
         self.is_converged = False
+        for __ in range(self.options['additional_constant_lr_iterations']):
+            obj_value_x1, x1, alpha, learning_rate, m, v, success = self.objective_callback(x1, alpha, learning_rate, m, v, record=True, update=False)
         while (n_iter < self.maxiter) and (not self.is_converged):
             obj_value_x1, x1, alpha, learning_rate, m, v, success = self.objective_callback(x1, alpha, learning_rate, m, v, record=True)
             n_iter += 1
@@ -178,7 +182,7 @@ class SGDDriver(Driver):
                 print(n_iter, obj_value_x1)
         return False
 
-    def objective_callback(self, x, alpha, learning_rate, m, v, record=False):
+    def objective_callback(self, x, alpha, learning_rate, m, v, record=False, update=True):
         """
         Evaluate problem objective at the requested point.
 
@@ -209,7 +213,9 @@ class SGDDriver(Driver):
         # if record:
         with RecordingDebugging('SGD', self.iter_count, self) as rec:
             # self.set_design_var(name, value)
-            self.iter_count += 1
+            if update or self.iter_count < 1:
+                self.iter_count += 1
+
             try:
                 model._solve_nonlinear()
 
