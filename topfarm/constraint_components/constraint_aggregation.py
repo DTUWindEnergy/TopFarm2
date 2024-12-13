@@ -73,14 +73,14 @@ class DistanceConstraintAggregation(ConstraintAggregation):
         """
 
         def constr_aggr_func(wtSeparationSquared, boundaryDistances, **kwargs):
-            separation_constraint = wtSeparationSquared - (2 * windTurbines.diameter()) ** 2
+            separation_constraint = wtSeparationSquared - (min_spacing_m) ** 2
             separation_constraint = separation_constraint[separation_constraint < 0]
             distance_constraint = boundaryDistances
             distance_constraint = distance_constraint[distance_constraint < 0]
             return np.sum(-1 * separation_constraint) + np.sum(distance_constraint ** 2)
 
         def constr_aggr_grad(wtSeparationSquared, boundaryDistances, **kwargs):
-            separation_constraint = wtSeparationSquared - (2 * windTurbines.diameter()) ** 2
+            separation_constraint = wtSeparationSquared - (min_spacing_m) ** 2
             J_separation = np.zeros_like(wtSeparationSquared)
             J_separation[np.where(separation_constraint < 0)] = -1
             J_distance = np.zeros_like(boundaryDistances)
