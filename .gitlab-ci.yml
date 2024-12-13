@@ -9,12 +9,18 @@
     - when: never
 
 # ===== CHECK FORMATTING =====
-test_topfarm_pep8: # name the job what we like
+test_topfarm_precommit: # name the job what we like
   image: ghcr.io/prefix-dev/pixi:latest
+  variables:
+    PRE_COMMIT_HOME: ${CI_PROJECT_DIR}/.cache/pre-commit
   stage: # build, test, deploy defined by default [2]
     test
   script:
-    - pixi run -e default pycodestyle --ignore=E501,W504 --exclude="*Colonel*" topfarm
+    - pixi run -e default pre-commit run --all-files
+  cache:
+    key: pre-commit-cache # Retains cache across all branches
+    paths:
+      - ${PRE_COMMIT_HOME}
   tags: # only runners with this tag can do the job [3]
     - linux
   <<: *run_tests_rules
@@ -22,6 +28,8 @@ test_topfarm_pep8: # name the job what we like
 # ===== TEST TOPFARM =====
 test_topfarm:
   image: ghcr.io/prefix-dev/pixi:latest
+  needs:
+    - test_topfarm_precommit
   stage: # build, test, deploy defined by default [2]
     test
   script:
@@ -32,6 +40,8 @@ test_topfarm:
 
 # ===== TEST TOPFARM ON WINDOWS =====
 test_topfarm_windows: # name the job what we like
+  needs:
+    - test_topfarm_precommit
   variables:
     GIT_SUBMODULE_STRATEGY: normal
     GIT_CLEAN_FLAGS: -ffdx -e .pixi/
