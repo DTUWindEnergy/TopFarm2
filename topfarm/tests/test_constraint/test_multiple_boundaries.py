@@ -702,8 +702,6 @@ class TestMultiWFPolygonBoundaryComp(unittest.TestCase):
         x_perturbed = x + eps
         numerical_dx = (comp.distances(x_perturbed, y) - comp.distances(x, y)) / eps
 
-        print(f"GRAD: {dx}; Numerical: {numerical_dx}")
-
         # Compare analytical vs numerical gradients
         np.testing.assert_allclose(
             np.diag(dx),
@@ -745,3 +743,25 @@ class TestMultiWFPolygonBoundaryComp(unittest.TestCase):
         dx2, dy2 = comp2.gradients(x, y)
         np.testing.assert_allclose(dx1, dx2, rtol=1e-10)
         np.testing.assert_allclose(dy1, dy2, rtol=1e-10)
+
+    def test_polygon_gradient_with_large_number_of_vertices(self):
+        N = 100
+        boundary_coords = np.array(
+            [
+                [np.cos(2 * np.pi * i / N), np.sin(2 * np.pi * i / N)]
+                for i in range(N)
+            ]
+        )
+
+        x = np.array([0.25, 0.75, 0.5, -0.2])
+        y = np.array([0.25, 0.25, 1.2, 0.5])
+        n_wt = len(x)
+
+        group_id = 1
+        multi = MultiWFPolygonBoundaryComp(
+            n_wt=n_wt,
+            boundaries={group_id: boundary_coords},
+            turbine_groups={group_id: np.arange(n_wt)},
+        )
+        # should not fail
+        _ = multi.gradients(x, y)

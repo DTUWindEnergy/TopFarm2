@@ -91,3 +91,12 @@ def test_satisfy():
     state = pbc.satisfy({'x': [3, 3, 3], 'y': [0, 5, 10]})
     x, y = state['x'], state['y']
     npt.assert_array_less(y, x)
+
+
+def test_gradient_with_large_number_of_vertices_in_boundary():
+    boundary = [
+        (np.cos(2 * np.pi * i / 150), np.sin(2 * np.pi * i / 150)) for i in range(150)
+    ]
+    pbc = PolygonBoundaryComp(1, boundary)
+    # should raise no error...
+    _ = pbc.calc_distance_and_gradients([0.5], [0.5])

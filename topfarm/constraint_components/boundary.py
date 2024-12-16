@@ -734,7 +734,9 @@ class PolygonBoundaryComp(BoundaryBaseComp):
         distance, ddist_dX, ddist_dY = self._calc_distance_and_gradients(x, y)
         closest_edge_index = np.argmin(np.abs(distance), 1)
         self._cache_input = np.array([x, y])
-        self._cache_output = [np.choose(closest_edge_index, v.T) for v in [distance, ddist_dX, ddist_dY]]
+        self._cache_output = [  # pick only closest edge
+            v[np.arange(len(closest_edge_index)), closest_edge_index] for v in [distance, ddist_dX, ddist_dY]
+        ]
         return self._cache_output
 
     def distances(self, x, y):
@@ -1396,8 +1398,8 @@ class MultiWFPolygonBoundaryComp(PolygonBoundaryComp):
         )
         closest_edge_index = np.argmin(np.abs(distance), 1)
         self._cache_input = np.array([x, y])
-        self._cache_output = [
-            np.choose(closest_edge_index, v.T) for v in [distance, ddist_dX, ddist_dY]
+        self._cache_output = [  # pick only closest edge
+            v[np.arange(len(closest_edge_index)), closest_edge_index] for v in [distance, ddist_dX, ddist_dY]
         ]
         return self._cache_output
 
