@@ -890,68 +890,40 @@ class MultiPolygonBoundaryComp(PolygonBoundaryComp):
                 boundaries.append((np.asarray([x, y]).T[:-1, :], 0))
         return boundaries
 
-    def _calc_resulting_polygons(self, boundary_polygons, incl_excls):
-        '''
+    @staticmethod
+    def _calc_resulting_polygons(boundary_polygons, incl_excls):
+        """
         Parameters
         ----------
-        boundary_polygons : list
+        boundary_polygons : list[shapely.Polygon]
             list of shapely polygons as specifed or inferred from user input
+        incl_excls : list[bool]
+            list of boolean values specifying whether the polygon is an inclusion or exclusion
+
         Returns
         -------
-        list of merged shapely polygons. Resolves issues arrising if any are overlapping, touching or contained in each other
-        '''
-        domain = []
-        for i in tqdm(range(len(boundary_polygons))):
-            b = boundary_polygons[i]
-            if len(domain) == 0:
-                if incl_excls[i]:
-                    domain.append(b)
-                else:
-                    warnings.warn("First boundary should be an inclusion zone or it will be ignored")
-                    pass
-            else:
-                if incl_excls[i]:
-                    temp = []
-                    for j, d in enumerate(domain):
-                        if d.intersects(b):
-                            b = unary_union([d, b])
-                        else:
-                            if d.contains(b):
-                                warnings.warn("Boundary is fully contained preceding polygon and will be ignored")
-                                pass
-                            elif b.contains(d):
-                                b = d
-                                warnings.warn("Boundary is fully containing preceding polygon and will override it")
-                                pass
-                            else:
-                                if b.area > 1e-3:
-                                    temp.append(d)
-                        if j == len(domain) - 1:
-                            if b.area > 1e-3:
-                                temp.append(b)
-                    domain = temp
-                else:
-                    temp = []
-                    for j, d in enumerate(domain):
-                        if d.intersects(b):
-                            nonoverlap = (d.symmetric_difference(b)).difference(b)
-                            if isinstance(nonoverlap, type(Polygon())):
-                                temp.append(nonoverlap)
-                            elif isinstance(nonoverlap, type(MultiPolygon())):
-                                for x in nonoverlap.geoms:
-                                    if x.area > 1e-3:
-                                        temp.append(x)
-                        else:
-                            if b.contains(d):
-                                warnings.warn("Exclusion boundary fully consumes preceding polygon")
-                                pass
-                            else:
-                                if d.contains(b):
-                                    d = Polygon(d.exterior.coords, [b.exterior.coords])
-                                if d.area > 1e-3:
-                                    temp.append(d)
-                    domain = temp
-        return domain
+            list of merged shapely polygons. Resolves issues arrising if any are overlapping, touching or contained in each other
+        """
+        included_polygons = [
+            boundary_polygons[i] for i, x in enumerate(incl_excls) if x == 1
+        ]
+        excluded_polygons = [
+            boundary_polygons[i] for i, x in enumerate(incl_excls) if x == 0
+        ]
+
+        included_polygons = unary_union(included_polygons)
+        excluded_polygons = unary_union(excluded_polygons)
+        remain_polygons = included_polygons.difference(excluded_polygons)
+
+        if isinstance(remain_polygons, Polygon):
+            return [remain_polygons] if remain_polygons.area > 1e-3 else []
+
+        if isinstance(remain_polygons, MultiPolygon):
+            return [
+                poly for poly in remain_polygons.geoms if poly.area > 1e-3
+            ]
+
+        return []
 
     def sign(self, Dist_ij):
         return np.sign(Dist_ij[np.arange(Dist_ij.shape[0]), np.argmin(abs(Dist_ij), axis=1)])
