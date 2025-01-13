@@ -57,13 +57,13 @@ class ConstraintAggregationComp(CostModelComponent, ConstraintComponent):
 class DistanceConstraintAggregation(ConstraintAggregation):
     """Aggregating the spacing and boundary distances constraints into a penalty function"""
 
-    def __init__(self, constraints, n_wt, min_spacing_m, windTurbines, name='sgd_constraint', **kwargs):
+    def __init__(self, distance_constraint, n_wt, min_spacing_m, windTurbines, name='sgd_constraint', **kwargs):
         """Initializing spacing constraint aggregation class
 
         Parameters
         ----------
-        constraints : list
-            list of constraint components, common constraints are [SpacingConstraints] and [XYBoundaryConstraints]
+        distance_constraint : object
+            TOPFARM distance constraint component
         n_wt : int
             number of turbines
         min_spacing_m : float
@@ -71,6 +71,7 @@ class DistanceConstraintAggregation(ConstraintAggregation):
         windTurbines : object
             pywake object for the wind turbine used
         """
+        constraints = [SpacingConstraint(min_spacing_m), distance_constraint]
 
         def constr_aggr_func(wtSeparationSquared, boundaryDistances, **kwargs):
             separation_constraint = wtSeparationSquared - (min_spacing_m) ** 2
