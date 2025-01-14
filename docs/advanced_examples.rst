@@ -30,7 +30,6 @@ In this section, more complex configurations for wind farm optimization are show
     notebooks/example_randomize_type_and_position_with_specific_boundaries
     notebooks/smart_start_with_predefined_types
     notebooks/sgd_slsqp_comparison
-    notebooks/smart_start_types
     notebooks/neighbouring_turbines
     notebooks/wind_farm_cluster
     notebooks/joint_multi_wf_optimization

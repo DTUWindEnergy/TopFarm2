@@ -86,7 +86,11 @@ language = 'en'
 # This patterns also effect to html_static_path and html_extra_path
 exclude_patterns = [
     'notebooks/.ipynb_checkpoints/*.ipynb',
-    'build/*'
+    'build/*',
+    "notebooks/layout_and_loads.ipynb",  # gives error from tensorflow on synnefo machine
+    "notebooks/wake_steering_and_loads.ipynb",  # ok but many warnings from tensorflow
+    "notebooks/wind_farm_cluster.ipynb",  # too long runtime
+    "notebooks/MongoDB_recorder.ipynb",  # deprecated
 ]
 
 # The name of the Pygments (syntax highlighting) style to use.
@@ -102,7 +106,7 @@ napolean_use_rtype = False
 
 # Execute notebooks before conversion: 'always', 'never', 'auto' (default)
 # We execute all notebooks, exclude the slow ones using 'exclude_patterns'
-nbsphinx_execute = 'never'
+nbsphinx_execute = 'auto'
 
 # Use this kernel instead of the one stored in the notebook metadata:
 #nbsphinx_kernel_name = 'python3'
@@ -115,7 +119,7 @@ nbsphinx_execute = 'never'
 
 
 # Controls when a cell will time out (defaults to 30; use -1 for no timeout):
-nbsphinx_timeout = 180
+nbsphinx_timeout = 60 * 15
 
 # Default Pygments lexer for syntax highlighting in code cells:
 #nbsphinx_codecell_lexer = 'ipython3'

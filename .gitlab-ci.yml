@@ -139,12 +139,15 @@ test_docs_build: # "pages" is a job specifically for GitLab pages [1]
   stage: # build, test, deploy defined by default [2]
     deploy
   script: # use sphinx to build docs
-    - pixi run -e default "cd docs; make html"
+    - pixi run -e default "cd docs; sphinx-build -j auto . build/html"
   tags: # only runners with this tag can do the job [3]
     - linux
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - when: never
+  artifacts:
+    paths:
+      - docs/build/html
 
 # ===== BUILD DOCS AND PUSH TO PUBLIC WEBSITE =====
 pages: # "pages" is a job specifically for GitLab pages [1]
@@ -152,7 +155,7 @@ pages: # "pages" is a job specifically for GitLab pages [1]
   stage: # build, test, deploy defined by default [2]
     deploy
   script: # use sphinx to build docs, move to public page
-    - pixi run -e default "cd docs; make html"
+    - pixi run -e default "cd docs; sphinx-build -j auto . build/html"
     - mv docs/build/html public/
   artifacts: # required for GitLab pages [1]
     paths:
