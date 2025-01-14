@@ -109,5 +109,5 @@ py311 = ["python311"]
 py312 = ["python312"]
 
 [tool.pixi.tasks]
-test-all = { depends_on = ["test311", "test310", "test39", "test312"] }
-test-latest = { depends_on = ["test312"] }
+test-all = { depends-on = ["test311", "test310", "test39"] }
+test-latest = { depends-on = ["test312"] }

@@ -22667,8 +22667,8 @@ packages:
   timestamp: 1733230836889
 - pypi: .
   name: topfarm
-  version: 2.4.3.post15
-  sha256: ac36284ad88ca4284682e01f9928b56fc48095a811f2e5daa9a36e463f32413f
+  version: 2.4.3.post3
+  sha256: b6d5c9bc7475f513f3e8841a8af6f4d71e0cdf4e65477d26b91460027bf14abd
   requires_dist:
   - jupyterlab>=4.2.5,<5
   - matplotlib>=3.7.5,<4
