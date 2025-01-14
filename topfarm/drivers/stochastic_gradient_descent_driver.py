@@ -110,9 +110,6 @@ class SGDDriver(Driver):
 
         disp = self.options['disp']
 
-        abs2prom = model._var_abs2prom['output']
-        self.abs2prom = abs2prom
-
         # Initial Design Vars
         desvar_vals = self.get_design_var_values()
         i = 0
@@ -124,8 +121,8 @@ class SGDDriver(Driver):
         x1 = x0.copy()
         n_iter = 0
 
-        desvar_info = [(abs2prom[name], *self._desvar_idx[name], lower_bound, upper_bound)
-                       for name, meta in iteritems(desvars)]
+        desvar_info = [(name, *self._desvar_idx[name], lower_bound, upper_bound)
+                       for name, _ in iteritems(desvars)]
         desvar_dict = {name: (x0[i:j].copy(), lbound[i:j], ubound[i:j]) for (name, i, j, lbound, ubound) in desvar_info}
         start = time.time()
 
@@ -240,9 +237,8 @@ class SGDDriver(Driver):
             outputs = []
             for subsys in model._subsystems_myproc:
                 # check if all requested of are accounted for
-                if all(self.abs2prom[x] in outputs for x in of_list):
+                if all(x in outputs for x in of_list):
                     subsys.skip_linearize = True
-                    # print('skipped: ' + subsys.name)
                 else:
                     subsys.skip_linearize = False
                 outputs += list(set([b['prom_name'] for a, b in subsys.list_outputs(val=False, prom_name=True, out_stream=None)]))

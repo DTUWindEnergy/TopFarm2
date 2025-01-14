@@ -14,18 +14,20 @@ from openmdao.drivers.doe_driver import DOEDriver
 from numpy import testing as npt
 from topfarm.tests.test_files import tfp
 import os
-from topfarm.tests.test_fuga import test_pyfuga
-from topfarm.plotting import PlotComp, NoPlot, XYPlotComp
 from topfarm.constraint_components.boundary import XYBoundaryConstraint
 from topfarm.constraint_components.spacing import SpacingConstraint
 from topfarm._topfarm import TopFarmProblem
-from topfarm.tests.test_fuga.test_pyfuga import get_fuga
-import subprocess
 
 
 @pytest.fixture
 def tf_generator():
-    def tf(xy_boundary=[(0, 0), (4, 4)], z_boundary=(0, 4), xy_boundary_type='square', **kwargs):
+
+    def tf(
+        xy_boundary=[(0, 0), (4, 4)],
+        z_boundary=(0, 4),
+        xy_boundary_type="square",
+        **kwargs,
+    ) -> TopFarmProblem:
         optimal = [(0, 2, 4), (4, 2, 1)]
         xyz = np.array([(0, 1, 0), (1, 1, 1)])
         p1 = DummyCost(optimal, 'xyz')
@@ -68,7 +70,6 @@ def test_ListRecorder():
     prob.driver = DOEDriver(ListGenerator([[('x', xy[0]), ('y', xy[1])] for xy in xyf]))
     recorder = TopFarmListRecorder()
     recorder._initialize_database()
-    recorder._cleanup_abs2meta()
     # recorder.record_iteration_problem(None, None, None)
     # recorder.record_iteration_system(None, None, None)
     # recorder.record_iteration_solver(None, None, None)
@@ -102,16 +103,12 @@ def test_ListRecorder():
 
 
 def test_TopFarmListRecorderAnimation(tf_generator):
-    try:
-        from matplotlib import animation
-        animation.writers['ffmpeg']
-    except Exception:
-        pytest.xfail("No matplotlib, animation or ffmpeg writer")
+    from matplotlib import animation
+    animation.writers['ffmpeg']
 
     tf = tf_generator()
     _, _, recorder = tf.optimize()
-    # # Generate test file:
-#    recorder.save('topfarm/tests/test_files/recordings/COBYLA_10iter.pkl')
+    recorder.save(tfp + "/tmp/COBYLA_10iter.pkl")
     fn = tfp + "/tmp/test.mp4"
     if os.path.exists(fn):
         os.remove(fn)
@@ -220,39 +217,28 @@ def test_TopFarmListRecorderLoad_Nothing(fn):
     assert rec.num_cases == 0
 
 
-@pytest.mark.parametrize('load_case,n_rec,n_fev', [('', 55, 1),
-                                                   ('none', 53, 52),
-                                                   (40, 207, 166)])
-def test_TopFarmListRecorder_continue(tf_generator, load_case, n_rec, n_fev, get_fuga):
-
-    D = 80.0
-    D2 = 2 * D + 10
-    init_pos = np.array([(0, 2 * D), (0, 0), (0, -2 * D)])
-    init_pos[:, 0] += [-40, 0, 40]
-
-    pyFuga = get_fuga(init_pos[:, 0], init_pos[:, 1], wind_atlas='MyFarm/north_pm45_only.lib')
-    boundary = [(-D2, -D2), (D2, D2)]
-    plot_comp = XYPlotComp()
-    plot_comp = NoPlot()
-    tf = TopFarmProblem(
-        dict(zip('xy', init_pos.T)),
-        cost_comp=pyFuga.get_TopFarm_cost_component(),
-        constraints=[SpacingConstraint(2 * D),
-                     XYBoundaryConstraint(boundary, 'square')],
-        driver=EasyScipyOptimizeDriver(tol=1e-10, disp=False),
-        plot_comp=plot_comp,
-        record_id=tfp + 'recordings/test_TopFarmListRecorder_continue:%s' % load_case,
-        expected_cost=25)
-
-    _, _, recorder = tf.optimize()
-    # Create test file:
-    # 1) delete file "test_files/recordings/test_TopFarmListRecorder_continue"
-    # 2) Uncomment line below, run and recomment
-#    if load_case == "": recorder.save()  # create test file
+@pytest.mark.xdist_group(name="sequential")
+@pytest.mark.parametrize(
+    "load_case,n_rec,n_fev",
+    [
+        ("", 195, 195),
+        ("none", 195, 195),
+        (40, 206, 166),
+    ],
+)
+def test_TopFarmListRecorder_continue(tf_generator, load_case, n_rec, n_fev):
+    rec_file = tfp + "recordings/test_TopFarmListRecorder_continue.pkl"
+    if load_case == "" and os.path.exists(rec_file):
+        os.remove(rec_file)
+    prob: TopFarmProblem = tf_generator(
+        record_id=tfp + "recordings/test_TopFarmListRecorder_continue:%s" % load_case,
+        driver=EasyScipyOptimizeDriver(optimizer="COBYLA", disp=False, maxiter=599),
+    )
+    _, _, recorder = prob.optimize()
+    if load_case == "":
+        recorder.save()  # create test file
     npt.assert_equal(recorder.num_cases, n_rec)
-    npt.assert_equal(tf.driver.result['nfev'], n_fev)
-
-    tf.plot_comp.show()
+    npt.assert_equal(prob.driver.result["model_evals"], n_fev)
 
 
 def test_TopFarmListRecorder_continue_wrong_recorder(tf_generator):

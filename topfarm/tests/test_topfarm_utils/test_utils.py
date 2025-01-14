@@ -2,7 +2,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
-from topfarm.utils import smart_start, SmoothMax, SmoothMin, SoftMax, StrictMax, StrictMin, LogSumExpMax, LogSumExpMin
+from topfarm.utils import (
+    smart_start,
+    SmoothMax,
+    SmoothMin,
+    StrictMax,
+    StrictMin,
+    LogSumExpMax,
+    LogSumExpMin,
+    _np2scalar,
+)
 from topfarm.tests import npt
 from topfarm import TopFarmProblem
 from topfarm.easy_drivers import EasyScipyOptimizeDriver
@@ -273,3 +282,28 @@ def test_max_funcs(max_func, scaling, ref):
     else:
         mask = slice(None)
     npt.assert_array_almost_equal(dmax_da_fd(x)[mask], dm_da[mask], 4)
+
+
+def test_np2scalar():
+    assert _np2scalar(np.array(5.0)) == 5.0
+    assert _np2scalar(np.array([3.14])) == 3.14
+    assert _np2scalar(np.array([[3.14]])) == 3.14
+    assert _np2scalar(np.array([[[3.14]]])) == 3.14
+    assert _np2scalar(np.float32(2.5)) == 2.5
+    assert _np2scalar(np.float64(7.8)) == 7.8
+    assert _np2scalar(np.int64(42)) == 42.0
+    assert _np2scalar(np.bool_(True)) == 1.0
+    assert _np2scalar(np.bool_(False)) == 0.0
+
+    assert _np2scalar(np.array(5.0), int) == 5
+    assert _np2scalar(np.array([3.0]), int) == 3
+
+    assert _np2scalar(5) == 5.0
+    assert _np2scalar(3.14) == 3.14
+    assert _np2scalar(True) == 1.0
+
+    try:
+        _np2scalar(np.array([1, 2, 3]))
+        assert False, "Should have raised ValueError"
+    except ValueError:
+        pass

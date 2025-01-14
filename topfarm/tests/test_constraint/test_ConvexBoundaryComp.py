@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 from topfarm.tests import npt
-from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
+from topfarm.easy_drivers import EasyScipyOptimizeDriver
 from topfarm.constraint_components.boundary import XYBoundaryConstraint, \
     ConvexBoundaryComp
 from topfarm._topfarm import TopFarmProblem
@@ -47,15 +47,13 @@ def testNotImplemented():
 def test_z_boundary():
     optimal = np.array([(0, 0, 0)]).T
     tf = TopFarmProblem(
-        {'z': (optimal, 70, 90)},
-        DummyCost(optimal, 'z'),
-        driver=pyOptSparseDriver(**{"optimizer": "NSGA2"})
+        {"z": (optimal, 70, 90)},
+        DummyCost(optimal, "z"),
+        driver=EasyScipyOptimizeDriver(),
     )
-
     desvars = tf.driver._designvars
-    print(desvars)
-    np.testing.assert_array_equal(desvars['indeps.z']['lower'], [70, 70])
-    np.testing.assert_array_equal(desvars['indeps.z']['upper'], [90, 90])
+    np.testing.assert_array_equal(desvars["z"]["lower"], [70, 70])
+    np.testing.assert_array_equal(desvars["z"]["upper"], [90, 90])
 
 
 def test_xyz_boundary():
@@ -66,9 +64,10 @@ def test_xyz_boundary():
     b = XYBoundaryConstraint(boundary, boundary_type='rectangle')
     tf = TopFarmProblem(
         desvar,
-        DummyCost(optimal, 'xyz'),
+        DummyCost(optimal, "xyz"),
         constraints=[b],
-        driver=pyOptSparseDriver(**{"optimizer": "NSGA2"}))
+        driver=EasyScipyOptimizeDriver(),
+    )
 
     np.testing.assert_array_equal(b.constraintComponent.xy_boundary, [[0, 0],
                                                                       [1, 0],
@@ -76,8 +75,8 @@ def test_xyz_boundary():
                                                                       [0, 3],
                                                                       [0, 0]])
     desvars = tf.driver._designvars
-    np.testing.assert_array_equal(desvars['indeps.z']['lower'], [70])
-    np.testing.assert_array_equal(desvars['indeps.z']['upper'], [90])
+    np.testing.assert_array_equal(desvars["z"]["lower"], [70])
+    np.testing.assert_array_equal(desvars["z"]["upper"], [90])
 
 
 def test_move_inside():

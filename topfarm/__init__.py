@@ -1,18 +1,21 @@
+import sys
 from ._topfarm import *
-import pkg_resources
+from importlib.metadata import entry_points
 from ._version import __version__
 
 __release__ = __version__
 
-plugins = {
-    entry_point.name: entry_point.load()
-    for entry_point
-    in pkg_resources.iter_entry_points('topfarm.plugins')
-}
-x_key = 'x'
-y_key = 'y'
-z_key = 'z'
-type_key = 'type'
-cost_key = 'cost'
-grid_x_key = 'sx'
-grid_y_key = 'sy'
+entry_pts = (  # change in the entry_points() API between Python 3.9 and 3.10
+    entry_points().get("topfarm.plugins", [])
+    if sys.version_info < (3, 10)
+    else entry_points().select(group="topfarm.plugins")
+)
+
+plugins = {entry_point.name: entry_point.load() for entry_point in entry_pts}
+x_key = "x"
+y_key = "y"
+z_key = "z"
+type_key = "type"
+cost_key = "cost"
+grid_x_key = "sx"
+grid_y_key = "sy"

@@ -5,7 +5,6 @@ from topfarm.tests import npt
 from topfarm.constraint_components.boundary import XYBoundaryConstraint
 from topfarm.easy_drivers import EasyScipyOptimizeDriver
 from topfarm import TopFarmProblem
-from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
 from openmdao.drivers.genetic_algorithm_driver import SimpleGADriver
 
 

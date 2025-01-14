@@ -158,7 +158,7 @@ def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, random_pct=0, plot=Fal
         gc.collect()
 
     print(
-        f"{len(XX.flatten())} possible points, {N_WT} wt, {len(XX)/N_WT:.1f} points pr wt, {arr.shape[1]}({arr.shape[1]/len(XX.flatten())*100:.0f}%) unused points")
+        f"{len(XX.flatten())} possible points, {N_WT} wt, {len(XX) / N_WT:.1f} points pr wt, {arr.shape[1]}({arr.shape[1] / len(XX.flatten()) * 100:.0f}%) unused points")
     if types:
         return xs, ys, type_i
     else:
@@ -326,7 +326,7 @@ class SmoothMax(AggregationFunction):
         self.alpha = 1 / base
 
     def __str__(self):
-        return f"{self.__class__.__name__}({1/self.alpha})"
+        return f"{self.__class__.__name__}({1 / self.alpha})"
 
     def __call__(self, x, axis=-1):
         if self.alpha > 0:
@@ -353,7 +353,7 @@ class SmoothMin(SmoothMax):
         SmoothMax.__init__(self, base=-base)
 
     def __str__(self):
-        return f"{self.__class__.__name__}({-1/self.alpha})"
+        return f"{self.__class__.__name__}({-1 / self.alpha})"
 
 
 class LogSumExpMax(SmoothMax):
@@ -369,7 +369,7 @@ class LogSumExpMax(SmoothMax):
     """
 
     def __str__(self):
-        return f"{self.__class__.__name__}({1/self.alpha})"
+        return f"{self.__class__.__name__}({1 / self.alpha})"
 
     def __call__(self, x, axis=-1):
         # factor used to reduce numerical errors in power
@@ -390,7 +390,7 @@ class LogSumExpMin(LogSumExpMax):
         LogSumExpMax.__init__(self, base=-base)
 
     def __str__(self):
-        return f"{self.__class__.__name__}({-1/self.alpha})"
+        return f"{self.__class__.__name__}({-1 / self.alpha})"
 
 
 def regular_generic_layout(n_wt, sx, sy, stagger, rotation, x0=0, y0=0, ratio=1.0):
@@ -424,16 +424,16 @@ def regular_generic_layout(n_wt, sx, sy, stagger, rotation, x0=0, y0=0, ratio=1.
         n_col = int(np.round((n_wt * ratio) ** 0.5))
         n_row = int(n_wt / n_col)
     rest = n_wt - n_col * n_row
-    theta = np.radians(float(rotation))
+    theta = np.radians(_np2scalar(rotation))
     R = np.array([[np.cos(theta), -np.sin(theta)],
                   [np.sin(theta), np.cos(theta)]])
-    x_grid = np.linspace(0, n_col * float(sx), n_col, endpoint=False)
-    y_grid = np.linspace(0, n_row * float(sy), n_row, endpoint=False)
+    x_grid = np.linspace(0, n_col * _np2scalar(sx), n_col, endpoint=False)
+    y_grid = np.linspace(0, n_row * _np2scalar(sy), n_row, endpoint=False)
     xm, ym = np.meshgrid(x_grid, y_grid)
     ym[:, 1::2] += stagger
     x, y = xm.ravel(), ym.ravel()
     x = np.hstack((x, x_grid[:rest]))
-    y = np.hstack((y, (y[-n_col:-(n_col - rest)] + float(sy))))
+    y = np.hstack((y, (y[-n_col: -(n_col - rest)] + _np2scalar(sy))))
     xy_grid = np.matmul(R, np.array([x, y]))
     return xy_grid + np.asarray([x0, y0])[:, na]
 
@@ -469,7 +469,7 @@ def regular_generic_layout_gradients(n_wt, sx, sy, stagger, rotation, x0=0, y0=0
         n_col = int(np.round((n_wt * ratio) ** 0.5))
         n_row = int(n_wt / n_col)
     rest = n_wt - n_col * n_row
-    theta = np.radians(float(rotation))
+    theta = np.radians(_np2scalar(rotation))
     R = np.array([[np.cos(theta), -np.sin(theta)],
                   [np.sin(theta), np.cos(theta)]])
 
@@ -493,13 +493,13 @@ def regular_generic_layout_gradients(n_wt, sx, sy, stagger, rotation, x0=0, y0=0
     dx_dsy = dxy_dsy[0, :]
     dy_dsy = dxy_dsy[1, :]
 
-    x_grid = np.linspace(0, n_col * float(sx), n_col, endpoint=False)
-    y_grid = np.linspace(0, n_row * float(sy), n_row, endpoint=False)
+    x_grid = np.linspace(0, n_col * _np2scalar(sx), n_col, endpoint=False)
+    y_grid = np.linspace(0, n_row * _np2scalar(sy), n_row, endpoint=False)
     xm, ym = np.meshgrid(x_grid, y_grid)
     ym[:, 1::2] += stagger
     x, y = xm.ravel(), ym.ravel()
     x = np.hstack((x, x_grid[:rest]))
-    y = np.hstack((y, (y[-n_col:-(n_col - rest)] + float(sy))))
+    y = np.hstack((y, (y[-n_col: -(n_col - rest)] + _np2scalar(sy))))
     dRdr = np.array([[-np.sin(theta), -np.cos(theta)],
                      [np.cos(theta), -np.sin(theta)]])
     dx_dr, dy_dr = np.matmul(dRdr, np.array([x, y])) * np.pi / 180
@@ -552,6 +552,32 @@ def fit_weib(u):
 
     A, k = fsolve(moments, (u_bar, 2.0))
     return A, k
+
+
+def _np2scalar(x, dtype=float):
+    """
+    Convert any scalar numpy value to scalar with type dtype,
+    while handling regular Python values.
+
+    Args:
+        x: A value that could be either a NumPy array/scalar or a regular Python value
+
+    Returns:
+        scalar [float|int]: The dtype representation of the input value
+
+    Raises:
+        ValueError: If input is a non-scalar NumPy array
+    """
+    if isinstance(x, np.ndarray):
+        if x.size != 1:
+            raise ValueError("Input array must be scalar (size 1)")
+
+        return dtype(x.item())
+
+    if isinstance(x, (np.number, np.bool_)):
+        return dtype(x.item())
+
+    return dtype(x)
 
 
 def main():

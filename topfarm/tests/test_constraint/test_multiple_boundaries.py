@@ -1,9 +1,11 @@
+import topfarm
 from topfarm.drivers.genetic_algorithm_driver import SimpleGADriver
 from topfarm.cost_models.dummy import DummyCost
+from topfarm.easy_drivers import EasyScipyOptimizeDriver
 from topfarm import TopFarmProblem
 from topfarm.plotting import NoPlot
 from topfarm.constraint_components.spacing import SpacingConstraint
-from ..test_files.xy3tb import get_tf, boundary, optimal
+from ..test_files.xy3tb import boundary, initial, desired, optimal
 import unittest
 from topfarm.constraint_components.boundary import (
     MultiConvexBoundaryComp,
@@ -17,6 +19,8 @@ from topfarm.constraint_components.boundary import (
     PolygonBoundaryComp,
     MultiWFPolygonBoundaryComp,
 )
+from topfarm.constraint_components.boundary import MultiPolygonBoundaryComp
+from topfarm.constraint_components.boundary import InclusionZone, ExclusionZone
 import numpy as np  # fmt: skip
 np.random.seed(42)
 
@@ -329,9 +333,18 @@ class TestMultiXYBoundaryConstraint(unittest.TestCase):
         assert np.concatenate([m1, ~m1]).sum() == self.n_wt
         self.boundaries = [Boundary(boundary, m1), Boundary(boundary, ~m1)]
         self.constraint = MultiXYBoundaryConstraint(self.boundaries)
-        self.tf_problem = get_tf(  # 3 turbines problem
-            {"constraints": [self.constraint, SpacingConstraint(2)]}
-        )
+
+        k = {
+            "cost_comp": DummyCost(desired[:, :2], [topfarm.x_key, topfarm.y_key]),
+            "design_vars": {
+                topfarm.x_key: (initial[:, 0], -1e4, 1e4),
+                topfarm.y_key: (initial[:, 1], -1e4, 1e4),
+            },
+            "driver": EasyScipyOptimizeDriver(disp=False, tol=1e-8),
+            "plot_comp": NoPlot(),
+            "constraints": [self.constraint, SpacingConstraint(2)],
+        }
+        self.tf_problem = TopFarmProblem(**k)
 
     def test_initialization(self):
         self.assertEqual(self.constraint.boundaries, self.boundaries)
@@ -747,10 +760,7 @@ class TestMultiWFPolygonBoundaryComp(unittest.TestCase):
     def test_polygon_gradient_with_large_number_of_vertices(self):
         N = 100
         boundary_coords = np.array(
-            [
-                [np.cos(2 * np.pi * i / N), np.sin(2 * np.pi * i / N)]
-                for i in range(N)
-            ]
+            [[np.cos(2 * np.pi * i / N), np.sin(2 * np.pi * i / N)] for i in range(N)]
         )
 
         x = np.array([0.25, 0.75, 0.5, -0.2])
@@ -765,3 +775,126 @@ class TestMultiWFPolygonBoundaryComp(unittest.TestCase):
         )
         # should not fail
         _ = multi.gradients(x, y)
+
+
+@pytest.fixture
+def sample_zones():
+    # Create sample inclusion and exclusion zones
+    inclusion = np.array([[0, 0], [10, 0], [10, 10], [0, 10]])
+    exclusion = np.array([[3, 3], [7, 3], [7, 7], [3, 7]])
+
+    zones = [
+        InclusionZone(inclusion, name="inclusion"),
+        ExclusionZone(exclusion, name="exclusion"),
+    ]
+    return zones
+
+
+def test_multipolygon_boundary_comp_basic_init(sample_zones):
+    # Test basic initialization
+    comp = MultiPolygonBoundaryComp(
+        n_wt=5, zones=sample_zones, const_id="test", units="m"
+    )
+
+    assert comp.n_wt == 5
+    assert len(comp.zones) == 2
+    assert comp.const_id == "test"
+    assert comp.units == "m"
+    assert comp.method == "nearest"
+    assert not comp.relaxation
+
+
+def test_multipolygon_boundary_comp_with_simplify_float(sample_zones):
+    # Test initialization with float simplification
+    comp = MultiPolygonBoundaryComp(n_wt=5, zones=sample_zones, simplify_geometry=0.1)
+
+    # Verify simplification was applied
+    assert hasattr(comp, "bounds_poly")
+    assert len(comp.bounds_poly) > 0
+
+
+def test_multipolygon_boundary_comp_with_simplify_dict(sample_zones):
+    # Test initialization with dict simplification
+    simplify_params = {"tolerance": 0.1, "preserve_topology": True}
+    comp = MultiPolygonBoundaryComp(
+        n_wt=5, zones=sample_zones, simplify_geometry=simplify_params
+    )
+
+    # Verify simplification was applied
+    assert hasattr(comp, "bounds_poly")
+    assert len(comp.bounds_poly) > 0
+
+
+def test_multipolygon_boundary_comp_method_options(sample_zones):
+    # Test different method options
+    comp_nearest = MultiPolygonBoundaryComp(
+        n_wt=5, zones=sample_zones, method="nearest"
+    )
+    assert comp_nearest.method == "nearest"
+
+    comp_smooth = MultiPolygonBoundaryComp(
+        n_wt=5, zones=sample_zones, method="smooth_min"
+    )
+    assert comp_smooth.method == "smooth_min"
+
+
+def test_multipolygon_boundary_comp_with_relaxation(sample_zones):
+    # Test initialization with relaxation
+    comp = MultiPolygonBoundaryComp(
+        n_wt=5,
+        zones=sample_zones,
+        relaxation=(0.1, 10),  # Example relaxation parameters
+    )
+    assert comp.relaxation == (0.1, 10)
+
+
+def test_simplify_method_float(sample_zones):
+    comp = MultiPolygonBoundaryComp(n_wt=5, zones=sample_zones)
+    initial_boundaries = len(comp.boundaries)
+
+    # Apply float simplification
+    comp.simplify(0.1)
+
+    # Verify boundaries were simplified but structure maintained
+    assert len(comp.boundaries) == initial_boundaries
+    assert all(isinstance(b[0], np.ndarray) for b in comp.boundaries)
+
+
+def test_simplify_method_dict(sample_zones):
+    comp = MultiPolygonBoundaryComp(n_wt=5, zones=sample_zones)
+    initial_boundaries = len(comp.boundaries)
+
+    # Apply dict simplification
+    simplify_params = {"tolerance": 0.1, "preserve_topology": True}
+    comp.simplify(simplify_params)
+
+    # Verify boundaries were simplified but structure maintained
+    assert len(comp.boundaries) == initial_boundaries
+    assert all(isinstance(b[0], np.ndarray) for b in comp.boundaries)
+
+
+def test_simplify_preserves_validity(sample_zones):
+    comp = MultiPolygonBoundaryComp(n_wt=5, zones=sample_zones)
+
+    # Apply simplification
+    comp.simplify(0.1)
+
+    # Verify that boundaries remain valid
+    assert hasattr(comp, "bounds_poly")
+    assert hasattr(comp, "boundaries")
+    assert len(comp.boundaries) > 0
+    assert all(isinstance(b[0], np.ndarray) for b in comp.boundaries)
+    assert all(
+        len(b[0]) >= 3 for b in comp.boundaries
+    )  # Minimum 3 points for valid polygon
+
+
+def test_simplify_maintains_types(sample_zones):
+    comp = MultiPolygonBoundaryComp(n_wt=5, zones=sample_zones)
+    original_incl_excls = comp.incl_excls.copy()
+
+    # Apply simplification
+    comp.simplify(0.1)
+
+    # Verify inclusion/exclusion flags maintained
+    assert np.array_equal(comp.incl_excls, original_incl_excls)

@@ -26,10 +26,10 @@ def test_TopFarmProblemLimits():
                       constraints=[])
     tf.evaluate()
     desvars = tf.driver._designvars
-    npt.assert_equal(desvars['indeps.x']['lower'], -3)
-    npt.assert_equal(desvars['indeps.x']['upper'], 3)
-    npt.assert_array_equal(desvars['indeps.y']['lower'], [-4, -3, -2])
-    npt.assert_array_equal(desvars['indeps.y']['upper'], [2, 3, 4])
+    npt.assert_equal(desvars['x']['lower'], -3)
+    npt.assert_equal(desvars['x']['upper'], 3)
+    npt.assert_array_equal(desvars['y']['lower'], [-4, -3, -2])
+    npt.assert_array_equal(desvars['y']['upper'], [2, 3, 4])
 
 
 def test_TopFarmProblemSpacingConstraint():
@@ -70,15 +70,17 @@ def test_TopFarmProblemXYBoundaryConstraint():
     if tuple(map(int, scipy.__version__.split("."))) < (1, 5, 0):
         for xy in 'xy':
             for lu in ['lower', 'upper']:
-                npt.assert_equal(desvars['indeps.' + xy][lu], np.nan)
-    else:
-        for i, xy in enumerate('xy'):
-            if tf.driver._has_scaling:
-                for lu, z in zip(['lower', 'upper'], (0, 1)):
-                    npt.assert_equal(desvars['indeps.' + xy][lu], z)
-            else:
-                for lu, func in zip(['lower', 'upper'], (np.min, np.max)):
-                    npt.assert_equal(desvars['indeps.' + xy][lu], func(xy3tb.boundary[:, i]))
+                npt.assert_equal(desvars[xy][lu], np.nan)
+        return
+
+    # new scipy version
+    for i, xy in enumerate('xy'):
+        if tf.driver._has_scaling:
+            for lu, z in zip(['lower', 'upper'], (0, 1)):
+                npt.assert_equal(desvars[xy][lu], z)
+        else:
+            for lu, func in zip(['lower', 'upper'], (np.min, np.max)):
+                npt.assert_equal(desvars[xy][lu], func(xy3tb.boundary[:, i]))
 
 
 def test_TopFarmProblemXYBoundaryConstraintPolygon():
@@ -114,7 +116,7 @@ def test_TopFarmProblemXYBoundaryPenaltyAndLimits():
     npt.assert_equal(tf['boundaryDistances'][1, 3], -1)
 
     desvars = tf.driver._designvars
-    npt.assert_equal(desvars['indeps.x']['lower'], 0)
-    npt.assert_equal(desvars['indeps.x']['upper'], 5)
-    npt.assert_array_equal(desvars['indeps.y']['lower'], -9)
-    npt.assert_array_equal(desvars['indeps.y']['upper'], -1)
+    npt.assert_equal(desvars['x']['lower'], 0)
+    npt.assert_equal(desvars['x']['upper'], 5)
+    npt.assert_array_equal(desvars['y']['lower'], -9)
+    npt.assert_array_equal(desvars['y']['upper'], -1)

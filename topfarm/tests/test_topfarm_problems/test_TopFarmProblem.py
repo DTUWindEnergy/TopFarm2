@@ -188,11 +188,12 @@ def testTopFarmProblem_as_component(turbineTypeOptimizationProblem):
 def testTopFarmProblem_get_DOE_list(turbineTypeOptimizationProblem):
     tf = turbineTypeOptimizationProblem
     npt.assert_array_equal(len(tf.get_DOE_list()), 27)
-    (k, v), = tf.get_DOE_list()[1]
-    assert k == "indeps.type"
+    ((k, v),) = tf.get_DOE_list()[1]
+    assert k == "type"
     npt.assert_array_equal(v, [1, 0, 0])
-
-    # npt.assert_array_equal(tf.get_DOE_list()[1], [[('indeps.turbineType', array([0., 0., 0.]))], [('indeps.turbineType', array([1., 0., 0.]))]])
+    ((k, v),) = tf.get_DOE_list()[0]
+    assert k == "type"
+    npt.assert_array_equal(v, [0, 0, 0])
 
 
 def testTopFarmProblem_get_DOE_array(turbineTypeOptimizationProblem):

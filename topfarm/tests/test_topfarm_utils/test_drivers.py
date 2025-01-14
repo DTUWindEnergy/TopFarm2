@@ -1,5 +1,5 @@
 import pytest
-
+import sys
 import numpy as np
 
 from topfarm.cost_models.dummy import DummyCost, DummyCostPlotComp
@@ -74,9 +74,15 @@ def topfarm_generator():
         (EasyScipyOptimizeDriver(tol=1e-3, disp=False), 1e-2),
         (EasyScipyOptimizeDriver(maxiter=14, disp=False), 1e-1),
         (EasyScipyOptimizeDriver(optimizer="COBYLA", tol=1e-3, disp=False), 1e-2),
-        (EasyPyOptSparseIPOPT(), 1e-4),
-        (EasyPyOptSparseSNOPT(), 1e-4),
-    ][:],
+    ] +
+    (
+        []
+        if sys.version_info >= (3, 12)
+        else [
+            (EasyPyOptSparseIPOPT(), 1e-4),
+            (EasyPyOptSparseSNOPT(), 1e-4),
+        ]
+    ),
 )
 def test_optimizers(driver, tol, topfarm_generator_scalable):
     if driver is None or driver.__class__.__name__ == "PyOptSparseMissingDriver":
@@ -94,24 +100,37 @@ def test_optimizers(driver, tol, topfarm_generator_scalable):
     np.testing.assert_array_almost_equal(tb_pos, optimal[:, :2], -int(np.log10(tol)))
 
 
-@pytest.mark.parametrize('driver,tol,N', [
-    (EasyScipyOptimizeDriver(disp=False), 1e-4, 30),
-    (EasyPyOptSparseSNOPT(), 1e-4, 39),
-    # COBYLA no longer works with scaling.
-    # See issue on Github: https://github.com/OpenMDAO/OpenMDAO/issues/942
-    # It can therefore requires 120 iterations instead of 104
-    #    (EasyScipyOptimizeDriver(optimizer='COBYLA', tol=1e-3, disp=False), 1e-2, 104),
-    (EasyScipyOptimizeDriver(optimizer='COBYLA', tol=1e-3, disp=False), 1e-2, 120),
-    (EasyPyOptSparseIPOPT(), 1e-4, 25),
-][:])
-@pytest.mark.parametrize('cost_scale,cost_offset', [(1, 0),
-                                                    (1000, 0),
-                                                    (1, 200),
-                                                    (0.001, 200),
-                                                    (0.001, -200),
-                                                    (1000, 200),
-                                                    (1000, -200)
-                                                    ])
+@pytest.mark.parametrize(
+    "driver,tol,N",
+    [
+        (EasyScipyOptimizeDriver(disp=False), 1e-4, 30),
+        # COBYLA no longer works with scaling.
+        # See issue on Github: https://github.com/OpenMDAO/OpenMDAO/issues/942
+        # It can therefore requires 120 iterations instead of 104
+        #    (EasyScipyOptimizeDriver(optimizer='COBYLA', tol=1e-3, disp=False), 1e-2, 104),
+        (EasyScipyOptimizeDriver(optimizer="COBYLA", tol=1e-3, disp=False), 1e-2, 120),
+    ] +
+    (
+        []
+        if sys.version_info >= (3, 12)
+        else [
+            (EasyPyOptSparseIPOPT(), 1e-4, 25),
+            (EasyPyOptSparseSNOPT(), 1e-4, 39),
+        ]
+    ),
+)
+@pytest.mark.parametrize(
+    "cost_scale,cost_offset",
+    [
+        (1, 0),
+        (1000, 0),
+        (1, 200),
+        (0.001, 200),
+        (0.001, -200),
+        (1000, 200),
+        (1000, -200),
+    ],
+)
 def test_optimizers_scaling(driver, tol, N, cost_scale, cost_offset, topfarm_generator_scalable):
     if driver.__class__.__name__ == "PyOptSparseMissingDriver":
         pytest.xfail("Driver missing")

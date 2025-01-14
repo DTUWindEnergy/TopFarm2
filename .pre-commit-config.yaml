@@ -8,8 +8,12 @@ repos:
         pass_filenames: false
         stages: [pre-commit]
   - repo: https://github.com/kynan/nbstripout
-    rev: 0.8.0
+    rev: 0.8.1
     hooks:
       - id: nbstripout
-        args: [--keep-output]
+        args:
+          [
+            "--extra-keys=metadata.kernelspec metadata.language_info.version",
+            "--keep-output",
+          ]
         files: ^docs/notebooks/.*\.ipynb$

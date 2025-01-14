@@ -5,7 +5,7 @@ from topfarm.easy_drivers import EasyScipyOptimizeDriver
 from topfarm._topfarm import TopFarmProblem
 from topfarm.plotting import NoPlot
 from topfarm.constraint_components.spacing import SpacingConstraint
-from topfarm.constraint_components.capacity import CapacityConstraint, CapacityComp
+from topfarm.constraint_components.capacity import CapacityConstraint
 import topfarm
 from topfarm.constraint_components.boundary import XYBoundaryConstraint
 initial = np.array([[6, 0], [6, -8], [1, 1]])  # initial turbine layouts

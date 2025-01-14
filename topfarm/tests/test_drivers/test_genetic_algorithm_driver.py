@@ -16,10 +16,6 @@ from openmdao.test_suite.components.three_bar_truss import ThreeBarTruss
 # from openmdao.utils.assert_utils import assert_rel_error
 from openmdao.utils.mpi import MPI
 
-# # skip all tests in this file; The driver is deprecated
-# import pytest
-# pytestmark = pytest.mark.skip
-
 
 class TestSimpleGA(unittest.TestCase):
 
@@ -374,8 +370,7 @@ class TestMultiObjectiveSimpleGA(unittest.TestCase):
         prob.driver.options['bits'] = {'length': 8, 'width': 8, 'height': 8}
         prob.driver.options['multi_obj_exponent'] = 1.
         prob.driver.options['penalty_parameter'] = 10.
-        prob.driver.options['multi_obj_weights'] = {'box.front_area': 0.1,
-                                                    'box.top_area': 0.9}
+        prob.driver.options["multi_obj_weights"] = {"front_area": 0.1, "top_area": 0.9}
         prob.driver.options['multi_obj_exponent'] = 1
 
         prob.model.add_design_var('length', lower=0.1, upper=2.)
@@ -413,8 +408,7 @@ class TestMultiObjectiveSimpleGA(unittest.TestCase):
         prob2.driver.options['bits'] = {'length': 8, 'width': 8, 'height': 8}
         prob2.driver.options['multi_obj_exponent'] = 1.
         prob2.driver.options['penalty_parameter'] = 10.
-        prob2.driver.options['multi_obj_weights'] = {'box.front_area': 0.9,
-                                                     'box.top_area': 0.1}
+        prob2.driver.options["multi_obj_weights"] = {"front_area": 0.9, "top_area": 0.1}
         prob2.driver.options['multi_obj_exponent'] = 1
 
         prob2.model.add_design_var('length', lower=0.1, upper=2.)

@@ -130,3 +130,6 @@ examples/scripts/figures/
 note.txt
 topfarm/_version.py
 .vscode/
+topfarm/tests/.testout/
+topfarm/tests/test_files/tmp/
+topfarm/tests/test_files/recordings/test_TopFarmListRecorder_continue.pkl

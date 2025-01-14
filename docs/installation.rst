@@ -50,3 +50,8 @@ We highly recommend developers to install TOPFARM into the environment created p
    git clone https://gitlab.windenergy.dtu.dk/TOPFARM/TopFarm2.git
    cd TopFarm2
    pip install -e .
+
+Please install `pre-commit` hooks to ensure that your code is formatted correctly and passes all linting tests. This can be done by running the following command::
+
+   pip install pre-commit
+   pre-commit install

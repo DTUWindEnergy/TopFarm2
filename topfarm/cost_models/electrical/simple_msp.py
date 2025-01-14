@@ -94,4 +94,5 @@ class XYCablePlotComp(XYPlotComp):
 
     def compute(self, inputs, outputs):
         XYPlotComp.compute(self, inputs, outputs)
-        self.hdisplay.update(self.fig)
+        if self.hdisplay:  # in the test environment, this is None
+            self.hdisplay.update(self.fig)

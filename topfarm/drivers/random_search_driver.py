@@ -109,8 +109,6 @@ class RandomSearchDriver(Driver):
 
         disp = self.options['disp']
 
-        abs2prom = model._var_abs2prom['output']
-
         # Initial Design Vars
         desvar_vals = self.get_design_var_values()
         i = 0
@@ -123,8 +121,10 @@ class RandomSearchDriver(Driver):
         x1 = x0.copy()
         n_iter = 0
 
-        desvar_info = [(abs2prom[name], *self._desvar_idx[name], lower_bound, upper_bound)
-                       for name, meta in iteritems(desvars)]
+        desvar_info = [
+            (name, *self._desvar_idx[name], lower_bound, upper_bound)
+            for name, _ in iteritems(desvars)
+        ]
         desvar_dict = {name: (x0[i:j].copy(), lbound[i:j], ubound[i:j]) for (name, i, j, lbound, ubound) in desvar_info}
         start = time.time()
 

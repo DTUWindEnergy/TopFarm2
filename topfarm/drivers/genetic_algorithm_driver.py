@@ -239,17 +239,13 @@ class SimpleGADriver(Driver):
 
         # Bits of resolution
         abs2prom = model._var_abs2prom['output']
-
         for name, meta in iteritems(desvars):
             i, j = self._desvar_idx[name]
-            prom_name = abs2prom[name]
 
             if name in user_bits:
                 val = user_bits[name]
-
-            elif prom_name in user_bits:
+            elif (prom_name := abs2prom.get(name)) and prom_name in user_bits:
                 val = user_bits[prom_name]
-
             else:
                 # If the user does not declare a bits for this variable, we assume they want it to
                 # be encoded as an integer. Encoding requires a power of 2 in the range, so we need

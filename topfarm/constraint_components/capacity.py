@@ -50,15 +50,17 @@ class CapacityComp(ConstraintComponent):
 
     def setup(self):
         self.add_input(topfarm.type_key, np.zeros(self.n_wt, dtype=int))
-        # self.add_output('constraint_violation_' + self.const_id, val=0.0)
         self.add_output('totalcapacity', val=0.0,
                         desc='wind farm installed capacity')
-        # Partial declaration is not needed for type or penalty in this case.
-        # Because it is only used for integer optimization.
+        self.declare_partials("totalcapacity", topfarm.type_key, val=1)
+        # self.add_output('constraint_violation_' + self.const_id, val=0.0)
 
     def compute(self, inputs, outputs):
         outputs['totalcapacity'] = np.sum(self.rated_power_array[inputs[topfarm.type_key].astype(int)])
         # outputs['constraint_violation_' + self.const_id] = np.maximum(0, outputs['totalcapacity'][0] - self.max_capacity)
+
+    def compute_partials(self, inputs, partials):
+        partials["totalcapacity", topfarm.type_key] = self.rated_power_array
 
     def satisfy(self):
         pass

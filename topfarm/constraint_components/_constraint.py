@@ -5,11 +5,11 @@ from openmdao.core.explicitcomponent import ExplicitComponent
 class Constraint(ABC):
 
     @abstractmethod
-    def setup_as_constraint(self):
+    def setup_as_constraint(self):  # pragma: no cover
         pass
 
     @abstractmethod
-    def setup_as_penalty(self):
+    def setup_as_penalty(self):  # pragma: no cover
         pass
 
     @property
@@ -22,7 +22,7 @@ class ConstraintComponent(ExplicitComponent, ABC):
         ExplicitComponent.__init__(self, **kwargs)
 
     @abstractmethod
-    def satisfy(self, state):
+    def satisfy(self, state):  # pragma: no cover
         pass
 
     def plot(self, ax):

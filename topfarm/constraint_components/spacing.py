@@ -86,8 +86,8 @@ class SpacingComp(ConstraintComponent):
             self.col_pairs = col_pairs
         else:
             # Sparse partial declaration
-            cols = col_pairs.flatten()
-            rows = np.repeat(np.arange(self.veclen), 2)
+            cols = np.asarray(col_pairs.flatten(), dtype=np.int32)
+            rows = np.asarray(np.repeat(np.arange(self.veclen), 2), dtype=np.int32)
 
             self.declare_partials(self.constraint_key,
                                   [topfarm.x_key, topfarm.y_key],

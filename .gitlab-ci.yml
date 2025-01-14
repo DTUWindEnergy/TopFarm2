@@ -33,29 +33,65 @@ test_topfarm:
   stage: # build, test, deploy defined by default [2]
     test
   script:
-    - pixi run test-all
+    - pixi run test-latest
+  artifacts:
+    paths:
+      - ./htmlcov
+    when: always
   tags: # only runners with this tag can do the job [3]
     - linux
   <<: *run_tests_rules
 
+# ===== TEST TOPFARM ALL PYTHON VERSIONS =====
+test_topfarm_all_py_versions:
+  image: ghcr.io/prefix-dev/pixi:latest
+  stage: # build, test, deploy defined by default [2]
+    test
+  script:
+    - pixi run test-all
+  tags: # only runners with this tag can do the job [3]
+    - linux
+  when: manual
+  allow_failure: true
+
+.windows_test_script:
+  script:
+    - setx PIXI_CACHE_DIR D:\.pixi_cache
+    # update PIXI_CACHE_DIR in current shell
+    - $env:PIXI_CACHE_DIR = [System.Environment]::GetEnvironmentVariable("PIXI_CACHE_DIR","User")
+    - C:\Users\ernim\.pixi\bin\pixi.exe clean
+    - C:\Users\ernim\.pixi\bin\pixi.exe run pip install -e .
+    - C:\Users\ernim\.pixi\bin\pixi.exe run $PIXI_TASK
+
 # ===== TEST TOPFARM ON WINDOWS =====
 test_topfarm_windows: # name the job what we like
+  extends: .windows_test_script
   needs:
     - test_topfarm_precommit
   variables:
     GIT_SUBMODULE_STRATEGY: normal
     GIT_CLEAN_FLAGS: -ffdx -e .pixi/
+    PIXI_TASK: test-latest
   stage: # build, test, deploy defined by default [2]
     test
   coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
-  script: # runs on windows machine due to tag below
-    - setx PIXI_CACHE_DIR D:\.pixi_cache
-    - $env:PIXI_CACHE_DIR = [System.Environment]::GetEnvironmentVariable("PIXI_CACHE_DIR","User") # update PIXI_CACHE_DIR in current shell
-    - C:\Users\ernim\.pixi\bin\pixi.exe run pip install -e .
-    - C:\Users\ernim\.pixi\bin\pixi.exe run test-all
   tags: # tag for shared runner on windows machine
     - ANMH_old
   <<: *run_tests_rules
+
+# ===== TEST TOPFARM ON WINDOWS ALL PYTHON VERSIONS =====
+test_topfarm_windows_all_py_versions: # name the job what we like
+  extends: .windows_test_script
+  variables:
+    GIT_SUBMODULE_STRATEGY: normal
+    GIT_CLEAN_FLAGS: -ffdx -e .pixi/
+    PIXI_TASK: test-all
+  stage: # build, test, deploy defined by default [2]
+    test
+  tags: # tag for shared runner on windows machine
+    - ANMH_old
+  when: manual
+  allow_failure: true
 
 # ===== TRIGGER TRIGGERHUB PIPELINE =====
 trigger_hub_test:
