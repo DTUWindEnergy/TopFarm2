@@ -7,12 +7,13 @@ import topfarm
 from shapely.geometry import Polygon, MultiPolygon, LineString
 from shapely.ops import unary_union
 import warnings
-from tqdm import tqdm
 from dataclasses import dataclass
 from typing import Dict, List, Optional
+from enum import Enum
 
 
 class XYBoundaryConstraint(Constraint):
+
     def __init__(self, boundary, boundary_type='convex_hull', units=None, relaxation=False, **kwargs):
         """Initialize XYBoundaryConstraint
 
@@ -63,6 +64,9 @@ class XYBoundaryConstraint(Constraint):
 
     @property
     def constraintComponent(self):
+        assert hasattr(
+            self, "boundary_comp"
+        ), "Boundary component not initialized, call setup first"
         return self.boundary_comp
 
     def set_design_var_limits(self, design_vars):
@@ -213,12 +217,10 @@ class BoundaryBaseComp(ConstraintComponent):
 class ConvexBoundaryComp(BoundaryBaseComp):
     def __init__(self, n_wt, xy_boundary=None, boundary_type='convex_hull', const_id=None, units=None):
         self.boundary_type = boundary_type
-#        self.const_id = const_id
         self.calculate_boundary_and_normals(xy_boundary)
         super().__init__(n_wt, self.xy_boundary, const_id, units)
         self.calculate_gradients()
         self.zeros = np.zeros([self.n_wt, self.nVertices])
-#        self.units = units
 
     def calculate_boundary_and_normals(self, xy_boundary):
         xy_boundary = np.asarray(xy_boundary)
@@ -347,255 +349,6 @@ class ConvexBoundaryComp(BoundaryBaseComp):
         state[topfarm.x_key] = x
         state[topfarm.y_key] = y
         return state
-
-
-@dataclass
-class Boundary(object):
-    _vertices: np.ndarray
-    design_var_mask: np.ndarray
-    is_inclusion: bool = True  # TODO: not implemented
-    normals: np.ndarray = None
-
-    @property
-    def n_turbines(self):
-        return self.design_var_mask.sum()
-
-    @property
-    def n_vertices(self):
-        if np.all(self.vertices[0] == self.vertices[-1]):
-            return self.vertices.shape[0] - 1
-        return self.vertices.shape[0]
-
-    @property
-    def vertices(self):
-        return self._vertices
-
-    @vertices.setter
-    def vertices(self, v):
-        self._vertices = v
-
-    def __post_init__(self):
-        self.__validate()
-
-    def __validate(self):
-        self.vertices = np.asarray(self.vertices)
-        assert self.vertices.ndim == 2, "Boundary must be a 2D array"
-        assert any(
-            [x for x in self.vertices.shape if x == 2]
-        ), "Boundary must have shape (n, 2) or (2, n)"
-        self.vertices = self.vertices.reshape(-1, 2)
-        assert self.vertices.shape[0] > 2, "Boundary must have at least 3 vertices"
-        assert isinstance(self.is_inclusion, bool), "is_inclusion must be a boolean"
-        assert self.design_var_mask.ndim == 1, "design_var_mask must 1 dimensional"
-        self.design_var_mask = np.asarray(self.design_var_mask, dtype=bool)
-
-
-class MultiXYBoundaryConstraint(Constraint):
-    def __init__(
-        self,
-        boundaries: list[Boundary],
-        boundary_type="convex_hull",
-        units=None,
-        relaxation=False,
-        **kwargs,
-    ):
-        if boundary_type != "convex_hull":
-            raise NotImplementedError("Only 'convex_hull' type is implemented")
-        if not isinstance(boundaries[0], Boundary):
-            boundaries = [Boundary(*b) for b in boundaries]
-        self.boundaries = boundaries
-        self.boundary_type = boundary_type
-        self.const_id = f"xyboundary_comp_{boundary_type}"
-        self.units = units
-        self.relaxation = relaxation
-
-    def get_comp(self, n_wt):
-        if hasattr(self, "boundary_comp"):
-            return self.boundary_comp
-        self.boundary_comp = MultiConvexBoundaryComp(
-            n_wt,
-            self.boundaries,
-            self.const_id,
-            self.units,
-        )
-        return self.boundary_comp
-
-    @property
-    def constraintComponent(self):
-        assert hasattr(
-            self, "boundary_comp"
-        ), "Boundary component not initialized, call setup first"
-        return self.boundary_comp
-
-    def set_design_var_limits(self, design_vars):
-        _ = design_vars
-
-    def _setup(self, problem, group="constraint_group"):
-        n_wt = problem.n_wt
-        self.boundary_comp = self.get_comp(n_wt)
-        self.boundary_comp.problem = problem
-        self.set_design_var_limits(problem.design_vars)
-        problem.indeps.add_output("xy_boundary", self.boundary_comp.xy_boundary)
-        getattr(problem.model, group).add_subsystem(
-            "xy_bound_comp", self.boundary_comp, promotes=["*"]
-        )
-
-    def setup_as_constraint(self, problem, group="constraint_group"):
-        self._setup(problem, group=group)
-        lower = 0 if problem.n_wt == 1 else self.boundary_comp.zeros
-        problem.model.add_constraint("boundaryDistances", lower=lower)
-
-    def setup_as_penalty(self, problem, group="constraint_group"):
-        self._setup(problem, group=group)
-
-
-class MultiConvexBoundaryComp(BoundaryBaseComp):
-    def __init__(
-        self,
-        n_wt,
-        xy_boundaries: list[Boundary],
-        const_id=None,
-        units=None,
-    ):
-        self.xy_boundaries = self.sort_boundaries(xy_boundaries)
-        self.xy_boundaries = self.calculate_boundary_and_normals(self.xy_boundaries)
-        super().__init__(n_wt, None, const_id, units)
-        self.turbine_vertice_prod = 0
-        total_n_active_turbines = 0
-        for b in self.xy_boundaries:
-            if np.any(b.vertices[0] != b.vertices[-1]):
-                b.vertices = np.r_[b.vertices, b.vertices[:1]]
-            self.turbine_vertice_prod += b.n_turbines * b.n_vertices
-            total_n_active_turbines += b.n_turbines
-        assert (
-            total_n_active_turbines == n_wt
-        ), "Number of active turbines in boundaries must match number of total turbines; Check that masks sum up to n_wt i.e. np.concatenate(all_masks).sum() == n_wt."
-        self.calculate_gradients()
-        self.zeros = np.zeros(self.turbine_vertice_prod)
-
-    def sort_boundaries(self, boundaries):
-        def centroid(boundary):  # fmt: skip
-            return tuple(np.mean(boundary.vertices, axis=0))
-        return sorted(boundaries, key=lambda b: centroid(b))
-
-    def calculate_boundary_and_normals(
-        self, xy_boundaries: list[Boundary]
-    ) -> list[Boundary]:
-        def __compute_normal(boundary_pts, ii, jj):
-            """Calculate the unit normal vector of the current face (taking points CCW)"""
-            normal = np.array(
-                [
-                    boundary_pts[ii, 1] - boundary_pts[jj, 1],
-                    -(boundary_pts[ii, 0] - boundary_pts[jj, 0]),
-                ]
-            )
-            return normal / np.linalg.norm(normal)
-
-        for boundary in xy_boundaries:
-            hull = ConvexHull(list(boundary.vertices))
-            # keep only vertices that actually comprise a convex hull and arrange in CCW order
-            boundary.vertices = boundary.vertices[hull.vertices]
-            # initialize normals array
-            unit_normals = np.zeros([boundary.n_vertices, 2])
-            # determine if point is inside or outside and distances from each face
-            nvtm1 = boundary.n_vertices - 1
-            for j in range(0, nvtm1):
-                # all but the points that close the shape
-                unit_normals[j] = __compute_normal(boundary.vertices, j + 1, j)
-            # points that close the shape
-            unit_normals[nvtm1] = __compute_normal(boundary.vertices, 0, nvtm1)
-            boundary.normals = unit_normals
-
-        return xy_boundaries
-
-    def calculate_gradients(self):
-        # this is flawed if the order of boundaries is switched;
-        # test with arbitrary number of vertices and arbitrary number
-        # of turbines in a boundary; For now it's sorted at the top..
-        final_dx = np.zeros([self.turbine_vertice_prod, self.n_wt])
-        final_dy = np.zeros([self.turbine_vertice_prod, self.n_wt])
-        for bi, boundary in enumerate(self.xy_boundaries):
-            assert (
-                boundary.design_var_mask is not None
-            ), "Design variable mask must be provided"
-            assert self.n_wt == len(
-                boundary.design_var_mask
-            ), "Design variable mask must must be the same length as the number of turbines"
-
-            unit_normals = boundary.normals
-            n_vertices = boundary.n_vertices
-            n_turbines = boundary.n_turbines
-            dfaceDistance_dx = np.zeros([n_turbines * n_vertices, n_turbines])
-            dfaceDistance_dy = np.zeros([n_turbines * n_vertices, n_turbines])
-            for i in range(0, n_turbines):
-                # determine if point is inside or outside of each face, and distances from each face
-                for j in range(0, n_vertices):
-                    # define the derivative vectors from the point of interest to the first point of the face
-                    dpa_dx = np.array([-1.0, 0.0])
-                    dpa_dy = np.array([0.0, -1.0])
-                    # find perpendicular distances derivatives from point to current surface (vector projection)
-                    ddistanceVec_dx = np.vdot(dpa_dx, unit_normals[j]) * unit_normals[j]
-                    ddistanceVec_dy = np.vdot(dpa_dy, unit_normals[j]) * unit_normals[j]
-                    # calculate derivatives for the sign of perpendicular distances from point to current face
-                    dfaceDistance_dx[i * n_vertices + j, i] = np.vdot(
-                        ddistanceVec_dx, unit_normals[j]
-                    )
-                    dfaceDistance_dy[i * n_vertices + j, i] = np.vdot(
-                        ddistanceVec_dy, unit_normals[j]
-                    )
-            seek = sum([(b.n_vertices * b.n_turbines) for b in self.xy_boundaries[:bi]])
-            final_dx[
-                seek: seek + (n_turbines * n_vertices), boundary.design_var_mask
-            ] = dfaceDistance_dx
-            final_dy[
-                seek: seek + (n_turbines * n_vertices), boundary.design_var_mask
-            ] = dfaceDistance_dy
-        dfaceDistance_dx = final_dx
-        dfaceDistance_dy = final_dy
-
-        def __wrap_sparse(m):  # fmt: skip
-            if m.size < 1e4:
-                return m
-            from scipy.sparse import csr_matrix  # fmt: skip
-            return csr_matrix(m)
-        # store Jacobians
-        self.dfaceDistance_dx = __wrap_sparse(dfaceDistance_dx)
-        self.dfaceDistance_dy = __wrap_sparse(dfaceDistance_dy)
-
-    def distances(self, x, y):
-        """
-        :param points: points that you want to calculate the distances from to the faces of the convex hull
-        :return face_distace: signed perpendicular distances from each point to each face; + is inside
-        """
-        points = np.array([x, y]).T
-        face_distances = np.zeros(self.turbine_vertice_prod)
-        for bi, boundary in enumerate(self.xy_boundaries):
-            mask = boundary.design_var_mask
-            vertices = boundary.vertices[:-1]
-            n_vertices = boundary.n_vertices
-            PA = vertices[:, na] - points[mask][na]
-            dist = np.sum(PA * boundary.normals[:, na], axis=2)
-            d_vec = dist[:, :, na] * boundary.normals[:, na]
-            seek = sum([(b.n_vertices * b.n_turbines) for b in self.xy_boundaries[:bi]])
-            face_distances[seek: seek + (boundary.n_turbines * n_vertices)] = np.sum(
-                d_vec * boundary.normals[:, na], axis=2
-            ).T.reshape(-1)
-        return face_distances
-
-    def gradients(self, x, y):
-        return self.dfaceDistance_dx, self.dfaceDistance_dy
-
-    def satisfy(self, state):
-        raise NotImplementedError("Not implemented for MultiConvexBoundaryComp")
-
-    def plot(self, ax):
-        for b in self.xy_boundaries:
-            ax.plot(
-                b.vertices[:, 0].tolist(),
-                b.vertices[:, 1].tolist(),
-                "k",
-                linewidth=1,
-            )
 
 
 class PolygonBoundaryComp(BoundaryBaseComp):
@@ -1172,53 +925,49 @@ class TurbineSpecificBoundaryComp(MultiPolygonBoundaryComp):
         return gradients
 
 
-class MultiCircleBoundaryConstraint(XYBoundaryConstraint):
-    def __init__(self, center, radius, masks):
-        """Initialize CircleBoundaryConstraint
-
-        Parameters
-        ----------
-        center : (float, float)
-            center position (x,y)
-        radius : int or float
-            circle radius
-        """
-
-        self.center = np.array(center)
-        self.radius = np.array(radius)
-        self.masks = np.array(masks)
-        assert (
-            len(self.center) == len(self.radius) == len(self.masks)
-        ), f"Lenght of center, radius and masks must be equal"
-        assert len(self.center) > 1
-        self.const_id = f"circle_boundary_comp_{id(self)}"
-
-    def get_comp(self, n_wt):
-        if not hasattr(self, "boundary_comp"):
-            self.boundary_comp = MultiCircleBoundaryComp(
-                n_wt, self.center, self.radius, self.masks, self.const_id
-            )
-        return self.boundary_comp
-
-    def set_design_var_limits(self, design_vars):
-        _ = design_vars
-        return
-
-
 class MultiCircleBoundaryComp(PolygonBoundaryComp):
 
-    def __init__(self, n_wt, center, radius, masks, const_id=None, units=None):
-        self.center = center
-        self.radius = radius
-        self.masks = masks
-        xy_boundary = None  # TODO: redundant
-        BoundaryBaseComp.__init__(self, n_wt, xy_boundary, const_id, units)
+    def __init__(self, n_wt, geometry, wt_groups, const_id=None, units=None):
+        self.__validate_input(geometry, wt_groups)
+        self.center = [g[0] for g in geometry]
+        self.radius = [g[1] for g in geometry]
+        # ones where the indices in each wt_group are active, zeros elsewhere
+        self.masks = [np.isin(np.arange(n_wt), g) for g in wt_groups]
+        BoundaryBaseComp.__init__(self, n_wt, None, const_id, units)
         self.zeros = np.zeros(self.n_wt)
+
+    def __validate_input(self, geometry, wt_groups):
+        does_len_match = len(geometry) == len(wt_groups)
+        centers_and_radii_given = all(len(g) == 2 for g in geometry)
+
+        from topfarm.utils import _np2scalar  # fmt:skip
+        are_radii_scalar = True
+        try:
+            _ = [_np2scalar(g[1]) for g in geometry]
+        except BaseException:
+            are_radii_scalar = False
+        are_centers_all_2x_coords = all(
+            hasattr(g[0], "__iter__") and len(g[0]) == 2 for g in geometry
+        )
+
+        assert all(
+            [
+                does_len_match,
+                centers_and_radii_given,
+                are_radii_scalar,
+                are_centers_all_2x_coords,
+            ]
+        ), (
+            "Invalid input for Circle: Ensure the number of geometries matches the number of wt_groups, "
+            "each geometry is a tuple of center and radius, and the center is a tuple of x and y "
+            "with the radius being a scalar. For instance, geometry = [((0, 0), 100), ...] and "
+            "wt_groups = [[0, 1], ...]; Here, the first geometry is a circle with center at (0, 0) "
+            "and radius 100, and turbines 0 and 1 are assigned for the circle constraint 0."
+        )
 
     def plot(self, ax=None):
         from matplotlib.pyplot import Circle
-        import matplotlib.pyplot as plt
-
+        import matplotlib.pyplot as plt  # fmt: skip
         ax = ax or plt.gca()
         for center, radius in zip(self.center, self.radius):
             circle = Circle(center, radius, color="k", fill=False)
@@ -1252,51 +1001,211 @@ class MultiCircleBoundaryComp(PolygonBoundaryComp):
         return np.diagflat(dx), np.diagflat(dy)
 
 
-class MultiWFPolygonBoundaryConstraint(XYBoundaryConstraint):
-    def __init__(self, boundaries, turbine_groups):
-        """Initialize CircleBoundaryConstraint
+@dataclass
+class Boundary(object):
+    _vertices: np.ndarray
+    design_var_mask: np.ndarray
+    normals: np.ndarray = None
 
-        Parameters
-        ----------
-        center : (float, float)
-            center position (x,y)
-        radius : int or float
-            circle radius
-        """
-        self.boundaries = boundaries
-        self.turbine_groups = turbine_groups
-        self.const_id = f"polygon_boundary_comp_{id(self)}"
+    @property
+    def n_turbines(self):
+        return self.design_var_mask.sum()
 
-    def get_comp(self, n_wt):
-        if not hasattr(self, "boundary_comp"):
-            self.boundary_comp = MultiWFPolygonBoundaryComp(
-                n_wt, self.boundaries, self.turbine_groups, const_id=self.const_id
+    @property
+    def n_vertices(self):
+        if np.all(self.vertices[0] == self.vertices[-1]):
+            return self.vertices.shape[0] - 1
+        return self.vertices.shape[0]
+
+    @property
+    def vertices(self):
+        return self._vertices
+
+    @vertices.setter
+    def vertices(self, v):
+        self._vertices = v
+
+    def __post_init__(self):
+        self.__validate()
+
+    def __validate(self):
+        self.vertices = np.asarray(self.vertices)
+        assert self.vertices.ndim == 2, "Boundary must be a 2D array"
+        assert any(
+            [x for x in self.vertices.shape if x == 2]
+        ), "Boundary must have shape (n, 2) or (2, n)"
+        self.vertices = self.vertices.reshape(-1, 2)
+        assert self.vertices.shape[0] > 2, "Boundary must have at least 3 vertices"
+        assert self.design_var_mask.ndim == 1, "design_var_mask must 1 dimensional"
+        self.design_var_mask = np.asarray(self.design_var_mask, dtype=bool)
+
+
+class MultiConvexBoundaryComp(BoundaryBaseComp):
+
+    def __init__(
+        self,
+        n_wt,
+        geometry,
+        wt_groups,
+        const_id=None,
+        units=None,
+    ):
+        xy_boundaries = [
+            Boundary(g, np.isin(np.arange(n_wt), mask))
+            for g, mask in zip(geometry, wt_groups)
+        ]
+        self.xy_boundaries = self.sort_boundaries(xy_boundaries)
+        self.xy_boundaries = self.calculate_boundary_and_normals(self.xy_boundaries)
+        super().__init__(n_wt, None, const_id, units)
+        self.turbine_vertice_prod = 0
+        total_n_active_turbines = 0
+        for b in self.xy_boundaries:
+            if np.any(b.vertices[0] != b.vertices[-1]):
+                b.vertices = np.r_[b.vertices, b.vertices[:1]]
+            self.turbine_vertice_prod += b.n_turbines * b.n_vertices
+            total_n_active_turbines += b.n_turbines
+        assert (
+            total_n_active_turbines == n_wt
+        ), "Number of active turbines in boundaries must match number of total turbines; Check that masks sum up to n_wt i.e. np.concatenate(all_masks).sum() == n_wt."
+        self.calculate_gradients()
+        self.zeros = np.zeros(self.turbine_vertice_prod)
+
+    def sort_boundaries(self, boundaries):
+        def centroid(boundary):  # fmt: skip
+            return tuple(np.mean(boundary.vertices, axis=0))
+        return sorted(boundaries, key=lambda b: centroid(b))
+
+    def calculate_boundary_and_normals(
+        self, xy_boundaries: list[Boundary]
+    ) -> list[Boundary]:
+        def __compute_normal(boundary_pts, ii, jj):
+            """Calculate the unit normal vector of the current face (taking points CCW)"""
+            normal = np.array(
+                [
+                    boundary_pts[ii, 1] - boundary_pts[jj, 1],
+                    -(boundary_pts[ii, 0] - boundary_pts[jj, 0]),
+                ]
             )
-        return self.boundary_comp
+            return normal / np.linalg.norm(normal)
 
-    def set_design_var_limits(self, design_vars):
-        _ = design_vars
-        return
+        for boundary in xy_boundaries:
+            hull = ConvexHull(list(boundary.vertices))
+            # keep only vertices that actually comprise a convex hull and arrange in CCW order
+            boundary.vertices = boundary.vertices[hull.vertices]
+            # initialize normals array
+            unit_normals = np.zeros([boundary.n_vertices, 2])
+            # determine if point is inside or outside and distances from each face
+            nvtm1 = boundary.n_vertices - 1
+            for j in range(0, nvtm1):
+                # all but the points that close the shape
+                unit_normals[j] = __compute_normal(boundary.vertices, j + 1, j)
+            # points that close the shape
+            unit_normals[nvtm1] = __compute_normal(boundary.vertices, 0, nvtm1)
+            boundary.normals = unit_normals
+
+        return xy_boundaries
+
+    def calculate_gradients(self):
+        # this is flawed if the order of boundaries is switched;
+        # test with arbitrary number of vertices and arbitrary number
+        # of turbines in a boundary; For now it's sorted at the top..
+        final_dx = np.zeros([self.turbine_vertice_prod, self.n_wt])
+        final_dy = np.zeros([self.turbine_vertice_prod, self.n_wt])
+        for bi, boundary in enumerate(self.xy_boundaries):
+            assert (
+                boundary.design_var_mask is not None
+            ), "Design variable mask must be provided"
+            assert self.n_wt == len(
+                boundary.design_var_mask
+            ), "Design variable mask must must be the same length as the number of turbines"
+
+            unit_normals = boundary.normals
+            n_vertices = boundary.n_vertices
+            n_turbines = boundary.n_turbines
+            dfaceDistance_dx = np.zeros([n_turbines * n_vertices, n_turbines])
+            dfaceDistance_dy = np.zeros([n_turbines * n_vertices, n_turbines])
+            for i in range(0, n_turbines):
+                # determine if point is inside or outside of each face, and distances from each face
+                for j in range(0, n_vertices):
+                    # define the derivative vectors from the point of interest to the first point of the face
+                    dpa_dx = np.array([-1.0, 0.0])
+                    dpa_dy = np.array([0.0, -1.0])
+                    # find perpendicular distances derivatives from point to current surface (vector projection)
+                    ddistanceVec_dx = np.vdot(dpa_dx, unit_normals[j]) * unit_normals[j]
+                    ddistanceVec_dy = np.vdot(dpa_dy, unit_normals[j]) * unit_normals[j]
+                    # calculate derivatives for the sign of perpendicular distances from point to current face
+                    dfaceDistance_dx[i * n_vertices + j, i] = np.vdot(
+                        ddistanceVec_dx, unit_normals[j]
+                    )
+                    dfaceDistance_dy[i * n_vertices + j, i] = np.vdot(
+                        ddistanceVec_dy, unit_normals[j]
+                    )
+            seek = sum([(b.n_vertices * b.n_turbines) for b in self.xy_boundaries[:bi]])
+            final_dx[
+                seek: seek + (n_turbines * n_vertices), boundary.design_var_mask
+            ] = dfaceDistance_dx
+            final_dy[
+                seek: seek + (n_turbines * n_vertices), boundary.design_var_mask
+            ] = dfaceDistance_dy
+        dfaceDistance_dx = final_dx
+        dfaceDistance_dy = final_dy
+
+        def __wrap_sparse(m):  # fmt: skip
+            if m.size < 1e4:
+                return m
+            from scipy.sparse import csr_matrix  # fmt: skip
+            return csr_matrix(m)
+        # store Jacobians
+        self.dfaceDistance_dx = __wrap_sparse(dfaceDistance_dx)
+        self.dfaceDistance_dy = __wrap_sparse(dfaceDistance_dy)
+
+    def distances(self, x, y):
+        """
+        :param points: points that you want to calculate the distances from to the faces of the convex hull
+        :return face_distace: signed perpendicular distances from each point to each face; + is inside
+        """
+        points = np.array([x, y]).T
+        face_distances = np.zeros(self.turbine_vertice_prod)
+        for bi, boundary in enumerate(self.xy_boundaries):
+            mask = boundary.design_var_mask
+            vertices = boundary.vertices[:-1]
+            n_vertices = boundary.n_vertices
+            PA = vertices[:, na] - points[mask][na]
+            dist = np.sum(PA * boundary.normals[:, na], axis=2)
+            d_vec = dist[:, :, na] * boundary.normals[:, na]
+            seek = sum([(b.n_vertices * b.n_turbines) for b in self.xy_boundaries[:bi]])
+            face_distances[seek: seek + (boundary.n_turbines * n_vertices)] = np.sum(
+                d_vec * boundary.normals[:, na], axis=2
+            ).T.reshape(-1)
+        return face_distances
+
+    def gradients(self, x, y):
+        return self.dfaceDistance_dx, self.dfaceDistance_dy
+
+    def satisfy(self, state):
+        raise NotImplementedError("Not implemented for MultiConvexBoundaryComp")
+
+    def plot(self, ax):
+        for b in self.xy_boundaries:
+            ax.plot(
+                b.vertices[:, 0].tolist(),
+                b.vertices[:, 1].tolist(),
+                "k",
+                linewidth=1,
+            )
 
 
 class MultiWFPolygonBoundaryComp(PolygonBoundaryComp):
+
     def __init__(
         self,
         n_wt: int,
-        boundaries: Optional[Dict[int, np.ndarray]],
-        turbine_groups: Optional[Dict[int, List[int]]],
-        *args,
+        geometry,
+        wt_groups,
         **kwargs,
     ):
-        """Initialize boundary and group assignments.
-
-        Args:
-            num_turbines: Total number of turbines
-            boundaries: Dictionary mapping group IDs to boundary coordinates
-            turbine_groups: Dictionary mapping group IDs to lists of turbine indices
-        """
-        if n_wt <= 0:
-            raise ValueError("Number of turbines must be positive")
+        boundaries = {i: geom for i, geom in enumerate(geometry)}
+        turbine_groups = {i: group for i, group in enumerate(wt_groups)}
 
         self.boundaries = {}  # group_id: boundary_coords
         for group_id, boundary_coords in boundaries.items():
@@ -1318,10 +1227,7 @@ class MultiWFPolygonBoundaryComp(PolygonBoundaryComp):
             raise ValueError(f"All turbines must be assigned to a group; All the -1 should be filled\n{self.turbine_groups}")
 
         super().__init__(
-            n_wt=n_wt,
-            xy_boundary=np.array(list(boundaries.values())[0]).reshape(-1, 2),
-            *args,
-            **kwargs,
+            n_wt, np.array(list(boundaries.values())[0]).reshape(-1, 2), **kwargs
         )
 
     def __validate_boundary_coords(self, boundary_coords: np.ndarray) -> None:
@@ -1417,6 +1323,85 @@ class MultiWFPolygonBoundaryComp(PolygonBoundaryComp):
         for ii, (group_id, boundary) in enumerate(self.boundaries.items()):
             ax.plot(*boundary.T, c=cmap(ii), label=f"Group {group_id}", linewidth=1)
         ax.legend()
+
+
+class BoundaryType(Enum):
+    CIRCLE = "circle"
+    CONVEX_HULL = "convex_hull"
+    POLYGON = "polygon"
+
+
+class MultiWFBoundaryConstraint(XYBoundaryConstraint):
+
+    def __init__(self, geometry, wt_groups, boundtype, units=None):
+        """Entry point for creating boundary constraints for joint multi-wind-farm optimization.
+
+        Parameters
+        ----------
+        geometry : Iterable
+            Geometry input depends on a specific boundary type:
+
+            CIRCLE - it is a list of tuples [(center1, radius1), (center2, radius2), ...],
+            where center itself is a tuple (x, y) and radius is a scalar.
+
+            CONVEX_HULL - it is a list of numpy arrays, where each array represents a convex hull boundary.
+            Each array has shape (n, 2) where n is the number of vertices.
+
+            POLYGON - it is a list of numpy arrays, where each array represents a polygon boundary.
+            Each array has shape (n, 2) where n is the number of vertices.
+
+            !!! Input length must match the number of groups in wt_groups. !!!
+
+        wt_groups : Iterable
+            List of lists where each list contains indices of turbines assigned to a specific boundary.
+            For instance, [[0, 1], [2, 3, 4], ...] assigns turbines 0 and 1 to boundary 0, and turbines 2, 3, and 4 to boundary 1.
+
+            !!! Input length must match the number of geometries in geometry parameter. !!!
+
+        boundtype : BoundaryType
+            One of BoundaryType.CIRCLE, BoundaryType.CONVEX_HULL, BoundaryType.POLYGON.
+            The argument specifies the type of boundary constraint to be enforced.
+
+        units : str, optional
+            Units for the boundary, by default None
+        """
+        self.geometry = geometry
+        self.boundtype = boundtype
+        self.const_id = f"wf_boundary_comp_{id(self)}"
+        self.units = units
+        self.wt_groups = wt_groups
+        assert len(geometry) == len(
+            wt_groups
+        ), "Number of geometries and groups must match"
+
+    BD2COMP = {
+        BoundaryType.CIRCLE: MultiCircleBoundaryComp,
+        BoundaryType.CONVEX_HULL: MultiConvexBoundaryComp,
+        BoundaryType.POLYGON: MultiWFPolygonBoundaryComp,
+    }
+
+    def get_comp(self, n_wt):
+        assert n_wt > 0, "Number of turbines must be greater than 0"
+        assert n_wt >= len(
+            self.wt_groups
+        ), "Number of turbines must be greater than or equal to the number of groups"
+
+        if hasattr(self, "boundary_comp"):
+            return self.boundary_comp
+
+        if (comp := self.BD2COMP.get(self.boundtype, None)) is None:
+            raise NotImplementedError(f"Invalid boundary type {self.boundtype}")
+
+        return comp(
+            n_wt,
+            self.geometry,
+            self.wt_groups,
+            const_id=self.const_id,
+            units=self.units,
+        )
+
+    def set_design_var_limits(self, design_vars):
+        _ = design_vars
 
 
 def main():

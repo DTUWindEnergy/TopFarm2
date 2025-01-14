@@ -10,7 +10,7 @@ from topfarm.cost_models.cost_model_wrappers import CostModelComponent
 from topfarm.constraint_components.spacing import SpacingConstraint
 from topfarm.constraint_components.boundary import (
     XYBoundaryConstraint,
-    MultiXYBoundaryConstraint,
+    MultiWFBoundaryConstraint,
 )
 
 
@@ -90,9 +90,7 @@ class DistanceConstraintAggregation(ConstraintAggregation):
 
         input_keys = []
         for cons in constraints:
-            if isinstance(cons, XYBoundaryConstraint) or isinstance(
-                cons, MultiXYBoundaryConstraint
-            ):
+            if isinstance(cons, (XYBoundaryConstraint, MultiWFBoundaryConstraint)):
                 comp = cons.get_comp(n_wt)
                 zeros = comp.zeros
                 input_keys.append(('boundaryDistances', zeros))

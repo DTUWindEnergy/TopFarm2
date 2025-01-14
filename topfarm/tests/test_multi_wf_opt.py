@@ -1,7 +1,9 @@
 import numpy as np
 from topfarm import TopFarmProblem
-from topfarm.constraint_components.boundary import MultiCircleBoundaryConstraint
-from topfarm.constraint_components.boundary import MultiXYBoundaryConstraint, Boundary
+from topfarm.constraint_components.boundary import (
+    MultiWFBoundaryConstraint,
+    BoundaryType,
+)
 from topfarm.constraint_components.spacing import SpacingConstraint
 from topfarm.cost_models.py_wake_wrapper import PyWakeAEPCostModelComponent
 from topfarm.easy_drivers import EasyScipyOptimizeDriver
@@ -10,7 +12,6 @@ from py_wake.utils.gradients import autograd
 from py_wake.validation.lillgrund import LillgrundSite
 from py_wake.wind_turbines.generic_wind_turbines import GenericWindTurbine
 from py_wake.literature.gaussian_models import Bastankhah_PorteAgel_2014
-from topfarm.constraint_components.boundary import MultiWFPolygonBoundaryConstraint
 
 
 def test_integration_multi_cirle_opt_succeeds():
@@ -30,22 +31,19 @@ def test_integration_multi_cirle_opt_succeeds():
     Y_full = np.concatenate([wt_y, wt_y2])
     n_wt = len(X_full)
 
-    n_wt_sf = n_wt // 2
-    wf1_mask = np.zeros(n_wt, dtype=bool)
-    wf1_mask[:n_wt_sf] = True
-    wf2_mask = np.zeros(n_wt, dtype=bool)
-    wf2_mask[n_wt_sf:] = True
-
     def _get_radius(x, y):  # fmt: skip
         return np.sqrt((x - x.mean()) ** 2 + (y - y.mean()) ** 2).max() + 100
 
     def _get_center(x, y):  # fmt: skip
         return np.array([x.mean(), y.mean()])
 
-    constraint_comp = MultiCircleBoundaryConstraint(
-        center=[_get_center(wt_x, wt_y), _get_center(wt_x2, wt_y2)],
-        radius=[_get_radius(wt_x, wt_y), _get_radius(wt_x2, wt_y2)],
-        masks=[wf1_mask, wf2_mask],
+    circle_constraint = MultiWFBoundaryConstraint(
+        geometry=[
+            (_get_center(wt_x, wt_y), _get_radius(wt_x, wt_y)),
+            (_get_center(wt_x2, wt_y2), _get_radius(wt_x2, wt_y2)),
+        ],
+        wt_groups=[np.arange(n_wt // 2), np.arange(n_wt // 2, n_wt)],
+        boundtype=BoundaryType.CIRCLE,
     )
     cost_comp = PyWakeAEPCostModelComponent(
         windFarmModel=wf_model,
@@ -54,7 +52,7 @@ def test_integration_multi_cirle_opt_succeeds():
     )
     const = [
         SpacingConstraint(min_spacing=wind_turbines.diameter() * 2),
-        constraint_comp,
+        circle_constraint,
     ]
     plots = NoPlot()
     problem = TopFarmProblem(
@@ -62,7 +60,7 @@ def test_integration_multi_cirle_opt_succeeds():
         n_wt=n_wt,
         constraints=(const),
         cost_comp=cost_comp,
-        driver=(EasyScipyOptimizeDriver(optimizer="SLSQP", maxiter=500)),
+        driver=(EasyScipyOptimizeDriver(optimizer="SLSQP", maxiter=50)),
         plot_comp=plots,
     )
 
@@ -71,10 +69,10 @@ def test_integration_multi_cirle_opt_succeeds():
     _, state, recorder = problem.optimize(disp=False)
     assert recorder["success"].all()
 
-    final_posx_wf1 = state["x"][wf1_mask]
-    final_posy_wf1 = state["y"][wf1_mask]
-    final_posx_wf2 = state["x"][wf2_mask]
-    final_posy_wf2 = state["y"][wf2_mask]
+    final_posx_wf1 = state["x"][: n_wt // 2]
+    final_posy_wf1 = state["y"][: n_wt // 2]
+    final_posx_wf2 = state["x"][n_wt // 2:]
+    final_posy_wf2 = state["y"][n_wt // 2:]
     center1 = _get_center(wt_x, wt_y)
     center2 = _get_center(wt_x2, wt_y2)
     radius1 = _get_radius(wt_x, wt_y)
@@ -110,12 +108,6 @@ def test_integration_multi_wf_convex_hull_opt_succeeds():
     Y_full = np.concatenate([wt_y, wt_y2])
     n_wt = len(X_full)
 
-    n_wt_sf = len(wt_x)
-    wf1_mask = np.zeros(n_wt, dtype=bool)
-    wf1_mask[:n_wt_sf] = True
-    wf2_mask = np.zeros(n_wt, dtype=bool)
-    wf2_mask[n_wt_sf:] = True
-
     # construct a rectangle
     def _get_corners(x: np.ndarray, y: np.ndarray, radius):  # fmt: skip
         cx = x.mean()
@@ -133,12 +125,10 @@ def test_integration_multi_wf_convex_hull_opt_succeeds():
     wf1_corners = _get_corners(wt_x, wt_y, radius)
     wf2_corners = _get_corners(wt_x2, wt_y2, radius)
 
-    constraint_comp = MultiXYBoundaryConstraint(
-        [
-            Boundary(wf1_corners, wf1_mask),
-            Boundary(wf2_corners, wf2_mask),
-        ],
-        boundary_type="convex_hull",
+    rectangle_constraint = MultiWFBoundaryConstraint(
+        geometry=[wf1_corners, wf2_corners],
+        wt_groups=[np.arange(n_wt // 2), np.arange(n_wt // 2, n_wt)],
+        boundtype=BoundaryType.CONVEX_HULL,
     )
     cost_comp = PyWakeAEPCostModelComponent(
         windFarmModel=wf_model, n_wt=n_wt, grad_method=autograd
@@ -148,12 +138,12 @@ def test_integration_multi_wf_convex_hull_opt_succeeds():
         n_wt=n_wt,
         constraints=(
             [
-                constraint_comp,
+                rectangle_constraint,
                 SpacingConstraint(min_spacing=wind_turbines.diameter() * 2),
             ]
         ),
         cost_comp=cost_comp,
-        driver=(EasyScipyOptimizeDriver(optimizer="SLSQP", maxiter=500)),
+        driver=(EasyScipyOptimizeDriver(optimizer="SLSQP", maxiter=100)),
         plot_comp=NoPlot(),
     )
 
@@ -161,10 +151,10 @@ def test_integration_multi_wf_convex_hull_opt_succeeds():
     _, state, recorder = problem.optimize(disp=False)
     assert recorder["success"].all()
 
-    final_posx_wf1 = state["x"][wf1_mask]
-    final_posy_wf1 = state["y"][wf1_mask]
-    final_posx_wf2 = state["x"][wf2_mask]
-    final_posy_wf2 = state["y"][wf2_mask]
+    final_posx_wf1 = state["x"][: n_wt // 2]
+    final_posy_wf1 = state["y"][: n_wt // 2]
+    final_posx_wf2 = state["x"][n_wt // 2:]
+    final_posy_wf2 = state["y"][n_wt // 2:]
     wf1_points = np.array([final_posx_wf1, final_posy_wf1]).T
     wf2_points = np.array([final_posx_wf2, final_posy_wf2]).T
     assert are_all_points_in_rectangle(wf1_points, wf1_corners, tolerance=1)
@@ -287,13 +277,10 @@ def test_integration_multi_wf_polygon_opt_succeeds():
     wf1_corners = _get_corners(wt_x, wt_y, radius)
     wf2_corners = _get_corners(wt_x2, wt_y2, radius)
 
-    boundary_coords = {
-        0: wf1_corners,
-        1: wf2_corners,
-    }
-    constraint_comp = MultiWFPolygonBoundaryConstraint(
-        boundaries=boundary_coords,
-        turbine_groups={0: np.arange(n_wt // 2), 1: np.arange(n_wt // 2, n_wt)},
+    non_convex_poly_constraint = MultiWFBoundaryConstraint(
+        geometry=[wf1_corners, wf2_corners],
+        wt_groups=[np.arange(n_wt // 2), np.arange(n_wt // 2, n_wt)],
+        boundtype=BoundaryType.POLYGON,
     )
     cost_comp = PyWakeAEPCostModelComponent(
         windFarmModel=wf_model, n_wt=n_wt, grad_method=autograd
@@ -303,12 +290,12 @@ def test_integration_multi_wf_polygon_opt_succeeds():
         n_wt=n_wt,
         constraints=(
             [
-                constraint_comp,
+                non_convex_poly_constraint,
                 SpacingConstraint(min_spacing=wind_turbines.diameter() * 2),
             ]
         ),
         cost_comp=cost_comp,
-        driver=(EasyScipyOptimizeDriver(optimizer="SLSQP", maxiter=500)),
+        driver=(EasyScipyOptimizeDriver(optimizer="SLSQP", maxiter=100)),
         plot_comp=NoPlot(),
     )
 

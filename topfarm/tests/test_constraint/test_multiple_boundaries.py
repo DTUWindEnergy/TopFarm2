@@ -1,26 +1,21 @@
-import topfarm
 from topfarm.drivers.genetic_algorithm_driver import SimpleGADriver
 from topfarm.cost_models.dummy import DummyCost
-from topfarm.easy_drivers import EasyScipyOptimizeDriver
 from topfarm import TopFarmProblem
 from topfarm.plotting import NoPlot
-from topfarm.constraint_components.spacing import SpacingConstraint
-from ..test_files.xy3tb import boundary, initial, desired, optimal
 import unittest
 from topfarm.constraint_components.boundary import (
     MultiConvexBoundaryComp,
     Boundary,
-    MultiXYBoundaryConstraint,
     MultiCircleBoundaryComp,
-    MultiCircleBoundaryConstraint,
-)
-import pytest
-from topfarm.constraint_components.boundary import (
     PolygonBoundaryComp,
     MultiWFPolygonBoundaryComp,
+    BoundaryType,
+    MultiWFBoundaryConstraint,
+    InclusionZone,
+    ExclusionZone,
+    MultiPolygonBoundaryComp,
 )
-from topfarm.constraint_components.boundary import MultiPolygonBoundaryComp
-from topfarm.constraint_components.boundary import InclusionZone, ExclusionZone
+import pytest
 import numpy as np  # fmt: skip
 np.random.seed(42)
 
@@ -31,31 +26,26 @@ def setup(request):
     # vertices of boundaries
     v1 = np.array([[0, 0], [1, 1], [0, 1]])
     v2 = np.array([[2, 2], [3, 2], [3, 3], [2, 3]])
-    # masks of boundaries
-    m1 = np.zeros(n_wt, dtype=bool)
-    m1[:2] = True
-    m2 = ~m1.copy()
-    boundaries: list[Boundary] = [Boundary(v1, m1), Boundary(v2, m2)]
-    comp = MultiConvexBoundaryComp(n_wt, boundaries)
-    return comp, boundaries, n_wt
+    comp = MultiConvexBoundaryComp(n_wt, [v1, v2], [[0, 1], np.arange(2, n_wt)])
+    return comp, n_wt
 
 
 @pytest.mark.parametrize("setup", [3, 5, 10], indirect=True)
 def test_initialization(setup):
-    comp, _, n_wt = setup
+    comp, n_wt = setup
     assert comp.n_wt == n_wt
     assert len(comp.xy_boundaries) == 2
 
 
 def test_calculate_boundary_and_normals(setup):
-    comp, boundaries, _ = setup
-    boundaries = comp.calculate_boundary_and_normals(boundaries)
+    comp, _ = setup
+    boundaries = comp.calculate_boundary_and_normals(comp.xy_boundaries)
     for boundary in boundaries:
         assert boundary.normals is not None
 
 
 def test_calculate_gradients(setup):
-    comp, _, _ = setup
+    comp, _ = setup
     comp.calculate_gradients()
     assert comp.dfaceDistance_dx is not None
     assert comp.dfaceDistance_dy is not None
@@ -63,13 +53,15 @@ def test_calculate_gradients(setup):
 
 @pytest.mark.parametrize("setup", [3, 5, 10], indirect=True)
 def test_distances_shape(setup):
-    comp, boundaries, n_wt = setup
+    comp, n_wt = setup
     x = np.random.rand(n_wt)
     y = np.random.rand(n_wt)
     distances = comp.distances(x, y)
     assert distances is not None
     assert len(distances) == comp.turbine_vertice_prod
-    assert distances.size == sum([b.n_vertices * b.n_turbines for b in boundaries])
+    assert distances.size == sum(
+        [b.n_vertices * b.n_turbines for b in comp.xy_boundaries]
+    )
 
 
 def test_distances_value():
@@ -98,11 +90,7 @@ def test_distances_value():
 
     def __check_dists():
         n_wt = 2
-        m1 = np.ones(n_wt, dtype=bool)
-        m1[0] = False
-        m2 = ~m1
-        boundaries: list[Boundary] = [Boundary(v1, m1), Boundary(v2, m2)]
-        comp = MultiConvexBoundaryComp(n_wt, boundaries)
+        comp = MultiConvexBoundaryComp(n_wt, [v1, v2], [[1], [0]])
 
         # place both turbines at (0,0)
         x = np.zeros(n_wt)
@@ -110,7 +98,9 @@ def test_distances_value():
         distances = comp.distances(x, y)
         boundaries_gt = [b.vertices[:-1] for b in comp.xy_boundaries]
         distances_gt = __compute_distances_to_faces((0, 0), boundaries_gt)
-        assert distances.size == sum([b.n_vertices * b.n_turbines for b in boundaries])
+        assert distances.size == sum(
+            [b.n_vertices * b.n_turbines for b in comp.xy_boundaries]
+        )
         assert np.allclose(distances, distances_gt, atol=1e-6)
 
     # vertices of boundaries
@@ -124,13 +114,13 @@ def test_distances_value():
 
 @pytest.mark.parametrize("setup", [3, 5, 10], indirect=True)
 def test_gradients_shape(setup):
-    comp, boundaries, n_wt = setup
+    comp, n_wt = setup
     x = np.random.rand(n_wt)
     y = np.random.rand(n_wt)
     dx, dy = comp.gradients(x, y)
     assert dx is not None
     assert dy is not None
-    n_distances = sum([b.n_vertices * b.n_turbines for b in boundaries])
+    n_distances = sum([b.n_vertices * b.n_turbines for b in comp.xy_boundaries])
     assert dx.shape[0] == n_distances
     assert dx.shape[1] == n_wt
     assert dy.shape[0] == n_distances
@@ -151,16 +141,9 @@ def test_order_of_boundaries_does_not_affect_results(n_wt, n_vertices):
     # vertices of boundaries
     v1 = np.random.randn(n_vertices[0], 2)
     v2 = np.random.randn(n_vertices[1], 2)
-    # masks of boundaries
-    m1 = np.zeros(n_wt, dtype=bool)
-    m1[0] = True
-    m2 = ~m1.copy()
-    boundaries: list[Boundary] = [Boundary(v1, m1), Boundary(v2, m2)]
-    comp0 = MultiConvexBoundaryComp(n_wt, boundaries)
+    comp0 = MultiConvexBoundaryComp(n_wt, [v1, v2], [[0], np.arange(1, n_wt)])
     # switch boundaries order
-    boundaries: list[Boundary] = [Boundary(v2, m2), Boundary(v1, m1)]
-    comp1 = MultiConvexBoundaryComp(n_wt, boundaries)
-
+    comp1 = MultiConvexBoundaryComp(n_wt, [v2, v1], [np.arange(1, n_wt), [0]])
     assert np.allclose(comp0.dfaceDistance_dx, comp1.dfaceDistance_dx)
     assert np.allclose(comp0.dfaceDistance_dy, comp1.dfaceDistance_dy)
     x_points = np.zeros(n_wt)
@@ -176,12 +159,7 @@ def test_gradient_is_returned_as_sparse_for_large_matrices():
     # vertices of boundaries
     v1 = np.random.randn(n_vertices[0], 2)
     v2 = np.random.randn(n_vertices[1], 2)
-    # masks of boundaries
-    m1 = np.zeros(n_wt, dtype=bool)
-    m1[0] = True
-    m2 = ~m1.copy()
-    boundaries: list[Boundary] = [Boundary(v1, m1), Boundary(v2, m2)]
-    comp = MultiConvexBoundaryComp(n_wt, boundaries)
+    comp = MultiConvexBoundaryComp(n_wt, [v1, v2], [[0], np.arange(1, n_wt)])
     x = np.random.rand(n_wt)
     y = np.random.rand(n_wt)
     dx, dy = comp.gradients(x, y)
@@ -197,18 +175,9 @@ def test_gradients_and_distances_are_calculated_based_on_masked_boundaries(n_ver
     # vertices of boundaries
     v1 = np.random.rand(n_vertices[0], 2)
     v2 = np.random.rand(n_vertices[1], 2)
-    # masks of boundaries
     n_wt = 4
-    m1 = np.zeros(n_wt, dtype=bool)
-    m1[:2] = True
-    m2 = ~m1.copy()
-    b1m1 = Boundary(v1, m1)
-    b1m2 = Boundary(v1, m2)
-    b2m1 = Boundary(v2, m1)
-    b2m2 = Boundary(v2, m2)
-    # switch masks in the boundaries
-    comp1 = MultiConvexBoundaryComp(n_wt, [b1m1, b2m2])
-    comp0 = MultiConvexBoundaryComp(n_wt, [b1m2, b2m1])
+    comp1 = MultiConvexBoundaryComp(n_wt, [v1, v2], [[0, 1], [2, 3]])
+    comp0 = MultiConvexBoundaryComp(n_wt, [v1, v2], [[2, 3], [0, 1]])
     # the jacobians should reflect the change in mask. i.e. cannot be the same
     assert not np.allclose(comp0.dfaceDistance_dx, comp1.dfaceDistance_dx)
     assert not np.allclose(comp0.dfaceDistance_dy, comp1.dfaceDistance_dy)
@@ -237,7 +206,6 @@ def test_initialization():
     mask = np.array([True, False, True, True])
     boundary = Boundary(vertices, mask)
     assert np.array_equal(boundary.vertices, vertices)
-    assert boundary.is_inclusion is True
     assert boundary.design_var_mask is not None
     assert (boundary.design_var_mask == mask).all()
 
@@ -303,7 +271,6 @@ def test_validate():
     boundary = Boundary(vertices, mask)
     assert boundary.vertices.shape == (4, 2)
     assert boundary.design_var_mask.shape == (42,)
-    assert isinstance(boundary.is_inclusion, bool)
 
 
 def test_design_var_mask_is_set_correctly():
@@ -318,58 +285,11 @@ def test_design_var_mask_is_set_correctly():
 
 
 def test_plot(setup):
-    comp, _, _ = setup
+    comp, _ = setup
     import matplotlib.pyplot as plt  # fmt: skip
     fig, ax = plt.subplots()
     comp.plot(ax)
     plt.close(fig)
-
-
-class TestMultiXYBoundaryConstraint(unittest.TestCase):
-    def setUp(self):
-        self.n_wt = 3
-        m1 = np.ones(self.n_wt, dtype=bool)
-        m1[: self.n_wt // 2] = False
-        assert np.concatenate([m1, ~m1]).sum() == self.n_wt
-        self.boundaries = [Boundary(boundary, m1), Boundary(boundary, ~m1)]
-        self.constraint = MultiXYBoundaryConstraint(self.boundaries)
-
-        k = {
-            "cost_comp": DummyCost(desired[:, :2], [topfarm.x_key, topfarm.y_key]),
-            "design_vars": {
-                topfarm.x_key: (initial[:, 0], -1e4, 1e4),
-                topfarm.y_key: (initial[:, 1], -1e4, 1e4),
-            },
-            "driver": EasyScipyOptimizeDriver(disp=False, tol=1e-8),
-            "plot_comp": NoPlot(),
-            "constraints": [self.constraint, SpacingConstraint(2)],
-        }
-        self.tf_problem = TopFarmProblem(**k)
-
-    def test_initialization(self):
-        self.assertEqual(self.constraint.boundaries, self.boundaries)
-        self.assertEqual(self.constraint.boundary_type, "convex_hull")
-        self.assertEqual(self.constraint.const_id, "xyboundary_comp_convex_hull")
-        self.assertIsNone(self.constraint.units)
-        self.assertFalse(self.constraint.relaxation)
-
-    def test_get_comp(self):
-        comp = self.constraint.get_comp(self.n_wt)
-        self.assertIsNotNone(comp)
-        self.assertEqual(comp.n_wt, self.n_wt)
-        self.assertEqual(comp.xy_boundaries, self.boundaries)
-
-    def test_can_solve(self):
-        self.tf_problem.optimize()
-        tb_pos = self.tf_problem.turbine_positions
-        tol = 1e-6
-        np.all(sum((tb_pos[2] - tb_pos[0]) ** 2) > 2**2 - tol)
-        assert np.all(tb_pos[1][0] < 6 + tol)
-        dec_prec = 4
-        np.testing.assert_array_almost_equal(tb_pos[:, :2], optimal, dec_prec)
-
-    def test_gradients(self):
-        self.tf_problem.check_gradients(True)
 
 
 class TestMultiCircleBoundaryConstraint(unittest.TestCase):
@@ -377,14 +297,18 @@ class TestMultiCircleBoundaryConstraint(unittest.TestCase):
         self.centers = [(0, 0), (1, 1)]
         self.radii = [1.0, 2.0]
         self.masks = [np.array([1, 0]), np.array([0, 1])]
-        self.constraint = MultiCircleBoundaryConstraint(
-            self.centers, self.radii, self.masks
+        self.constraint = MultiWFBoundaryConstraint(
+            geometry=[(c, r) for c, r in zip(self.centers, self.radii)],
+            wt_groups=[np.arange(1), np.arange(1, 2)],
+            boundtype=BoundaryType.CIRCLE,
         )
 
     def test_initialization(self):
-        np.testing.assert_array_equal(self.constraint.center, np.array(self.centers))
-        np.testing.assert_array_equal(self.constraint.radius, np.array(self.radii))
-        np.testing.assert_array_equal(self.constraint.masks, np.array(self.masks))
+        n_wt = 2
+        comp = self.constraint.get_comp(n_wt)
+        np.testing.assert_array_equal(comp.center, np.array(self.centers))
+        np.testing.assert_array_equal(comp.radius, np.array(self.radii))
+        np.testing.assert_array_equal(comp.masks, np.array(self.masks))
 
     def test_get_comp(self):
         n_wt = 2
@@ -412,14 +336,13 @@ class TestMultiCircleBoundaryComp(unittest.TestCase):
         self.masks = [np.array([1, 0]), np.array([0, 1])]
         self.n_wt = 2
         self.comp = MultiCircleBoundaryComp(
-            self.n_wt, self.centers, self.radii, self.masks
+            self.n_wt, [(c, r) for c, r in zip(self.centers, self.radii)], [[0], [1]]
         )
 
     def test_initialization(self):
         self.assertEqual(self.comp.n_wt, self.n_wt)
         self.assertEqual(self.comp.center, self.centers)
         self.assertEqual(self.comp.radius, self.radii)
-        self.assertEqual(self.comp.masks, self.masks)
 
     def test_distances(self):
         x = np.array([0.5, 1.5])
@@ -434,6 +357,7 @@ class TestMultiCircleBoundaryComp(unittest.TestCase):
 
 
 class TestMultiWFPolygonBoundaryComp(unittest.TestCase):
+
     def test_single_group_equivalence(self):
 
         boundary_coords = np.array(
@@ -447,11 +371,10 @@ class TestMultiWFPolygonBoundaryComp(unittest.TestCase):
         d0 = single.distances(x, y)
         dx0, dy0 = single.gradients(x, y)
 
-        group_id = 1
         multi = MultiWFPolygonBoundaryComp(
-            n_wt=n_wt,
-            boundaries={group_id: boundary_coords},
-            turbine_groups={group_id: np.arange(n_wt)},
+            n_wt,
+            [boundary_coords],
+            [np.arange(n_wt)],
         )
         d1 = multi.distances(x, y)
         dx1, dy1 = multi.gradients(x, y)
@@ -476,26 +399,26 @@ class TestMultiWFPolygonBoundaryComp(unittest.TestCase):
         )
 
     def test_two_group_equivalence(self):
-        boundary_coords = {
-            1: np.random.rand(4, 2),
-            2: np.random.rand(4, 2),
-        }
+        boundary_coords = [
+            np.random.rand(4, 2),
+            np.random.rand(4, 2),
+        ]
         x = np.random.rand(8)
         y = np.random.rand(8)
         n_wt = len(x)
         hn_wt = n_wt // 2
 
-        single_1b = PolygonBoundaryComp(hn_wt, boundary_coords[1])
+        single_1b = PolygonBoundaryComp(hn_wt, boundary_coords[0])
         d0_1b = single_1b.distances(x[:hn_wt], y[:hn_wt])
         dx0_1b, dy0_1b = single_1b.gradients(x[:hn_wt], y[:hn_wt])
-        single_2b = PolygonBoundaryComp(hn_wt, boundary_coords[2])
+        single_2b = PolygonBoundaryComp(hn_wt, boundary_coords[1])
         d0_2b = single_2b.distances(x[hn_wt:], y[hn_wt:])
         dx0_2b, dy0_2b = single_2b.gradients(x[hn_wt:], y[hn_wt:])
 
         multi = MultiWFPolygonBoundaryComp(
-            n_wt=n_wt,
-            boundaries=boundary_coords,
-            turbine_groups={1: np.arange(hn_wt), 2: np.arange(hn_wt, n_wt)},
+            n_wt,
+            boundary_coords,
+            [np.arange(hn_wt), np.arange(hn_wt, n_wt)],
         )
         d1 = multi.distances(x, y)
         dx1, dy1 = multi.gradients(x, y)
@@ -540,65 +463,55 @@ class TestMultiWFPolygonBoundaryComp(unittest.TestCase):
         )
 
     def test_group_boundary_order_impact_on_result(self):
-        boundary_coords = {
-            1: np.random.rand(4, 2),
-            2: np.random.rand(4, 2),
-        }
+        boundary_coords = [
+            np.random.rand(4, 2),
+            np.random.rand(4, 2),
+        ]
         x = np.random.rand(8)
         y = np.random.rand(8)
         n_wt = len(x)
         hn_wt = n_wt // 2
 
         multi = MultiWFPolygonBoundaryComp(
-            n_wt=n_wt,
-            boundaries=boundary_coords,
-            turbine_groups={1: np.arange(hn_wt), 2: np.arange(hn_wt, n_wt)},
+            n_wt,
+            boundary_coords,
+            [np.arange(hn_wt), np.arange(hn_wt, n_wt)],
         )
         d1 = multi.distances(x, y)
 
         multi = MultiWFPolygonBoundaryComp(
-            n_wt=n_wt,
-            boundaries=boundary_coords,
-            turbine_groups={2: np.arange(hn_wt, n_wt), 1: np.arange(hn_wt)},
+            n_wt,
+            reversed(boundary_coords),
+            [np.arange(hn_wt, n_wt), np.arange(hn_wt)],
         )
         d2 = multi.distances(x, y)
-
-        multi = MultiWFPolygonBoundaryComp(
-            n_wt=n_wt,
-            boundaries=boundary_coords,
-            turbine_groups={2: np.arange(hn_wt), 1: np.arange(hn_wt, n_wt)},
-        )
-        d3 = multi.distances(x, y)
-
         np.testing.assert_array_almost_equal(
             d1,
             d2,
             decimal=6,
             err_msg="Distances don't match between different group order",
         )
+
+        multi = MultiWFPolygonBoundaryComp(
+            n_wt,
+            reversed(boundary_coords),
+            [np.arange(hn_wt), np.arange(hn_wt, n_wt)],
+        )
+        d3 = multi.distances(x, y)
+
         assert not np.allclose(d1, d3)
         assert not np.allclose(d2, d3)
 
     def setUp(self):
         self.sample_boundary = np.array([[0, 0], [1, 0], [1, 1], [0, 1]])
-        self.sample_boundaries = {
-            1: self.sample_boundary,
-            2: self.sample_boundary + 2,
-        }  # Shifted copy
-        self.sample_turbine_groups = {
-            1: [0, 1],  # First two turbines in group 1
-            2: [2, 3],  # Last two turbines in group 2
-        }
-
-    def test_validate_positive_n_wt(self):
-        with pytest.raises(ValueError, match="Number of turbines must be positive"):
-            MultiWFPolygonBoundaryComp(
-                0, self.sample_boundaries, self.sample_turbine_groups
-            )
-        with pytest.raises(ValueError, match="Number of turbines must be positive"):
-            MultiWFPolygonBoundaryComp(
-                -1, self.sample_boundaries, self.sample_turbine_groups
-            )
+        self.sample_boundaries = [
+            self.sample_boundary,
+            self.sample_boundary + 2,
+        ]
+        self.sample_turbine_groups = [
+            np.arange(2),
+            np.arange(2, 4),
+        ]
 
     def test_validate_boundary_coordinates(self):
         # Test invalid type
@@ -611,56 +524,10 @@ class TestMultiWFPolygonBoundaryComp(unittest.TestCase):
                 2, invalid_boundaries, self.sample_turbine_groups
             )
 
-        # Test invalid shape (1D array)
-        invalid_boundaries = {1: np.array([1, 2, 3])}
-        with pytest.raises(
-            ValueError,
-            match="Boundary coordinates must be a 2D array with shape \\(n,2\\)",
-        ):
-            MultiWFPolygonBoundaryComp(
-                2, invalid_boundaries, self.sample_turbine_groups
-            )
-
-        # Test too few points
-        invalid_boundaries = {1: np.array([[0, 0], [1, 1]])}
-        with pytest.raises(ValueError, match="Boundary must have at least 3 points"):
-            MultiWFPolygonBoundaryComp(
-                2, invalid_boundaries, self.sample_turbine_groups
-            )
-
-    def test_validate_turbine_groups(self):
-        # Test invalid type
-        with pytest.raises(TypeError, match="Groups must be a dictionary"):
-            MultiWFPolygonBoundaryComp(2, self.sample_boundaries, "not a dict")
-
-        # Test invalid group ID type
-        invalid_groups = {"a": [0, 1]}  # String instead of int
-        with pytest.raises(ValueError, match="Invalid group ID"):
-            MultiWFPolygonBoundaryComp(2, self.sample_boundaries, invalid_groups)
-
-        # Test negative group ID
-        invalid_groups = {-1: [0, 1]}
-        with pytest.raises(ValueError, match="Invalid group ID"):
-            MultiWFPolygonBoundaryComp(2, self.sample_boundaries, invalid_groups)
-
-        # Test invalid turbine indices
-        invalid_groups = {1: [0, 5]}  # Index 5 is out of range for n_wt=2
-        with pytest.raises(ValueError, match="Invalid turbine indices"):
-            MultiWFPolygonBoundaryComp(2, self.sample_boundaries, invalid_groups)
-
-    def test_boundary_group_correspondence(self):
-        # Test when group in turbine_groups has no corresponding boundary
-        invalid_groups = {1: [0, 1], 3: [2, 3]}  # Group 3 has no boundary
-        with pytest.raises(ValueError, match="No boundary defined for group 3"):
-            MultiWFPolygonBoundaryComp(4, self.sample_boundaries, invalid_groups)
-
     def test_single_group_distance_calculation(self):
-        boundaries = {1: self.sample_boundary}
-        groups = {1: [0, 1]}
         comp = MultiWFPolygonBoundaryComp(
-            n_wt=2, boundaries=boundaries, turbine_groups=groups
+            2, [self.sample_boundary], [[0, 1]]
         )
-
         # Test points inside boundary
         x = np.array([0.5, 0.5])
         y = np.array([0.5, 0.5])
@@ -675,9 +542,9 @@ class TestMultiWFPolygonBoundaryComp(unittest.TestCase):
 
     def test_multiple_group_distance_calculation(self):
         comp = MultiWFPolygonBoundaryComp(
-            n_wt=4,
-            boundaries=self.sample_boundaries,
-            turbine_groups=self.sample_turbine_groups,
+            4,
+            self.sample_boundaries,
+            self.sample_turbine_groups,
         )
 
         # Test points with mixed positions
@@ -695,9 +562,9 @@ class TestMultiWFPolygonBoundaryComp(unittest.TestCase):
 
     def test_gradient_calculation_mf_polygon(self):
         comp = MultiWFPolygonBoundaryComp(
-            n_wt=4,
-            boundaries=self.sample_boundaries,
-            turbine_groups=self.sample_turbine_groups,
+            4,
+            self.sample_boundaries,
+            self.sample_turbine_groups,
         )
 
         x = np.random.rand(4)
@@ -726,22 +593,14 @@ class TestMultiWFPolygonBoundaryComp(unittest.TestCase):
     def test_group_order_independence(self):
         # Create component with original order
         comp1 = MultiWFPolygonBoundaryComp(
-            n_wt=4,
-            boundaries=self.sample_boundaries,
-            turbine_groups=self.sample_turbine_groups,
+            4,
+            self.sample_boundaries,
+            self.sample_turbine_groups,
         )
 
         # Create component with reversed group order
-        reversed_boundaries = {
-            2: self.sample_boundaries[2],
-            1: self.sample_boundaries[1],
-        }
-        reversed_groups = {
-            2: self.sample_turbine_groups[2],
-            1: self.sample_turbine_groups[1],
-        }
         comp2 = MultiWFPolygonBoundaryComp(
-            n_wt=4, boundaries=reversed_boundaries, turbine_groups=reversed_groups
+            4, reversed(self.sample_boundaries), reversed(self.sample_turbine_groups)
         )
 
         x = np.array([0.5, 0.5, 2.5, 2.5])
@@ -762,16 +621,13 @@ class TestMultiWFPolygonBoundaryComp(unittest.TestCase):
         boundary_coords = np.array(
             [[np.cos(2 * np.pi * i / N), np.sin(2 * np.pi * i / N)] for i in range(N)]
         )
-
         x = np.array([0.25, 0.75, 0.5, -0.2])
         y = np.array([0.25, 0.25, 1.2, 0.5])
         n_wt = len(x)
-
-        group_id = 1
         multi = MultiWFPolygonBoundaryComp(
-            n_wt=n_wt,
-            boundaries={group_id: boundary_coords},
-            turbine_groups={group_id: np.arange(n_wt)},
+            n_wt,
+            [boundary_coords],
+            [np.arange(n_wt)],
         )
         # should not fail
         _ = multi.gradients(x, y)
@@ -898,3 +754,53 @@ def test_simplify_maintains_types(sample_zones):
 
     # Verify inclusion/exclusion flags maintained
     assert np.array_equal(comp.incl_excls, original_incl_excls)
+
+
+class TestMultiWFCircleValidation(unittest.TestCase):
+
+    def test_validate_input_happy_path(self):
+        # Setup valid test inputs
+        geometry = [((0, 0), 1), ((1, 1), 2)]  # List of (center, radius) tuples
+        wt_groups = [[0, 1], [2, 3]]  # List of lists with turbine indices
+        n_wt = 4
+        comp = MultiCircleBoundaryComp(n_wt, geometry, wt_groups)
+        assert len(comp.center) == 2
+        assert len(comp.radius) == 2
+        assert len(comp.masks) == 2
+
+    def test_validate_input_mismatched_lengths(self):
+        # Setup test inputs with mismatched lengths
+        geometry = [((0, 0), 1)]  # Only one boundary
+        wt_groups = [[0, 1], [2, 3]]  # But two groups
+        n_wt = 4
+
+        with pytest.raises(AssertionError):
+            MultiCircleBoundaryComp(n_wt, geometry, wt_groups)
+
+    def test_validate_input_invalid_geometry_format(self):
+        # Test cases with invalid geometry format
+        invalid_cases = [
+            ([[0, 1]], [[0, 1]]),  # geometry not a tuple
+            ([(0, 0)], [[0, 1]]),  # missing radius
+            ([(0, 0, 1)], [[0, 1]]),  # not a tuple of (center, radius)
+            ([((0,), 1)], [[0, 1]]),  # center not 2D
+        ]
+
+        n_wt = 2
+        for geometry, wt_groups in invalid_cases:
+            with pytest.raises(AssertionError):
+                MultiCircleBoundaryComp(n_wt, geometry, wt_groups)
+
+    def test_validate_input_invalid_center_radius_format(self):
+        # Test cases with invalid center/radius format
+        invalid_cases = [
+            ([((0, 0, 0), 1)], [[0, 1]]),  # center is 3D
+            ([((0,), 1)], [[0, 1]]),  # center is 1D
+            ([((0, 0), (1, 1))], [[0, 1]]),  # radius is 2D
+            ([((0, 0), [1])], [[0, 1]]),  # radius is list instead of scalar
+        ]
+
+        n_wt = 2
+        for geometry, wt_groups in invalid_cases:
+            with pytest.raises(AssertionError):
+                MultiCircleBoundaryComp(n_wt, geometry, wt_groups)
