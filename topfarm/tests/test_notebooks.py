@@ -5,7 +5,7 @@ import uuid
 import pytest
 from topfarm.tests.notebook import Notebook
 import topfarm
-
+import sys
 import matplotlib  # fmt:skip
 matplotlib.use("Agg")
 
@@ -28,18 +28,19 @@ def get_notebooks():  # fmt:skip
     return get(path)
 
 
-notebooks = get_notebooks()
-notebooks = [
-    nb
-    for nb in notebooks
-    if os.path.basename(nb.filename)
-    not in [
-        "layout_and_loads.ipynb",  # gives error from tensorflow on synnefo machine
-        "wake_steering_and_loads.ipynb",  # ok but many warnings from tensorflow
-        "wind_farm_cluster.ipynb",  # too long runtime
-        "MongoDB_recorder.ipynb",  # deprecated
-    ]
+excluded = [
+    "layout_and_loads.ipynb",  # gives error from tensorflow on synnefo machine
+    "wake_steering_and_loads.ipynb",  # ok but many warnings from tensorflow
+    "wind_farm_cluster.ipynb",  # too long runtime
+    "MongoDB_recorder.ipynb",  # deprecated
 ]
+if sys.version_info > (3, 10):
+    excluded += [
+        "cables.ipynb",  # ed_win python requirement is python<3.10
+    ]
+
+notebooks = get_notebooks()
+notebooks = [nb for nb in notebooks if os.path.basename(nb.filename) not in excluded]
 grouped_notebooks = [
     pytest.param(nb, marks=pytest.mark.xdist_group(name=f"{uuid.uuid4()}_group"))
     for nb in notebooks

@@ -89,6 +89,9 @@ topfarm = { path = ".", editable = true }
 [tool.pixi.feature.python39]
 dependencies = { python = "3.9.*", pyoptsparse = ">=2.11.3,<3" }
 tasks = { test39 = "pytest -n auto" }
+pypi-dependencies = { ed_win = { git = "https://gitlab.windenergy.dtu.dk/TOPFARM/edwin.git", extras = [
+    "interarray",
+] } }
 
 [tool.pixi.feature.python310]
 dependencies = { python = "3.10.*", pyoptsparse = ">=2.11.3,<3" }

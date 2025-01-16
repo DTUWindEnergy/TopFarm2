@@ -184,10 +184,10 @@ def predict_output(model,
     """
 
     # Form the input array.
-    if type(input) is dict:
+    if isinstance(input, dict):
         input_array = np.column_stack(
             [input[key] for key in model_in_keys])
-    elif type(input) is np.ndarray:
+    elif isinstance(input, np.ndarray):
         input_array = input
     else:
         raise TypeError(
@@ -296,10 +296,10 @@ def predict_gradient(model,
     # - 2D or 3D depending on the case?
 
     # Form the input array.
-    if type(input) is dict:
+    if isinstance(input, dict):
         input_array = np.column_stack(
             [input[key] for key in model_in_keys])
-    elif type(input) is np.ndarray:
+    elif isinstance(input, np.ndarray):
         input_array = input
     else:
         raise TypeError(
@@ -320,9 +320,9 @@ def predict_gradient(model,
         try:
             gradient = np.array(
                 _switch_gradient[type(model)](model, input_scaled))
-            if type(input_scaler) is MinMaxScaler:
+            if isinstance(input_scaler, MinMaxScaler):
                 gradient *= input_scaler.scale_
-            elif ((type(input_scaler) is StandardScaler) and
+            elif ((isinstance(input_scaler, StandardScaler)) and
                   (input_scaler.scale_ is not None)):
                 gradient /= input_scaler.scale_
         except KeyError:
@@ -336,9 +336,9 @@ def predict_gradient(model,
 
     # If possible scale back the gradient.
     if output_scaler is not None:
-        if type(output_scaler) is MinMaxScaler:
+        if isinstance(output_scaler, MinMaxScaler):
             gradient /= output_scaler.scale_
-        elif ((type(output_scaler) is StandardScaler) and
+        elif ((isinstance(output_scaler, StandardScaler)) and
               (output_scaler.scale_ is not None)):
             gradient *= output_scaler.scale_
 
