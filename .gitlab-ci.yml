@@ -33,6 +33,7 @@ test_topfarm:
   stage: # build, test, deploy defined by default [2]
     test
   script:
+    - apt update && apt install -y git
     - pixi run test-latest
   artifacts:
     paths:
@@ -48,6 +49,7 @@ test_topfarm_all_py_versions:
   stage: # build, test, deploy defined by default [2]
     test
   script:
+    - apt update && apt install -y git
     - pixi run test-all
   tags: # only runners with this tag can do the job [3]
     - linux
