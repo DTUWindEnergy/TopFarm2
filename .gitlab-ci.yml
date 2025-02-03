@@ -16,6 +16,7 @@ test_topfarm_precommit: # name the job what we like
   stage: # build, test, deploy defined by default [2]
     test
   script:
+    - apt update && apt install -y git
     - pixi run -e default pre-commit run --all-files
   cache:
     key: pre-commit-cache # Retains cache across all branches
@@ -112,6 +113,7 @@ test_topfarm_deploy:
   stage: # build, test, deploy defined by default [2]
     deploy
   script:
+    - apt update && apt install -y git
     - rm -rf topfarm/examples/input_ts.csv # reduce upload size 75%
     - pixi run -e default hatch build
     - pixi run -e default hatch publish -r test -u $HATCH_INDEX_USER -a $HATCH_INDEX_AUTH
@@ -125,6 +127,7 @@ pypi_deploy:
   image: ghcr.io/prefix-dev/pixi:latest
   stage: deploy
   script:
+    - apt update && apt install -y git
     - eval "$(pixi shell-hook -e default)"
     - export SETUPTOOLS_SCM_PRETEND_VERSION=$(hatch version | sed 's/\.post0$//') # remove post for pypi
     - echo $SETUPTOOLS_SCM_PRETEND_VERSION # pypi version
@@ -141,6 +144,7 @@ test_docs_build: # "pages" is a job specifically for GitLab pages [1]
   stage: # build, test, deploy defined by default [2]
     deploy
   script: # use sphinx to build docs
+    - apt update && apt install -y git
     - pixi run -e default "cd docs; sphinx-build -j auto . build/html"
   tags: # only runners with this tag can do the job [3]
     - linux
@@ -157,6 +161,7 @@ pages: # "pages" is a job specifically for GitLab pages [1]
   stage: # build, test, deploy defined by default [2]
     deploy
   script: # use sphinx to build docs, move to public page
+    - apt update && apt install -y git
     - pixi run -e default "cd docs; sphinx-build -j auto . build/html"
     - mv docs/build/html public/
   artifacts: # required for GitLab pages [1]

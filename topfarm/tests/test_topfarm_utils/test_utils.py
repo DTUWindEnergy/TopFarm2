@@ -11,6 +11,7 @@ from topfarm.utils import (
     LogSumExpMax,
     LogSumExpMin,
     _np2scalar,
+    is_number,
 )
 from topfarm.tests import npt
 from topfarm import TopFarmProblem
@@ -307,3 +308,16 @@ def test_np2scalar():
         assert False, "Should have raised ValueError"
     except ValueError:
         pass
+
+
+def test_is_number():
+    assert is_number(5) == True
+    assert is_number(-1) == True
+    assert is_number(3.14) == True
+    assert is_number(np.int64(42)) == True
+    assert is_number(np.float32(2.5)) == True
+    assert is_number(np.float64(7.8)) == True
+    assert is_number("string") == False
+    assert is_number([1, 2, 3]) == False
+    assert is_number(None) == False
+    assert is_number(np.bool_(True)) == False

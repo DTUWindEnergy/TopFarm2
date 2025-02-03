@@ -2,7 +2,7 @@ import numpy as np
 from numpy import newaxis as na
 from scipy.spatial import ConvexHull
 from topfarm.constraint_components import Constraint, ConstraintComponent
-from topfarm.utils import smooth_max, smooth_max_gradient
+from topfarm.utils import smooth_max, smooth_max_gradient, is_number
 import topfarm
 from shapely.geometry import Polygon, MultiPolygon, LineString
 from shapely.ops import unary_union
@@ -10,6 +10,8 @@ import warnings
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 from enum import Enum
+import matplotlib.pyplot as plt
+from matplotlib.pyplot import Circle
 
 
 class XYBoundaryConstraint(Constraint):
@@ -191,27 +193,12 @@ class BoundaryBaseComp(ConstraintComponent):
 
     def plot(self, ax):
         """Plot boundary"""
-        if isinstance(self, TurbineSpecificBoundaryComp):
-            linestyles = ['--', '-']
-            colors = np.array(['b', 'r', 'm', 'c', 'g', 'y', 'orange', 'indigo', 'grey'] * 10)
-            for n, t in enumerate(self.types):
-                line, = ax.plot(*self.ts_merged_xy_boundaries[n][0][0][0, :], color=colors[t], linewidth=1, label=f'{self.wind_turbines._names[n]} boundary')
-                for bound, io in self.ts_merged_xy_boundaries[n]:
-                    ax.plot(np.asarray(bound)[:, 0].tolist() + [np.asarray(bound)[0, 0]],
-                            np.asarray(bound)[:, 1].tolist() + [np.asarray(bound)[0, 1]], color=colors[t], linewidth=1, linestyle=linestyles[io])
-        elif isinstance(self, MultiPolygonBoundaryComp):
-            colors = ['--k', 'k']
-            if self.relaxation != 0:
-                for bound, io in self.relaxed_polygons():
-                    ax.plot(np.asarray(bound)[:, 0].tolist() + [np.asarray(bound)[0, 0]],
-                            np.asarray(bound)[:, 1].tolist() + [np.asarray(bound)[0, 1]], c='r', linewidth=1, linestyle='--')
-                ax.plot([], c='r', linewidth=1, linestyle='--', label='Relaxed boundaries')
-            for bound, io in self.boundaries:
-                ax.plot(np.asarray(bound)[:, 0].tolist() + [np.asarray(bound)[0, 0]],
-                        np.asarray(bound)[:, 1].tolist() + [np.asarray(bound)[0, 1]], colors[io], linewidth=1)
-        else:
-            ax.plot(self.xy_boundary[:, 0].tolist() + [self.xy_boundary[0, 0]],
-                    self.xy_boundary[:, 1].tolist() + [self.xy_boundary[0, 1]], 'k', linewidth=1)
+        ax.plot(
+            self.xy_boundary[:, 0].tolist() + [self.xy_boundary[0, 0]],
+            self.xy_boundary[:, 1].tolist() + [self.xy_boundary[0, 1]],
+            "k",
+            linewidth=1,
+        )
 
 
 class ConvexBoundaryComp(BoundaryBaseComp):
@@ -392,7 +379,6 @@ class PolygonBoundaryComp(BoundaryBaseComp):
         A_normal = (edge_unit_normal + np.roll(edge_unit_normal, 1, 1)) / 2
         B_normal = np.roll(A_normal, -1, 1)
 
-        # import matplotlib.pyplot as plt
         # for (x, y), (dx, dy), (unx, uny) in zip(A.T, AB.T, edge_unit_normal.T):
         #     plt.arrow(x, y, dx, dy, color='k', head_width=.2)
         #     plt.arrow(x, y, unx, uny, color='r', head_width=.2)
@@ -521,8 +507,6 @@ class CircleBoundaryComp(PolygonBoundaryComp):
         self.zeros = np.zeros(self.n_wt)
 
     def plot(self, ax=None):
-        from matplotlib.pyplot import Circle
-        import matplotlib.pyplot as plt
         ax = ax or plt.gca()
         circle = Circle(self.center, self.radius, color='k', fill=False)
         ax.add_artist(circle)
@@ -611,14 +595,10 @@ class MultiPolygonBoundaryComp(PolygonBoundaryComp):
         polygons = []
         bounds = []
         for z in self.zones:
-            if hasattr(z.dist2wt, '__code__'):
-                buffer = z.dist2wt(**{k: 100 for k in z.dist2wt.__code__.co_varnames})
-            else:
-                buffer = 0
-            if z.geometry_type == 'line':
-                poly = Polygon(LineString(z.boundary).buffer(buffer, join_style=2).exterior)
-            elif z.geometry_type == 'polygon':
-                poly = Polygon(z.boundary).buffer(buffer, join_style=2)
+            # hardcoded values passed to this function... it does not impact the
+            # result because this only happends due to turbine specific component
+            # calling into parent constructor;
+            poly = self._zone2poly(z, D=-1, H=-1)
             polygons.append(poly)
             bounds.append(np.asarray(poly.exterior.coords))
         return polygons, bounds
@@ -772,6 +752,76 @@ class MultiPolygonBoundaryComp(PolygonBoundaryComp):
         merged_poly = self._calc_resulting_polygons(relaxed_poly, booleans)
         return self._poly_to_bound(merged_poly)
 
+    @staticmethod
+    def _zone2poly(z: Zone, **kwargs):
+        buffer = 0
+        if hasattr(z.dist2wt, "__code__"):
+            buffer = z.dist2wt(
+                **{k: kwargs[k] for k in z.dist2wt.__code__.co_varnames}
+            )
+            if not is_number(buffer):
+                raise ValueError(f"dist2wt must return a float, not {type(buffer)}")
+        elif is_number(z.dist2wt):
+            buffer = z.dist2wt
+        elif z.dist2wt is not None:
+            warnings.warn(
+                f"dist2wt is not a function or a float and is ignored. Zone buffer is set to 0."
+            )
+        buf_direction = -1 if z.incl else 1
+        buffer = abs(buffer) * buf_direction
+
+        if z.geometry_type == "line":
+            poly = Polygon(LineString(z.boundary).buffer(buffer, join_style=2).exterior)
+        elif z.geometry_type == "polygon":
+            poly = Polygon(z.boundary).buffer(buffer, join_style=2)
+        else:
+            raise NotImplementedError(
+                f"Geometry type '{z.geometry_type}' is not implemented"
+            )
+        return poly
+
+    def plot(self, ax):
+        """Plot original and buffered boundaries"""
+        legend_mask = [0, 0]
+        for i, (zone, buffered_poly) in enumerate(zip(self.zones, self.bounds_poly)):
+            original_coords = zone.boundary
+            if zone.geometry_type == "line":
+                ax.plot(
+                    original_coords[:, 0],
+                    original_coords[:, 1],
+                    "k--",
+                    linewidth=1,
+                    alpha=0.5,
+                    label="Original line" if i == 0 else "",
+                )
+            else:
+                original_poly = np.vstack([original_coords, original_coords[0]])
+                ax.plot(
+                    original_poly[:, 0],
+                    original_poly[:, 1],
+                    "k--",
+                    linewidth=1,
+                    alpha=0.5,
+                    label="Original boundary" if i == 0 else "",
+                )
+
+            x, y = buffered_poly.exterior.xy
+            color = "green" if zone.incl else "red"
+            label = "Inclusion" if zone.incl else "Exclusion"
+            if legend_mask[zone.incl]:
+                label = ""
+            legend_mask[zone.incl] = 1
+            ax.plot(
+                x,
+                y,
+                color=color,
+                linewidth=1,
+                linestyle="-",
+                label=label,
+            )
+            ax.fill(x, y, color=color, alpha=0.1)
+        ax.legend()
+
 
 class TurbineSpecificBoundaryComp(MultiPolygonBoundaryComp):
     def __init__(self, n_wt, wind_turbines, zones, const_id=None,
@@ -799,17 +849,12 @@ class TurbineSpecificBoundaryComp(MultiPolygonBoundaryComp):
         for t in set(self.types):
             temp1 = []
             temp2 = []
-            dist2wt_input = dict(D=self.wind_turbines.diameter(t),
-                                 H=self.wind_turbines.hub_height(t))
+            dist2wt_input = dict(
+                D=self.wind_turbines.diameter(t),
+                H=self.wind_turbines.hub_height(t),
+            )
             for z in self.zones:
-                if hasattr(z.dist2wt, '__code__'):
-                    buffer = z.dist2wt(**{k: dist2wt_input[k] for k in z.dist2wt.__code__.co_varnames})
-                else:
-                    buffer = 0
-                if z.geometry_type == 'line':
-                    poly = Polygon(LineString(z.boundary).buffer(buffer, join_style=2).exterior)
-                elif z.geometry_type == 'polygon':
-                    poly = Polygon(z.boundary).buffer(buffer, join_style=2)
+                poly = self._zone2poly(z, **dist2wt_input)
                 bound = np.asarray(poly)
                 temp1.append(poly)
                 temp2.append(bound)
@@ -924,6 +969,48 @@ class TurbineSpecificBoundaryComp(MultiPolygonBoundaryComp):
             gradients = np.diagflat(dDdx_i), np.diagflat(dDdy_i)
         return gradients
 
+    def plot(self, ax):
+        linestyles = ["--", "-"]
+        colors = ["b", "r", "m", "c", "g", "y", "orange", "indigo", "grey"]
+        for n, t in enumerate(self.types):
+            _ = ax.plot(
+                *self.ts_merged_xy_boundaries[n][0][0][0, :],
+                color=colors[t % len(colors)],
+                linewidth=1,
+                label=f"{self.wind_turbines._names[n]} boundary",
+            )
+            for bound, io in self.ts_merged_xy_boundaries[n]:
+                ax.plot(
+                    np.asarray(bound)[:, 0].tolist() + [np.asarray(bound)[0, 0]],
+                    np.asarray(bound)[:, 1].tolist() + [np.asarray(bound)[0, 1]],
+                    color=colors[t % len(colors)],
+                    linewidth=1,
+                    linestyle=linestyles[io],
+                )
+
+        for i, zone in enumerate(self.zones):
+            original_coords = zone.boundary
+            if zone.geometry_type == "line":
+                ax.plot(
+                    original_coords[:, 0],
+                    original_coords[:, 1],
+                    "k-.",
+                    linewidth=0.8,
+                    alpha=0.7,
+                    label=f"Original" if (i == 0) else "",
+                )
+            else:
+                original_poly = np.vstack([original_coords, original_coords[0]])
+                ax.plot(
+                    original_poly[:, 0],
+                    original_poly[:, 1],
+                    "k-.",
+                    linewidth=0.8,
+                    alpha=0.7,
+                    label=f"Original" if (i == 0) else "",
+                )
+        ax.legend()
+
 
 class MultiCircleBoundaryComp(PolygonBoundaryComp):
 
@@ -966,8 +1053,6 @@ class MultiCircleBoundaryComp(PolygonBoundaryComp):
         )
 
     def plot(self, ax=None):
-        from matplotlib.pyplot import Circle
-        import matplotlib.pyplot as plt  # fmt: skip
         ax = ax or plt.gca()
         for center, radius in zip(self.center, self.radius):
             circle = Circle(center, radius, color="k", fill=False)
@@ -1318,7 +1403,6 @@ class MultiWFPolygonBoundaryComp(PolygonBoundaryComp):
         return np.diagflat(dx), np.diagflat(dy)
 
     def plot(self, ax=None):
-        import matplotlib.pyplot as plt  # fmt: skip
         cmap = plt.cm.get_cmap("viridis", len(self.boundaries))
         for ii, (group_id, boundary) in enumerate(self.boundaries.items()):
             ax.plot(*boundary.T, c=cmap(ii), label=f"Group {group_id}", linewidth=1)
@@ -1405,8 +1489,7 @@ class MultiWFBoundaryConstraint(XYBoundaryConstraint):
 
 
 def main():
-    if __name__ == '__main__':
-        import matplotlib.pyplot as plt
+    if __name__ == "__main__":
         from py_wake.wind_turbines import WindTurbines
         from py_wake.wind_turbines.power_ct_functions import CubePowerSimpleCt
 

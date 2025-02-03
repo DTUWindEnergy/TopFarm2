@@ -12,6 +12,7 @@ import gc
 from scipy.special import gamma
 from scipy.optimize import fsolve
 import pandas as pd
+import numbers
 
 
 def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, random_pct=0, plot=False, seed=None, types=None):
@@ -596,6 +597,10 @@ def plot_list_recorder(recorder, x='counter'):
         ax.plot(xs, recorder[k])
     plt.tight_layout()
     plt.show()
+
+
+def is_number(s):
+    return isinstance(s, (numbers.Number, np.number))
 
 
 def main():
