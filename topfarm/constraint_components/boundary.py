@@ -1403,9 +1403,9 @@ class MultiWFPolygonBoundaryComp(PolygonBoundaryComp):
         return np.diagflat(dx), np.diagflat(dy)
 
     def plot(self, ax=None):
-        cmap = plt.cm.get_cmap("viridis", len(self.boundaries))
+        colors = plt.cm.viridis(np.linspace(0, .8, len(self.boundaries)))
         for ii, (group_id, boundary) in enumerate(self.boundaries.items()):
-            ax.plot(*boundary.T, c=cmap(ii), label=f"Group {group_id}", linewidth=1)
+            ax.plot(*boundary.T, c=colors[ii], label=f"Group {group_id}", linewidth=1)
         ax.legend()
 
 

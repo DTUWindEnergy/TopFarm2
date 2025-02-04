@@ -32,7 +32,7 @@ class XYPlotComp(ExplicitComponent):
     # colors = ['b', 'r', 'm', 'c', 'g', 'y', 'orange', 'indigo', 'grey'] * 100
     colors = [c['color'] for c in iter(matplotlib.rcParams['axes.prop_cycle'])] * 100
 
-    def __init__(self, memory=10, delay=0.001, plot_initial=True, plot_improvements_only=False, ax=None, legendloc=1, save_plot_per_iteration=False):
+    def __init__(self, memory=10, delay=0.001, plot_initial=True, plot_improvements_only=False, ax=None, legendloc=1, save_plot_per_iteration=False, folder_name='Figures', file_prefix='iteration', callback=None):
         """Initialize component for plotting turbine locations
 
         Parameters
@@ -49,6 +49,12 @@ class XYPlotComp(ExplicitComponent):
             Axes into which to make the plot
         legendloc : int
             Location of the legend in the plot
+        folder_name : str
+            name of the folder to save plots in
+        callback : None or function
+            optional function that accepts ax as an argument
+        file_prefix : str
+            prefix of saved plot file names
         """
         ExplicitComponent.__init__(self)
         self.delay = delay
@@ -61,6 +67,9 @@ class XYPlotComp(ExplicitComponent):
         self.counter = 0
         self.by_pass = False
         self.legendloc = legendloc
+        self.callback = callback
+        self.folder_name = folder_name
+        self.file_prefix = file_prefix
         self.save_plot_per_iteration = save_plot_per_iteration
 
     @property
@@ -211,11 +220,14 @@ class XYPlotComp(ExplicitComponent):
             self.counter += 1
             outputs['plot_counter'] = self.counter
 
+            if self.callback is not None:
+                self.callback(self.ax)
+
             if self.save_plot_per_iteration:
                 fig = self.ax
-                if not os.path.exists('Figures'):
-                    os.makedirs('Figures')
-                plt.savefig('Figures/iteration_%s.png' % self.counter)
+                if not os.path.exists(self.folder_name):
+                    os.makedirs(self.folder_name)
+                plt.savefig(f'{self.folder_name}/{self.file_prefix}_%s.png' % self.counter)
 
 
 class PlotComp(XYPlotComp):
