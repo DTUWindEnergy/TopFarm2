@@ -210,7 +210,7 @@ class SGDDriver(Driver):
         # if record:
         with RecordingDebugging('SGD', self.iter_count, self) as rec:
             # self.set_design_var(name, value)
-            if update or self.iter_count < 1:
+            if update:
                 self.iter_count += 1
 
             try:
@@ -263,8 +263,12 @@ class SGDDriver(Driver):
             # adam
             m = self.beta1 * m + (1 - self.beta1) * jacobian
             v = self.beta2 * v + (1 - self.beta2) * jacobian ** 2
-            mhat = m / (1 - self.beta1 ** self.iter_count)
-            vhat = v / (1 - self.beta2 ** self.iter_count)
+            if self.iter_count > 0:
+                mhat = m / (1 - self.beta1 ** self.iter_count)
+                vhat = v / (1 - self.beta2 ** self.iter_count)
+            else:
+                mhat = m
+                vhat = v
 
             # update x
             x -= learning_rate * mhat / np.sqrt(vhat)
