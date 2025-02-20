@@ -5141,7 +5141,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/e7/05/c19819d5e3d95294a6f5947fb9b9629efb316b96de511b418c53d245aae6/cycler-0.12.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/2e/c73e2744c88c7df7e830c6f7bd4dcb3d39beb7d306e26d21cf1dd439fdf5/debugpy-1.8.11-cp39-cp39-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/d5/50/83c593b07763e1161326b3b8c6686f0f4b0f24d5526546bee538c89837d6/decorator-5.1.1-py3-none-any.whl
-      - pypi: git+https://gitlab.windenergy.dtu.dk/TOPFARM/edwin.git@517099b186a093556129aa75c968924861f9b9b1
+      - pypi: git+https://gitlab.windenergy.dtu.dk/TOPFARM/edwin#517099b186a093556129aa75c968924861f9b9b1
       - pypi: https://files.pythonhosted.org/packages/c1/8b/5fe2cc11fee489817272089c4203e679c63b570a5aaeb18d852ae3cbba6a/et_xmlfile-2.0.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b5/fd/afcd0496feca3276f509df3dbd5dae726fcc756f1a08d9e25abe1733f962/executing-2.1.0-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/6b/77/9893aa413e7d839e292685bae0749a319eacba9470c85253529d35248075/fonttools-4.55.3-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
@@ -5457,7 +5457,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/e7/05/c19819d5e3d95294a6f5947fb9b9629efb316b96de511b418c53d245aae6/cycler-0.12.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/77/0a/d29a5aacf47b4383ed569b8478c02d59ee3a01ad91224d2cff8562410e43/debugpy-1.8.11-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/d5/50/83c593b07763e1161326b3b8c6686f0f4b0f24d5526546bee538c89837d6/decorator-5.1.1-py3-none-any.whl
-      - pypi: git+https://gitlab.windenergy.dtu.dk/TOPFARM/edwin.git@517099b186a093556129aa75c968924861f9b9b1
+      - pypi: git+https://gitlab.windenergy.dtu.dk/TOPFARM/edwin#517099b186a093556129aa75c968924861f9b9b1
       - pypi: https://files.pythonhosted.org/packages/c1/8b/5fe2cc11fee489817272089c4203e679c63b570a5aaeb18d852ae3cbba6a/et_xmlfile-2.0.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b5/fd/afcd0496feca3276f509df3dbd5dae726fcc756f1a08d9e25abe1733f962/executing-2.1.0-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/ea/29/532e428003bdd98f728aff4a48ae91d6ba44eb0b7b4f30e746ad18bf56b6/fonttools-4.55.3-cp39-cp39-macosx_10_9_x86_64.whl
@@ -5773,7 +5773,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/e7/05/c19819d5e3d95294a6f5947fb9b9629efb316b96de511b418c53d245aae6/cycler-0.12.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/77/0a/d29a5aacf47b4383ed569b8478c02d59ee3a01ad91224d2cff8562410e43/debugpy-1.8.11-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/d5/50/83c593b07763e1161326b3b8c6686f0f4b0f24d5526546bee538c89837d6/decorator-5.1.1-py3-none-any.whl
-      - pypi: git+https://gitlab.windenergy.dtu.dk/TOPFARM/edwin.git@517099b186a093556129aa75c968924861f9b9b1
+      - pypi: git+https://gitlab.windenergy.dtu.dk/TOPFARM/edwin#517099b186a093556129aa75c968924861f9b9b1
       - pypi: https://files.pythonhosted.org/packages/c1/8b/5fe2cc11fee489817272089c4203e679c63b570a5aaeb18d852ae3cbba6a/et_xmlfile-2.0.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b5/fd/afcd0496feca3276f509df3dbd5dae726fcc756f1a08d9e25abe1733f962/executing-2.1.0-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/7c/2e/3481bd2f8a501146ceb60fa98e54ac91d3589d22dd0b3605d26d65280f3f/fonttools-4.55.3-cp39-cp39-macosx_10_9_universal2.whl
@@ -6072,7 +6072,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/e7/05/c19819d5e3d95294a6f5947fb9b9629efb316b96de511b418c53d245aae6/cycler-0.12.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/8d/52/38bd3ce8686ef3b69f1462976deb874e70acba527783844b98387b90f4ba/debugpy-1.8.11-cp39-cp39-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/d5/50/83c593b07763e1161326b3b8c6686f0f4b0f24d5526546bee538c89837d6/decorator-5.1.1-py3-none-any.whl
-      - pypi: git+https://gitlab.windenergy.dtu.dk/TOPFARM/edwin.git@517099b186a093556129aa75c968924861f9b9b1
+      - pypi: git+https://gitlab.windenergy.dtu.dk/TOPFARM/edwin#517099b186a093556129aa75c968924861f9b9b1
       - pypi: https://files.pythonhosted.org/packages/c1/8b/5fe2cc11fee489817272089c4203e679c63b570a5aaeb18d852ae3cbba6a/et_xmlfile-2.0.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b5/fd/afcd0496feca3276f509df3dbd5dae726fcc756f1a08d9e25abe1733f962/executing-2.1.0-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/e3/05/b0ddd91049475035cc341d1e6fa88a04340f2ef6c38192ca45e4e2b3331f/fonttools-4.55.3-cp39-cp39-win_amd64.whl
@@ -8466,7 +8466,7 @@ packages:
   - pkg:pypi/docutils?source=hash-mapping
   size: 402700
   timestamp: 1733217860944
-- pypi: git+https://gitlab.windenergy.dtu.dk/TOPFARM/edwin.git@517099b186a093556129aa75c968924861f9b9b1
+- pypi: git+https://gitlab.windenergy.dtu.dk/TOPFARM/edwin#517099b186a093556129aa75c968924861f9b9b1
   name: ed-win
   version: 1.1.0
   requires_dist:
@@ -10361,6 +10361,46 @@ packages:
   sha256: afdb66ba5aa354b09b91379bac28ae4afebbb30e8b39510c9690afb7a10421b5
   requires_dist:
   - appnope ; platform_system == 'Darwin'
+  - comm>=0.1.1
+  - debugpy>=1.6.5
+  - ipython>=7.23.1
+  - jupyter-client>=6.1.12
+  - jupyter-core>=4.12,!=5.0.*
+  - matplotlib-inline>=0.1
+  - nest-asyncio
+  - packaging
+  - psutil
+  - pyzmq>=24
+  - tornado>=6.1
+  - traitlets>=5.4.0
+  - coverage[toml] ; extra == 'cov'
+  - curio ; extra == 'cov'
+  - matplotlib ; extra == 'cov'
+  - pytest-cov ; extra == 'cov'
+  - trio ; extra == 'cov'
+  - myst-parser ; extra == 'docs'
+  - pydata-sphinx-theme ; extra == 'docs'
+  - sphinx ; extra == 'docs'
+  - sphinx-autodoc-typehints ; extra == 'docs'
+  - sphinxcontrib-github-alt ; extra == 'docs'
+  - sphinxcontrib-spelling ; extra == 'docs'
+  - trio ; extra == 'docs'
+  - pyqt5 ; extra == 'pyqt5'
+  - pyside6 ; extra == 'pyside6'
+  - flaky ; extra == 'test'
+  - ipyparallel ; extra == 'test'
+  - pre-commit ; extra == 'test'
+  - pytest-asyncio>=0.23.5 ; extra == 'test'
+  - pytest-cov ; extra == 'test'
+  - pytest-timeout ; extra == 'test'
+  - pytest>=7.0 ; extra == 'test'
+  requires_python: '>=3.8'
+- pypi: https://files.pythonhosted.org/packages/94/5c/368ae6c01c7628438358e6d337c19b05425727fbb221d2a3c4303c372f42/ipykernel-6.29.5-py3-none-any.whl
+  name: ipykernel
+  version: 6.29.5
+  sha256: afdb66ba5aa354b09b91379bac28ae4afebbb30e8b39510c9690afb7a10421b5
+  requires_dist:
+  - appnope ; sys_platform == 'darwin'
   - comm>=0.1.1
   - debugpy>=1.6.5
   - ipython>=7.23.1
@@ -15999,6 +16039,46 @@ packages:
   - matplotlib ; extra == 'visualization'
   - panel ; extra == 'visualization'
   requires_python: '>=3.9'
+- pypi: https://files.pythonhosted.org/packages/86/69/a9d43adf8ed4f6bc23d8de09be9334ba8d22c02ec62e9915767cd867d6d0/openmdao-3.36.0.tar.gz
+  name: openmdao
+  version: 3.36.0
+  sha256: fe0ba873ccc382590ec33702a6cde5496246992a959e43359e5a211322b01fd1
+  requires_dist:
+  - networkx>=2.0
+  - numpy
+  - packaging
+  - requests
+  - scipy
+  - openmdao[docs,doe,jax,notebooks,visualization,test] ; extra == 'all'
+  - ipyparallel ; extra == 'docs'
+  - jupyter-book==0.14 ; extra == 'docs'
+  - matplotlib ; extra == 'docs'
+  - numpydoc>=1.1 ; extra == 'docs'
+  - sphinx-sitemap ; extra == 'docs'
+  - idna>=3.7 ; extra == 'docs'
+  - jinja2>=3.1.4 ; extra == 'docs'
+  - tqdm>=4.66.3 ; extra == 'docs'
+  - pydoe3 ; extra == 'doe'
+  - jax>=0.4.0 ; extra == 'jax'
+  - jaxlib>=0.4.0 ; extra == 'jax'
+  - ipympl ; extra == 'notebooks'
+  - notebook ; extra == 'notebooks'
+  - idna>=3.7 ; extra == 'notebooks'
+  - pre-commit ; extra == 'test'
+  - aiounittest ; extra == 'test'
+  - num2words ; extra == 'test'
+  - numpydoc>=1.1 ; extra == 'test'
+  - parameterized ; extra == 'test'
+  - playwright>=1.20 ; extra == 'test'
+  - pycodestyle>=2.4.0 ; extra == 'test'
+  - pydocstyle>=2.0.0 ; extra == 'test'
+  - testflo>=1.3.6 ; extra == 'test'
+  - websockets>8 ; extra == 'test'
+  - panel ; extra == 'visualization'
+  - bokeh>=2.4.0 ; extra == 'visualization'
+  - colorama ; extra == 'visualization'
+  - matplotlib ; extra == 'visualization'
+  requires_python: '>=3.9'
 - conda: https://conda.anaconda.org/conda-forge/win-64/openmp-5.0.0-vc14_1.tar.bz2
   sha256: 05c19170938b589f59049679d4e0679c98160fecc6fd1bf721b0f4980bd235dd
   md5: 8284c925330fa53668ade00db3c9e787
@@ -18727,7 +18807,7 @@ packages:
   - numdifftools ; implementation_name != 'pypy' and extra == 'optional'
   - pandas ; implementation_name != 'pypy' and extra == 'optional'
   - seaborn ; implementation_name != 'pypy' and extra == 'optional'
-  - pywin32 ; platform_system == 'Windows' and extra == 'optional'
+  - pywin32 ; sys_platform == 'win32' and extra == 'optional'
   - networkx<3.2 ; python_full_version < '3.9' and extra == 'optional'
   - networkx ; python_full_version >= '3.9' and extra == 'optional'
   - coverage ; extra == 'tests'
@@ -18770,7 +18850,7 @@ packages:
   - numdifftools ; implementation_name != 'pypy' and extra == 'optional'
   - pandas ; implementation_name != 'pypy' and extra == 'optional'
   - seaborn ; implementation_name != 'pypy' and extra == 'optional'
-  - pywin32 ; platform_system == 'Windows' and extra == 'optional'
+  - pywin32 ; sys_platform == 'win32' and extra == 'optional'
   - networkx<3.2 ; python_full_version < '3.9' and extra == 'optional'
   - networkx ; python_full_version >= '3.9' and extra == 'optional'
   - coverage ; extra == 'tests'
@@ -18813,7 +18893,7 @@ packages:
   - numdifftools ; implementation_name != 'pypy' and extra == 'optional'
   - pandas ; implementation_name != 'pypy' and extra == 'optional'
   - seaborn ; implementation_name != 'pypy' and extra == 'optional'
-  - pywin32 ; platform_system == 'Windows' and extra == 'optional'
+  - pywin32 ; sys_platform == 'win32' and extra == 'optional'
   - networkx<3.2 ; python_full_version < '3.9' and extra == 'optional'
   - networkx ; python_full_version >= '3.9' and extra == 'optional'
   - coverage ; extra == 'tests'
@@ -18856,7 +18936,7 @@ packages:
   - numdifftools ; implementation_name != 'pypy' and extra == 'optional'
   - pandas ; implementation_name != 'pypy' and extra == 'optional'
   - seaborn ; implementation_name != 'pypy' and extra == 'optional'
-  - pywin32 ; platform_system == 'Windows' and extra == 'optional'
+  - pywin32 ; sys_platform == 'win32' and extra == 'optional'
   - networkx<3.2 ; python_full_version < '3.9' and extra == 'optional'
   - networkx ; python_full_version >= '3.9' and extra == 'optional'
   - coverage ; extra == 'tests'
@@ -23128,6 +23208,25 @@ packages:
   - tensorflow>=2.13.1,<3 ; extra == 'tensorflow'
   requires_python: '>=3.9,<3.13'
   editable: true
+- pypi: .
+  name: topfarm
+  version: 2.5.0.post4
+  sha256: 530081aaba520ac6acda143c4f544f48f45d0c64698423e3deb6870ca70a122a
+  requires_dist:
+  - jupyterlab>=4.2.5,<5
+  - matplotlib>=3.7.5,<4
+  - numpy-financial>=1.0.0,<2
+  - numpy>=1.24.3,<3
+  - openmdao>=3.27,<=4
+  - py-wake>=2.6.5,<3
+  - pydoe2>=1.3.0,<2
+  - pydoe3>=1.0.4,<2
+  - scikit-learn>=1.3.2,<2
+  - scipy>=1.10.1,<2
+  - shapely>=2.0.6,<3
+  - tensorflow>=2.13.1,<3 ; extra == 'tensorflow'
+  requires_python: '>=3.9,<3.13'
+  editable: true
 - conda: https://conda.anaconda.org/conda-forge/linux-64/tornado-6.4.2-py310ha75aee5_0.conda
   sha256: 9c2b86d4e58c8b0e7d13a7f4c440f34e2201bae9cfc1d7e1d30a5bc7ffb1d4c8
   md5: 166d59aab40b9c607b4cc21c03924e9d
@@ -23358,6 +23457,22 @@ packages:
   sha256: 26445eca388f82e72884e0d580d5464cd801a3ea01e63e5601bdff9ba6a48de2
   requires_dist:
   - colorama ; platform_system == 'Windows'
+  - pytest>=6 ; extra == 'dev'
+  - pytest-cov ; extra == 'dev'
+  - pytest-timeout ; extra == 'dev'
+  - pytest-asyncio>=0.24 ; extra == 'dev'
+  - nbval ; extra == 'dev'
+  - requests ; extra == 'discord'
+  - slack-sdk ; extra == 'slack'
+  - requests ; extra == 'telegram'
+  - ipywidgets>=6 ; extra == 'notebook'
+  requires_python: '>=3.7'
+- pypi: https://files.pythonhosted.org/packages/d0/30/dc54f88dd4a2b5dc8a0279bdd7270e735851848b762aeb1c1184ed1f6b14/tqdm-4.67.1-py3-none-any.whl
+  name: tqdm
+  version: 4.67.1
+  sha256: 26445eca388f82e72884e0d580d5464cd801a3ea01e63e5601bdff9ba6a48de2
+  requires_dist:
+  - colorama ; sys_platform == 'win32'
   - pytest>=6 ; extra == 'dev'
   - pytest-cov ; extra == 'dev'
   - pytest-timeout ; extra == 'dev'

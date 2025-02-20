@@ -47,6 +47,9 @@ class PyWakeAEPCostModelComponent(AEPCostModelComponent):
             except ValueError as e:
                 if 'are at the same position' in str(e):
                     return 0
+                raise ValueError(
+                    f"{str(e)}\n\n ^^^^^ PyWake model call failed with an error  ^^^^^"
+                ) from e
 
         if grad_method:
             if hasattr(self.windFarmModel, 'dAEPdxy'):
@@ -123,6 +126,9 @@ class PyWakeAEPCostModelComponentAdditionalTurbines(PyWakeAEPCostModelComponent)
             except ValueError as e:
                 if 'are at the same position' in str(e):
                     return 0
+                raise ValueError(
+                    f"{str(e)}\n\n ^^^^^ PyWake model call failed with an error  ^^^^^"
+                ) from e
 
         if grad_method:
             if hasattr(self.windFarmModel, 'dAEPdxy'):
