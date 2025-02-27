@@ -299,7 +299,7 @@ class EasyRandomSearchDriver(RandomSearchDriver, EasyDriverBase):
 
 
 class EasySGDDriver(SGDDriver, EasyDriverBase):
-    def __init__(self, maxiter=100, max_time=600, disp=False, run_parallel=False,
+    def __init__(self, maxiter=100, disp=False, run_parallel=False,
                  learning_rate=10, upper=0.1, lower=0, beta1=0.1, beta2=0.2, gamma_min_factor=1e-2,
                  speedupSGD=False, sgd_thresh=0.1, additional_constant_lr_iterations=0):
         """Easy initialization of Stochastic Gradient Descent (SGD) Driver
@@ -324,5 +324,5 @@ class EasySGDDriver(SGDDriver, EasyDriverBase):
         self.gamma_min_factor = gamma_min_factor
         self.gamma_min = gamma_min_factor  # * learning_rate
         self.additional_constant_lr_iterations = additional_constant_lr_iterations
-        SGDDriver.__init__(self, maxiter=maxiter, max_time=max_time, disp=disp, run_parallel=run_parallel,
+        SGDDriver.__init__(self, maxiter=maxiter, disp=disp, run_parallel=run_parallel,
                            speedupSGD=speedupSGD, sgd_thresh=sgd_thresh, additional_constant_lr_iterations=additional_constant_lr_iterations)

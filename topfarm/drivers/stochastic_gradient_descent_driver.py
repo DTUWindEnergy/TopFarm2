@@ -9,10 +9,6 @@ from openmdao.core.driver import Driver, RecordingDebugging
 from six import iteritems
 import numpy as np
 from openmdao.core.analysis_error import AnalysisError
-import topfarm
-import time
-from openmdao.utils.concurrent import concurrent_eval
-from openmdao.utils.record_util import create_local_meta
 
 
 class SGDDriver(Driver):
@@ -41,8 +37,6 @@ class SGDDriver(Driver):
         """
         self.options.declare('additional_constant_lr_iterations', 0,
                              desc='Additional steps to run with the initial learning rate')
-        self.options.declare('max_time', 5e10,
-                             desc='Maximum time in seconds (set to None to disable)')
         self.options.declare('disp', True,
                              desc='Set to False to prevent printing')
         self.options.declare('run_parallel', False,
@@ -104,9 +98,6 @@ class SGDDriver(Driver):
             lower_bound[i:j] = meta['lower']
             upper_bound[i:j] = meta['upper']
             x0[i:j] = desvar_vals[name]
-        maxiter = self.maxiter
-        max_time = self.options['max_time'] or 1e20
-        assert maxiter < 1e20 or max_time < 1e20, "maxiter or max_time must be set"
 
         disp = self.options['disp']
 
@@ -124,7 +115,6 @@ class SGDDriver(Driver):
         desvar_info = [(name, *self._desvar_idx[name], lower_bound, upper_bound)
                        for name, _ in iteritems(desvars)]
         desvar_dict = {name: (x0[i:j].copy(), lbound[i:j], ubound[i:j]) for (name, i, j, lbound, ubound) in desvar_info}
-        start = time.time()
 
         self.obj_list = list(self._objs)
         self.con_list = []
@@ -138,13 +128,9 @@ class SGDDriver(Driver):
             self.con_list.append(name)
         self.obj_and_con_list = self.obj_list + self.con_list
 
-        start = time.time()
         model._solve_nonlinear()
         jac = self._compute_totals(of=self.obj_and_con_list, wrt=self._dvlist,
                                    return_format='array')
-        jac_time = time.time() - start
-        max_iters_from_max_time = int(max_time / jac_time)
-        self.maxiter = min(self.maxiter, max_iters_from_max_time)
         j = jac[0]
         learning_rate = float(np.copy(self.learning_rate))
         self.alpha0 = np.mean(np.abs(j)) / learning_rate
@@ -207,9 +193,7 @@ class SGDDriver(Driver):
             self.set_design_var(name, x[i:j])
 
         # Execute the model
-        # if record:
         with RecordingDebugging('SGD', self.iter_count, self) as rec:
-            # self.set_design_var(name, value)
             if update:
                 self.iter_count += 1
 
@@ -243,9 +227,7 @@ class SGDDriver(Driver):
                     subsys.skip_linearize = False
                 outputs += list(set([b['prom_name'] for a, b in subsys.list_outputs(val=False, prom_name=True, out_stream=None)]))
 
-            # tic = time.time()
             jac = self._compute_totals(of=of_list, wrt=self._dvlist, return_format='array')
-            # print(f'time of {of_list}: {time.time() - tic:.5f}')
 
             if only_cons:
                 c = jac[0]
