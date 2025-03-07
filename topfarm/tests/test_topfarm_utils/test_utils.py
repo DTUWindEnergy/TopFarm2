@@ -143,21 +143,23 @@ def test_smart_start_aep_map(seed, radius, resolution, tol):
     site.default_ws = ws_lst
     site.default_wd = wd_lst
     wfm = NOJ(site, turbines)
-    aep_comp = PyWakeAEPCostModelComponent(wfm, n_wt=n_wt)
     aep_1wt = wfm([0], [0]).aep().sum()
 
-    tf = TopFarmProblem(
-        design_vars={'x': x, 'y': y},
-        cost_comp=aep_comp,
-        driver=EasyScipyOptimizeDriver(),
-        constraints=[SpacingConstraint(160), CircleBoundaryConstraint((0, 0), radius)]
-    )
-    x = np.arange(-radius, radius, resolution)
-    y = np.arange(-radius, radius, resolution)
-    XX, YY = np.meshgrid(x, y)
+    XX, YY = np.meshgrid(np.arange(-radius, radius, resolution), np.arange(-radius, radius, resolution))
 
-    tf.smart_start(XX, YY, aep_comp.get_aep4smart_start(wd=wd_lst, ws=ws_lst), radius=40, plot=0, seed=seed)
-    tf.evaluate()
+    for ii in range(2):
+
+        aep_comp = PyWakeAEPCostModelComponent(wfm, n_wt=n_wt)
+
+        tf = TopFarmProblem(
+            design_vars={'x': x, 'y': y},
+            cost_comp=aep_comp,
+            driver=EasyScipyOptimizeDriver(),
+            constraints=[SpacingConstraint(160), CircleBoundaryConstraint((0, 0), radius)]
+        )
+
+        tf.smart_start(XX, YY, aep_comp.get_aep4smart_start(wd=wd_lst, ws=ws_lst), radius=40, plot=0, seed=seed, show_progress=[True, False][ii], random_pct=[100, 0][ii])
+        tf.evaluate()
 
     if 0:
         wt_x, wt_y = tf['x'], tf['y']

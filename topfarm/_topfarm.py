@@ -555,7 +555,7 @@ class TopFarmProblem(Problem):
     def turbine_positions(self):
         return np.array([self[k] for k in [topfarm.x_key, topfarm.y_key]]).T
 
-    def smart_start(self, XX, YY, ZZ=None, min_space=None, radius=None, random_pct=0, plot=False, seed=None, types=None):
+    def smart_start(self, XX, YY, ZZ=None, min_space=None, radius=None, random_pct=0, plot=False, seed=None, types=None, show_progress=True):
         assert XX.shape == YY.shape
         ZZ_is_func = hasattr(ZZ, '__call__')
         spacing_comp_lst = [c for c in self.model.constraint_components if isinstance(c, SpacingComp)]
@@ -584,7 +584,7 @@ class TopFarmProblem(Problem):
                 X, Y = X[mask], Y[mask]
                 if not ZZ_is_func:
                     Z = Z[mask]
-        res = smart_start(X, Y, Z, self.n_wt, min_spacing, radius, random_pct, plot, seed=seed, types=types)
+        res = smart_start(X, Y, Z, self.n_wt, min_spacing, radius, random_pct, plot, seed=seed, types=types, show_progress=show_progress)
         self.update_state({topfarm.x_key: res[0], topfarm.y_key: res[1]})
         if types:
             self.set_val(topfarm.type_key, res[2])

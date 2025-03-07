@@ -15,7 +15,7 @@ import pandas as pd
 import numbers
 
 
-def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, random_pct=0, plot=False, seed=None, types=None):
+def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, random_pct=0, plot=False, seed=None, types=None, show_progress=True):
     """Selects the a number of gridpoints (N_WT) in the grid defined by x and y,
     where ZZ has the maximum value, while chosen points spacing (min_space)
     is respected.
@@ -83,7 +83,11 @@ def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, random_pct=0, plot=Fal
         seed = np.random.randint(0, 2**31)
     np.random.seed(seed)
     mask = np.full(arr.shape[1:], True)
-    for i in tqdm(range(N_WT), desc='Smartstart'):
+    i_range = range(N_WT)
+    if show_progress:
+        i_range = tqdm(i_range, desc="Smartstart")
+
+    for i in i_range:
         idx = np.where(mask < 1)
         if arr.shape[1] == 0:
             raise Exception('No feasible positions for wt %d' % i)
