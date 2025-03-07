@@ -26,11 +26,18 @@ class NoPlot():
     def show(self):
         pass
 
+# fmt:off
+BASE_COLORS = [ 
+    'b', 'r', 'm', 'c', 'g', 'y', 'magenta', 
+    'orange', 'indigo', 'grey', 'purple', 
+    'violet', 'firebrick', 'coral', 'pink', 'lime' 
+]
+# fmt:on
+
 
 class XYPlotComp(ExplicitComponent):
     """Plotting component for turbine locations"""
-    # colors = ['b', 'r', 'm', 'c', 'g', 'y', 'orange', 'indigo', 'grey'] * 100
-    colors = [c['color'] for c in iter(matplotlib.rcParams['axes.prop_cycle'])] * 100
+    colors = BASE_COLORS * (2000 // len(BASE_COLORS) + 1)  # ~2000 colors delay tech-debt
 
     def __init__(self, memory=10, delay=0.001, plot_initial=True, plot_improvements_only=False, ax=None, legendloc=1, save_plot_per_iteration=False, folder_name='Figures', file_prefix='iteration', callback=None):
         """Initialize component for plotting turbine locations
@@ -239,7 +246,7 @@ class PlotComp(XYPlotComp):
 
 class TurbineTypePlotComponent(XYPlotComp):
     """Plotting component for turbine types"""
-    colors = np.array(['b', 'r', 'm', 'c', 'g', 'y', 'orange', 'indigo', 'grey'] * 10)
+    colors = np.array(BASE_COLORS * 10)
     markers = np.array(list("123v^<>.o48spP*hH+xXDd|_"))
 
     def __init__(self, turbine_type_names, **kwargs):
