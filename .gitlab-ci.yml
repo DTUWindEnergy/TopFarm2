@@ -9,7 +9,7 @@
     - when: never
 
 # ===== CHECK FORMATTING =====
-test_topfarm_precommit: # name the job what we like
+test_topfarm_precommit:
   image: ghcr.io/prefix-dev/pixi:latest
   variables:
     PRE_COMMIT_HOME: ${CI_PROJECT_DIR}/.cache/pre-commit
@@ -57,42 +57,37 @@ test_topfarm_all_py_versions:
   when: manual
   allow_failure: true
 
-.windows_test_script:
-  script:
-    - setx PIXI_CACHE_DIR D:\.pixi_cache
-    # update PIXI_CACHE_DIR in current shell
-    - $env:PIXI_CACHE_DIR = [System.Environment]::GetEnvironmentVariable("PIXI_CACHE_DIR","User")
-    - C:\Users\ernim\.pixi\bin\pixi.exe clean
-    - C:\Users\ernim\.pixi\bin\pixi.exe run pip install -e .
-    - C:\Users\ernim\.pixi\bin\pixi.exe run $PIXI_TASK
-
 # ===== TEST TOPFARM ON WINDOWS =====
-test_topfarm_windows: # name the job what we like
-  extends: .windows_test_script
+test_topfarm_windows:
+  image: registry.windenergy.dtu.dk/dockerimages/windows-pixi:ltsc2019
+  script:
+    - pixi run pip install .
+    - pixi run test-latest
   needs:
     - test_topfarm_precommit
   variables:
     GIT_SUBMODULE_STRATEGY: normal
     GIT_CLEAN_FLAGS: -ffdx -e .pixi/
-    PIXI_TASK: test-latest
   stage: # build, test, deploy defined by default [2]
     test
   coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
-  tags: # tag for shared runner on windows machine
-    - ANMH_old
+  tags:
+    - docker-windows
   <<: *run_tests_rules
 
 # ===== TEST TOPFARM ON WINDOWS ALL PYTHON VERSIONS =====
-test_topfarm_windows_all_py_versions: # name the job what we like
-  extends: .windows_test_script
+test_topfarm_windows_all_py_versions:
+  image: registry.windenergy.dtu.dk/dockerimages/windows-pixi:ltsc2019
+  script:
+    - pixi run pip install .
+    - pixi run test-all
   variables:
     GIT_SUBMODULE_STRATEGY: normal
     GIT_CLEAN_FLAGS: -ffdx -e .pixi/
-    PIXI_TASK: test-all
   stage: # build, test, deploy defined by default [2]
     test
-  tags: # tag for shared runner on windows machine
-    - ANMH_old
+  tags:
+    - docker-windows
   when: manual
   allow_failure: true
 

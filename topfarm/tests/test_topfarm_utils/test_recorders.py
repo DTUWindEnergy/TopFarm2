@@ -17,6 +17,7 @@ import os
 from topfarm.constraint_components.boundary import XYBoundaryConstraint
 from topfarm.constraint_components.spacing import SpacingConstraint
 from topfarm._topfarm import TopFarmProblem
+import platform
 
 
 @pytest.fixture
@@ -102,6 +103,7 @@ def test_ListRecorder():
     npt.assert_array_equal(recorder.time, recorder['timestamp'] - recorder['timestamp'][0])
 
 
+@pytest.mark.skipif(platform.system() == "Windows", reason="Skip on Windows")
 def test_TopFarmListRecorderAnimation(tf_generator):
     from matplotlib import animation
     animation.writers['ffmpeg']
