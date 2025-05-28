@@ -34,7 +34,7 @@ except ModuleNotFoundError:
 
 import openmdao
 from openmdao.core.driver import Driver, RecordingDebugging
-from openmdao.utils.concurrent import concurrent_eval
+from openmdao.utils.concurrent_utils import concurrent_eval
 from openmdao.utils.mpi import MPI
 from openmdao.core.analysis_error import AnalysisError
 
@@ -238,13 +238,13 @@ class SimpleGADriver(Driver):
             x0[i:j] = desvar_vals[name]
 
         # Bits of resolution
-        abs2prom = model._var_abs2prom['output']
+        abs2prom = model._var_abs2meta['output']
         for name, meta in iteritems(desvars):
             i, j = self._desvar_idx[name]
 
             if name in user_bits:
                 val = user_bits[name]
-            elif (prom_name := abs2prom.get(name)) and prom_name in user_bits:
+            elif (prom_name := abs2prom.get(name) is not None) and prom_name in user_bits:
                 val = user_bits[prom_name]
             else:
                 # If the user does not declare a bits for this variable, we assume they want it to

@@ -4,7 +4,7 @@ import numpy as np
 from openmdao.core.analysis_error import AnalysisError
 import topfarm
 import time
-from openmdao.utils.concurrent import concurrent_eval
+from openmdao.utils.concurrent_utils import concurrent_eval
 from openmdao.utils.record_util import create_local_meta
 
 

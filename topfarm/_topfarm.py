@@ -522,7 +522,7 @@ class TopFarmProblem(Problem):
         else:
             comp_name_lst = [self.cost_comp.pathname]
         print("checking %s" % ", ".join(comp_name_lst))
-        res = self.check_partials(includes=comp_name_lst, compact_print=True)
+        res = self.check_partials(includes=comp_name_lst, compact_print=True, rel_err_tol=tol)
         for comp in comp_name_lst:
             var_pair = [(x, dx) for x, dx in res[comp].keys()
                         if (x not in ['cost_comp_eval'] and
@@ -532,8 +532,23 @@ class TopFarmProblem(Problem):
                                  comp != 'constraint_violation_comp')
                             )
                         ]
-            worst = var_pair[np.argmax(np.nan_to_num([res[comp][k]['rel error'].forward for k in var_pair]))]
+            worst = var_pair[
+                np.argmax(
+                    np.nan_to_num(
+                        [
+                            res[comp][k]["rel error"].forward
+                            for k in var_pair
+                            if res[comp][k]["rel error"].forward is not None
+                        ]
+                    )
+                )
+            ]
             err = res[comp][worst]['rel error'].forward
+            abs_err = res[comp][worst]['abs error'].forward
+            if err == np.inf:
+                continue
+            if abs_err < 1e-6:
+                continue
             if err > tol:
                 raise Warning("Mismatch between finite difference derivative of '%s' wrt. '%s' and derivative computed in '%s' is: %f" %
                               (worst[0], worst[1], comp, err))

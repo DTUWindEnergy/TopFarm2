@@ -14,14 +14,14 @@ class ElNetComp(om.ExplicitComponent):
         self.options.declare('n_wt', types=int)
 
     def setup(self):
-        self.add_input(topfarm.x_key, np.zeros(self.options['n_wt']), units='m')
-        self.add_input(topfarm.y_key, np.zeros(self.options['n_wt']), units='m')
+        self.add_input(topfarm.x_key, np.zeros(self.options['n_wt']))  # units='m'
+        self.add_input(topfarm.y_key, np.zeros(self.options['n_wt']))  # units='m'
 
 
 class ElNetLength(ElNetComp):
     def setup(self):
         super().setup()
-        self.add_output('elnet_length', 0.0, units='m')
+        self.add_output('elnet_length', 0.0)  # units='m'
 
         # Note that this component is NOT derivative friendly, as the
         # electrical layout will jump from one turbine to another in a non-
@@ -51,7 +51,7 @@ class ElNetCost(CostModelComponent):
         self.n_wt = n_wt
         self.length_key = length_key
         CostModelComponent.__init__(self, [(self.length_key, 0.0)], self.n_wt,
-                                    self.cost, self.grad, objective=False, input_units=['m'],
+                                    self.cost, self.grad, objective=False,  # input_units=['m'],
                                     **kwargs)
 
     def initialize(self):
