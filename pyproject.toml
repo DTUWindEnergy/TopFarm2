@@ -82,23 +82,24 @@ nbconvert = ">=7.16.4,<8"
 ffmpeg = ">=7.1.0,<8"
 netcdf4 = ">=1.7.2,<2"
 hdf5 = ">=1.14.4,<2"
+pyoptsparse = ">=2.11.3,<3"
 
 [tool.pixi.pypi-dependencies]
 topfarm = { path = ".", editable = true }
 
 [tool.pixi.feature.python39]
-dependencies = { python = "3.9.*", pyoptsparse = ">=2.11.3,<3" }
+dependencies = { python = "3.9.*" }
 tasks = { test39 = "pytest -n auto" }
 pypi-dependencies = { ed_win = { git = "https://gitlab.windenergy.dtu.dk/TOPFARM/edwin.git", extras = [
     "interarray",
 ] } }
 
 [tool.pixi.feature.python310]
-dependencies = { python = "3.10.*", pyoptsparse = ">=2.11.3,<3" }
+dependencies = { python = "3.10.*" }
 tasks = { test310 = "pytest -n auto" }
 
 [tool.pixi.feature.python311]
-dependencies = { python = "3.11.*", pyoptsparse = ">=2.11.3,<3" }
+dependencies = { python = "3.11.*" }
 tasks = { test311 = "pytest -n auto" }
 
 [tool.pixi.feature.python312]
