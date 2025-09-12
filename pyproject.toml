@@ -60,7 +60,7 @@ fail_under = 90
 
 [tool.pixi.project]
 channels = ["conda-forge"]
-platforms = ["linux-64", "win-64", "osx-64", "osx-arm64"]
+platforms = ["linux-64", "win-64", "osx-arm64"]
 
 [tool.pixi.dependencies]
 pytest-xdist = ">=3.6.1,<4"
@@ -97,20 +97,25 @@ pypi-dependencies = { ed_win = { git = "https://gitlab.windenergy.dtu.dk/TOPFARM
 [tool.pixi.feature.python310]
 dependencies = { python = "3.10.*" }
 tasks = { test310 = "pytest -n auto" }
+# here bc with python 3.9 cannot solve the dependencies
+pypi-dependencies = { costmodels = { git = "https://gitlab.windenergy.dtu.dk/TOPFARM/costmodels.git" } }
 
 [tool.pixi.feature.python311]
 dependencies = { python = "3.11.*" }
 tasks = { test311 = "pytest -n auto" }
+pypi-dependencies = { costmodels = { git = "https://gitlab.windenergy.dtu.dk/TOPFARM/costmodels.git" } }
 
 [tool.pixi.feature.python312]
 dependencies = { python = "3.12.*", numpy = ">2.0,<3" }
 tasks = { test312 = "pytest -n auto" }
+pypi-dependencies = { costmodels = { git = "https://gitlab.windenergy.dtu.dk/TOPFARM/costmodels.git" } }
 
 [tool.pixi.environments]
 py39 = ["python39"]
 py310 = ["python310"]
 py311 = ["python311"]
 py312 = ["python312"]
+default = ["python312"]
 
 [tool.pixi.tasks]
 test-all = { depends-on = ["test311", "test310", "test39"] }

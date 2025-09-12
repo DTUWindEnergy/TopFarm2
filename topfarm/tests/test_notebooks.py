@@ -32,12 +32,7 @@ excluded = [
     "layout_and_loads.ipynb",  # gives error from tensorflow on synnefo machine
     "wake_steering_and_loads.ipynb",  # ok but many warnings from tensorflow
     "wind_farm_cluster.ipynb",  # too long runtime
-    "MongoDB_recorder.ipynb",  # deprecated
 ]
-if sys.version_info > (3, 10):
-    excluded += [
-        "cables.ipynb",  # ed_win python requirement is python<3.10
-    ]
 
 notebooks = get_notebooks()
 notebooks = [nb for nb in notebooks if os.path.basename(nb.filename) not in excluded]

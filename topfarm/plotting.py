@@ -117,7 +117,7 @@ class XYPlotComp(ExplicitComponent):
         ra = ma - mi + 1
         ext = .1
         xlim, ylim = np.array([mi - ext * ra, ma + ext * ra]).T
-        self.ax.set_xlim(xlim)
+        # self.ax.set_xlim(xlim)
         self.ax.set_ylim(ylim)
 
 #     def plot_boundary(self):

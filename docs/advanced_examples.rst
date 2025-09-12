@@ -19,12 +19,10 @@ In this section, more complex configurations for wind farm optimization are show
 
     notebooks/hub_height_optimization
     notebooks/unconstrained_wake_steering
-    notebooks/roads_and_cables
     notebooks/wake_steering_and_loads
     notebooks/layout_and_loads
     notebooks/bathymetry
     notebooks/exclusion_zones
-    notebooks/MongoDB_recorder
     notebooks/regular_grid_optimization
     notebooks/nested_optimization_type_and_positions
     notebooks/example_randomize_type_and_position_with_specific_boundaries
@@ -33,6 +31,5 @@ In this section, more complex configurations for wind farm optimization are show
     notebooks/neighbouring_turbines
     notebooks/wind_farm_cluster
     notebooks/joint_multi_wf_optimization
-    notebooks/cables
-    
+    notebooks/economic_cost_models
     

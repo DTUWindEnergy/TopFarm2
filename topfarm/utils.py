@@ -148,7 +148,7 @@ def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, random_pct=0, plot=Fal
             plt.plot(xs, ys, '2k', ms=10)
             plt.plot(xs[-1], ys[-1], '2r', ms=10)
             plt.axis('equal')
-            plt.show()
+            plt.draw()
 
         # Remove all point within min_space from the newly added wt
         if types:
@@ -600,7 +600,8 @@ def plot_list_recorder(recorder, x='counter'):
         ax.set_title(f'{k}')
         ax.plot(xs, recorder[k])
     plt.tight_layout()
-    plt.show()
+    plt.draw()
+    # plt.show()
 
 
 def is_number(s):
@@ -627,7 +628,6 @@ def main():
             plt.gcf().gca().add_artist(circle)
             plt.plot(xs[i], ys[i], 'rx')
         plt.axis('equal')
-        plt.show()
 
         plt.figure()
         xy = regular_generic_layout(n_wt=100, sx=5, sy=4, stagger=2, rotation=35, ratio=1.25, x0=20, y0=40)
@@ -666,6 +666,7 @@ def main():
         plt.plot(dx_dR.ravel(), dx_dRg.ravel(), '.')
         plt.figure()
         plt.plot(dy_dR.ravel(), dy_dRg.ravel(), '.')
+        plt.show()
 
 
 main()

@@ -3,7 +3,7 @@ repos:
     hooks:
       - id: pep8
         name: check formatting
-        entry: autopep8 --recursive --ignore=E501,W504 --exclude="*Colonel*" --exit-code --in-place --aggressive topfarm
+        entry: autopep8 --recursive --ignore=E501,W504 --exclude="*Colonel*,topfarm/examples/deprecated" --exit-code --in-place --aggressive topfarm
         language: system
         pass_filenames: false
         stages: [pre-commit]

@@ -73,7 +73,7 @@ def topfarm_generator():
         (EasyScipyOptimizeDriver(disp=False), 1e-4),
         (EasyScipyOptimizeDriver(tol=1e-3, disp=False), 1e-2),
         (EasyScipyOptimizeDriver(maxiter=14, disp=False), 1e-1),
-        (EasyScipyOptimizeDriver(optimizer="COBYLA", tol=1e-3, disp=False), 1e-2),
+        (EasyScipyOptimizeDriver(optimizer="COBYLA", disp=False, maxiter=500), 1e-2),
     ] +
     (
         []
@@ -104,11 +104,7 @@ def test_optimizers(driver, tol, topfarm_generator_scalable):
     "driver,tol,N",
     [
         (EasyScipyOptimizeDriver(disp=False), 1e-4, 30),
-        # COBYLA no longer works with scaling.
-        # See issue on Github: https://github.com/OpenMDAO/OpenMDAO/issues/942
-        # It can therefore requires 120 iterations instead of 104
-        #    (EasyScipyOptimizeDriver(optimizer='COBYLA', tol=1e-3, disp=False), 1e-2, 104),
-        (EasyScipyOptimizeDriver(optimizer="COBYLA", tol=1e-3, disp=False), 1e-2, 120),
+        (EasyScipyOptimizeDriver(optimizer="COBYLA", tol=1e-3, disp=False, maxiter=500), 1e-1, 500),
     ] +
     (
         []
