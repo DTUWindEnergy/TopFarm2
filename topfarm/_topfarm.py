@@ -82,7 +82,7 @@ class TopFarmProblem(Problem):
                  constraints=[], plot_comp=NoPlot(), record_id=None,
                  expected_cost=1, ext_vars={}, approx_totals=False,
                  recorder=None, additional_recorders=None,
-                 n_wt=0, grid_layout_comp=None, penalty_comp=None, reports=None, **kwargs):
+                 n_wt=0, grid_layout_comp=None, penalty_comp=None, reports=False, **kwargs):
         """Initialize TopFarmProblem
 
         Parameters
@@ -178,10 +178,11 @@ class TopFarmProblem(Problem):
         else:
             post_constraints = [constraint for constraint in constraints if isinstance(constraint, dict) or isinstance(constraint, tuple)]
             constraints = [constraint for constraint in constraints if isinstance(constraint, Constraint)]
-        if 'reports' not in inspect.getfullargspec(Problem.__init__).args:
-            Problem.__init__(self, comm=comm)
-        else:
-            Problem.__init__(self, comm=comm, reports=reports)
+        # if 'reports' not in inspect.getfullargspec(Problem.__init__).args:
+        #     Problem.__init__(self, comm=comm)
+        # else:
+        #     Problem.__init__(self, comm=comm, reports=reports)
+        Problem.__init__(self, comm=comm, reports=reports)
         if cost_comp:
             if isinstance(cost_comp, TopFarmProblem):
                 cost_comp = cost_comp.as_component()
@@ -326,15 +327,15 @@ class TopFarmProblem(Problem):
         self.setup()
 
     # This is needed to avoid an error from interaction between creation of coloring reports and parametrizised pytests in openmdao 3.23-3.26
-    def _update_reports(self, driver):
-        try:
-            from openmdao.utils.reports_system import activate_reports, clear_reports
-            if self._driver is not None:
-                clear_reports(self._driver)
-            driver._set_problem(self)
-            activate_reports(self._reports, driver)
-        except ModuleNotFoundError:
-            pass
+    # def _update_reports(self, driver):
+    #     try:
+    #         from openmdao.utils.reports_system import activate_reports, clear_reports
+    #         if self._driver is not None:
+    #             clear_reports(self._driver)
+    #         driver._set_problem(self)
+    #         activate_reports(self._reports, driver)
+    #     except ModuleNotFoundError:
+    #         pass
 
     @property
     def cost(self):
@@ -391,9 +392,9 @@ class TopFarmProblem(Problem):
 
     def setup(self):
         if not self._metadata:
-            Problem.setup(self, check=True)
+            Problem.setup(self)
         if self._metadata['setup_status'] == _SetupStatus.PRE_SETUP:
-            Problem.setup(self, check=True)
+            Problem.setup(self)
         if self._metadata['setup_status'] < _SetupStatus.POST_FINAL_SETUP:
             with warnings.catch_warnings():
                 warnings.filterwarnings('error')
@@ -406,7 +407,7 @@ class TopFarmProblem(Problem):
                         Problem.final_setup(self)
                 except Warning as w:
                     if str(w).startswith('Inefficient choice of derivative mode'):
-                        Problem.setup(self, check=True, mode='fwd')
+                        Problem.setup(self, mode='fwd')
                     else:
                         raise w
                 finally:

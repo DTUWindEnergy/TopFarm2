@@ -77,7 +77,7 @@ class TurbineTypeXYZOptimizationProblem(TurbineTypeOptimizationProblem, TurbineX
         TopFarmProblem.__init__(self, cost_comp, driver, plot_comp, record_id, expected_cost)
         TurbineTypeOptimizationProblem.initialize(self, turbineTypes, lower, upper)
         TurbineXYZOptimizationProblem.initialize(self, turbineXYZ, boundary_comp, min_spacing)
-        self.setup(check=True, mode=self.mode)
+        self.setup(mode=self.mode)
 
 #     @property
 #     def state(self):

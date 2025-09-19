@@ -112,13 +112,13 @@ class XYPlotComp(ExplicitComponent):
         self.ax.cla()
         self.ax.axis('equal')
 
-        mi = limits.min(0)
-        ma = limits.max(0)
-        ra = ma - mi + 1
-        ext = .1
-        xlim, ylim = np.array([mi - ext * ra, ma + ext * ra]).T
+        # mi = limits.min(0)
+        # ma = limits.max(0)
+        # ra = ma - mi + 1
+        # ext = .1
+        # xlim, ylim = np.array([mi - ext * ra, ma + ext * ra]).T
         # self.ax.set_xlim(xlim)
-        self.ax.set_ylim(ylim)
+        # self.ax.set_ylim(ylim)
 
 #     def plot_boundary(self):
 #         b = np.r_[self.xy_boundary[:], self.xy_boundary[:1]]

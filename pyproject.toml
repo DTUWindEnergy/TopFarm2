@@ -8,6 +8,8 @@ requires-python = ">=3.9,<3.13"
 dynamic = ["version"]
 dependencies = [
     "py-wake>=2.6.5,<3",
+    "optiwindnet",
+    "costmodels @ git+https://gitlab.windenergy.dtu.dk/TOPFARM/costmodels.git",
     "jupyterlab>=4.2.5,<5",
     "pydoe3>=1.0.4,<2",
     "pydoe2>=1.3.0,<2",
@@ -27,6 +29,9 @@ requires = ["hatchling", "hatch-vcs"]
 
 [tool.hatch.version]
 source = "vcs"
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.hatch.build.hooks.vcs]
 version-file = "topfarm/_version.py"
@@ -62,6 +67,9 @@ fail_under = 90
 channels = ["conda-forge"]
 platforms = ["linux-64", "win-64", "osx-arm64"]
 
+[tool.pixi.system-requirements]
+libc = "2.34"
+
 [tool.pixi.dependencies]
 pytest-xdist = ">=3.6.1,<4"
 pytest = ">=8.3.3,<9"
@@ -83,40 +91,29 @@ ffmpeg = ">=7.1.0,<8"
 netcdf4 = ">=1.7.2,<2"
 hdf5 = ">=1.14.4,<2"
 pyoptsparse = ">=2.11.3,<3"
+numpy = "<2.3"
 
 [tool.pixi.pypi-dependencies]
 topfarm = { path = ".", editable = true }
 
-[tool.pixi.feature.python39]
-dependencies = { python = "3.9.*" }
-tasks = { test39 = "pytest -n auto" }
-pypi-dependencies = { ed_win = { git = "https://gitlab.windenergy.dtu.dk/TOPFARM/edwin.git", extras = [
-    "interarray",
-] } }
-
 [tool.pixi.feature.python310]
 dependencies = { python = "3.10.*" }
 tasks = { test310 = "pytest -n auto" }
-# here bc with python 3.9 cannot solve the dependencies
-pypi-dependencies = { costmodels = { git = "https://gitlab.windenergy.dtu.dk/TOPFARM/costmodels.git" } }
 
 [tool.pixi.feature.python311]
 dependencies = { python = "3.11.*" }
 tasks = { test311 = "pytest -n auto" }
-pypi-dependencies = { costmodels = { git = "https://gitlab.windenergy.dtu.dk/TOPFARM/costmodels.git" } }
 
 [tool.pixi.feature.python312]
-dependencies = { python = "3.12.*", numpy = ">2.0,<3" }
+dependencies = { python = "3.12.*" }
 tasks = { test312 = "pytest -n auto" }
-pypi-dependencies = { costmodels = { git = "https://gitlab.windenergy.dtu.dk/TOPFARM/costmodels.git" } }
 
 [tool.pixi.environments]
-py39 = ["python39"]
 py310 = ["python310"]
 py311 = ["python311"]
 py312 = ["python312"]
 default = ["python312"]
 
 [tool.pixi.tasks]
-test-all = { depends-on = ["test311", "test310", "test39"] }
+test-all = { depends-on = ["test311", "test310"] }
 test-latest = { depends-on = ["test312"] }

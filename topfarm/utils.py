@@ -585,9 +585,9 @@ def _np2scalar(x, dtype=float):
     return dtype(x)
 
 
-def plot_list_recorder(recorder, x='counter'):
+def plot_list_recorder(recorder, x='counter', dont_plot=[]):
     keys = recorder.keys()
-    dont_plot = ['counter', 'plot_counter', 'iteration_coordinate', 'success', 'msg']
+    dont_plot += ['counter', 'plot_counter', 'iteration_coordinate', 'success', 'msg']
     do_plot = [k for k in keys if recorder[k].ndim == 1 and k not in dont_plot]
     n_plots = len(do_plot)
     rows = int(np.ceil(np.sqrt(n_plots)))
@@ -596,9 +596,12 @@ def plot_list_recorder(recorder, x='counter'):
 
     fig = plt.figure(figsize=(10, 8))
     for i, k in enumerate(do_plot):
-        ax = fig.add_subplot(rows, cols, i + 1)
-        ax.set_title(f'{k}')
-        ax.plot(xs, recorder[k])
+        try:
+            ax = fig.add_subplot(rows, cols, i + 1)
+            ax.set_title(f'{k}')
+            ax.plot(xs, recorder[k])
+        except BaseException:
+            print(f'could not plot {k}')
     plt.tight_layout()
     plt.draw()
     # plt.show()

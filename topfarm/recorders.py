@@ -34,6 +34,7 @@ def recordid2filename(record_id):
 class TopFarmListRecorder(SqliteRecorder):
     def __init__(self, record_id=None, filepath='cases.sql', append=False, pickle_version=2, record_viewer_data=False):
         super().__init__(filepath, append, pickle_version, record_viewer_data)
+        self._use_outputs_dir = False  # used to disable the recorder creating a reports folder
         self.iteration_coordinate_lst = []
         self.filepath = filepath
         self.driver_iteration_dict = {}

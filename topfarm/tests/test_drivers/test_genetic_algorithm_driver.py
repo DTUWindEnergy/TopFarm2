@@ -63,7 +63,7 @@ class TestSimpleGA(unittest.TestCase):
 
         prob.driver._randomstate = 11
 
-        prob.setup(check=False)
+        prob.setup()
         prob.run_driver()
 
         # TODO: Satadru listed this solution, but I get a way better one.
@@ -94,7 +94,7 @@ class TestSimpleGA(unittest.TestCase):
 
         prob.driver._randomstate = 1
 
-        prob.setup(check=False)
+        prob.setup()
         prob.run_driver()
 
         # Optimal solution
@@ -152,7 +152,7 @@ class TestSimpleGA(unittest.TestCase):
 
         prob.driver._randomstate = 1
 
-        prob.setup(check=False)
+        prob.setup()
         prob['area3'] = 0.0005
         prob.run_driver()
 
@@ -218,7 +218,7 @@ class TestSimpleGA(unittest.TestCase):
 
         prob.driver._randomstate = 1
 
-        prob.setup(check=False)
+        prob.setup()
         prob['area3'] = 0.0005
         prob.run_driver()
 
@@ -254,7 +254,7 @@ class TestSimpleGA(unittest.TestCase):
 
         prob.driver = SimpleGADriver(max_gen=75, pop_size=25)
         prob.driver._randomstate = 1
-        prob.setup(check=False)
+        prob.setup()
         # prob.run_driver()
         self.assertRaises(ValueError, prob.run_driver)
 
@@ -324,7 +324,7 @@ class TestDriverOptionsSimpleGA(unittest.TestCase):
         driver.options['bits'] = {'x': 8}
         prob.model.add_design_var('x', lower=-10., upper=10.)
         prob.model.add_objective('y')
-        prob.setup(check=False)
+        prob.setup()
         prob.run_driver()
         self.assertEqual(driver.options['Pm'], 0.1)
         self.assertEqual(driver.options['Pc'], 0.01)
@@ -620,7 +620,7 @@ class MPITestSimpleGA(unittest.TestCase):
 
         prob.driver._randomstate = 1
 
-        prob.setup(check=False)
+        prob.setup()
         prob.run_driver()
 
         # Optimal solution
@@ -662,7 +662,7 @@ class MPITestSimpleGA(unittest.TestCase):
 
         prob.driver._randomstate = 1
 
-        prob.setup(check=False)
+        prob.setup()
         prob.run_driver()
 
         # Optimal solution
@@ -722,7 +722,7 @@ class MPITestSimpleGA(unittest.TestCase):
 
         prob.driver._randomstate = 1
 
-        prob.setup(check=False)
+        prob.setup()
         prob['area3'] = 0.0005
         prob.run_driver()
 
@@ -776,7 +776,7 @@ class MPITestSimpleGA4Procs(unittest.TestCase):
 
         prob.driver._randomstate = 1
 
-        prob.setup(check=False)
+        prob.setup()
         prob.run_driver()
 
         # Optimal solution
@@ -1039,7 +1039,7 @@ class MPIFeatureTests(unittest.TestCase):
         prob.driver.options['max_gen'] = 10
         prob.driver.options['run_parallel'] = True
 
-        prob.setup(check=False)
+        prob.setup()
         prob.run_driver()
 
         # Optimal solution
@@ -1089,7 +1089,7 @@ class MPIFeatureTests4(unittest.TestCase):
 
         prob.driver._randomstate = 1
 
-        prob.setup(check=False)
+        prob.setup()
         prob.run_driver()
 
         # Optimal solution
