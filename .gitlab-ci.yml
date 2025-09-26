@@ -67,7 +67,7 @@ test_topfarm_windows:
     - test_topfarm_precommit
   variables:
     GIT_SUBMODULE_STRATEGY: normal
-    GIT_CLEAN_FLAGS: -ffdx -e .pixi/
+    GIT_CLEAN_FLAGS: -ffdx
   stage: # build, test, deploy defined by default [2]
     test
   coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
@@ -83,7 +83,7 @@ test_topfarm_windows_all_py_versions:
     - pixi run test-all
   variables:
     GIT_SUBMODULE_STRATEGY: normal
-    GIT_CLEAN_FLAGS: -ffdx -e .pixi/
+    GIT_CLEAN_FLAGS: -ffdx
   stage: # build, test, deploy defined by default [2]
     test
   tags:
