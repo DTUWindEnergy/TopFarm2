@@ -209,8 +209,7 @@ class SGDDriver(Driver):
                 obj = val
                 break
 
-            # epsilon (1e-7) to avoid division by zero
-            only_cons = self.alpha0 / (alpha + 1e-7) < self.options['sgd_thresh'] and self.options['speedupSGD']
+            only_cons = self.alpha0 / (alpha + 1e-12) < self.options['sgd_thresh'] and self.options['speedupSGD']
 
             if only_cons:
                 of_list = self.con_list
@@ -232,7 +231,7 @@ class SGDDriver(Driver):
             if only_cons:
                 c = jac[0]
                 j = np.zeros_like(c)
-                if c.sum() == 0:
+                if np.all(c == 0.0):
                     self.is_converged = True
                     return obj, x, alpha, learning_rate, m, v, success
             else:
@@ -253,7 +252,7 @@ class SGDDriver(Driver):
                 vhat = v
 
             # update x
-            x -= learning_rate * mhat / np.sqrt(vhat)
+            x -= learning_rate * mhat / np.sqrt(vhat + 1e-12)
 
             # update learning rate and constraint scaler
             learning_rate *= 1. / (1 + self.mid * self.iter_count)
