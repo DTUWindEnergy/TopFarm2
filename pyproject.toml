@@ -60,7 +60,7 @@ omit = [
 [tool.coverage.report]
 fail_under = 90
 
-[tool.pixi.project]
+[tool.pixi.workspace]
 channels = ["conda-forge"]
 platforms = ["linux-64", "win-64", "osx-arm64"]
 
@@ -89,6 +89,7 @@ netcdf4 = ">=1.7.2,<2"
 hdf5 = ">=1.14.4,<2"
 pyoptsparse = ">=2.11.3,<3"
 numpy = "<2.3"
+cyipopt = ">=1.6.1,<2"
 
 [tool.pixi.pypi-dependencies]
 topfarm = { path = ".", editable = true }

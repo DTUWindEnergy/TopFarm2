@@ -2,7 +2,7 @@ import pytest
 import sys
 import numpy as np
 
-from topfarm.cost_models.dummy import DummyCost, DummyCostPlotComp
+from topfarm.cost_models.dummy import DummyCost
 from topfarm.drivers.random_search_driver import RandomizeTurbinePosition_Circle, RandomizeTurbinePosition_Square, \
     RandomizeTurbineTypeAndPosition, RandomizeTurbinePosition_Normal, \
     RandomizeAllUniform, RandomizeAllRelativeMaxStep, RandomizeNUniform
@@ -74,15 +74,9 @@ def topfarm_generator():
         (EasyScipyOptimizeDriver(tol=1e-3, disp=False), 1e-2),
         (EasyScipyOptimizeDriver(maxiter=14, disp=False), 1e-1),
         (EasyScipyOptimizeDriver(optimizer="COBYLA", disp=False, maxiter=500), 1e-2),
-    ] +
-    (
-        []
-        if sys.version_info >= (3, 12)
-        else [
-            (EasyPyOptSparseIPOPT(), 1e-4),
-            (EasyPyOptSparseSNOPT(), 1e-4),
-        ]
-    ),
+        (EasyPyOptSparseIPOPT(), 1e-4),
+        (EasyPyOptSparseSNOPT(), 1e-4),
+    ],
 )
 def test_optimizers(driver, tol, topfarm_generator_scalable):
     if driver is None or driver.__class__.__name__ == "PyOptSparseMissingDriver":
@@ -104,16 +98,16 @@ def test_optimizers(driver, tol, topfarm_generator_scalable):
     "driver,tol,N",
     [
         (EasyScipyOptimizeDriver(disp=False), 1e-4, 30),
-        (EasyScipyOptimizeDriver(optimizer="COBYLA", tol=1e-3, disp=False, maxiter=500), 1e-1, 500),
-    ] +
-    (
-        []
-        if sys.version_info >= (3, 12)
-        else [
-            (EasyPyOptSparseIPOPT(), 1e-4, 25),
-            (EasyPyOptSparseSNOPT(), 1e-4, 39),
-        ]
-    ),
+        (
+            EasyScipyOptimizeDriver(
+                optimizer="COBYLA", tol=1e-3, disp=False, maxiter=500
+            ),
+            1e-1,
+            500,
+        ),
+        (EasyPyOptSparseIPOPT(), 1e-4, 25),
+        (EasyPyOptSparseSNOPT(), 1e-4, 39),
+    ],
 )
 @pytest.mark.parametrize(
     "cost_scale,cost_offset",
@@ -129,7 +123,7 @@ def test_optimizers(driver, tol, topfarm_generator_scalable):
 )
 def test_optimizers_scaling(driver, tol, N, cost_scale, cost_offset, topfarm_generator_scalable):
     if driver.__class__.__name__ == "PyOptSparseMissingDriver":
-        pytest.xfail("Driver missing")
+        pytest.xfail(f"Driver missing; For class {driver.__class__.__name__}")
 
     tf = topfarm_generator_scalable(driver, cost_scale=cost_scale, cost_offset=cost_offset)
     _, _, recorder = tf.optimize()
