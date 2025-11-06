@@ -1,0 +1,19 @@
+.. pub_2:
+
+Gradient-based wind farm layout optimization with inclusion and exclusion zones
+========================================================================================================================
+
+**Abstract**
+
+Wind farm layout optimization is usually subjected to boundary constraints of irregular shapes. The analytical expressions of these shapes are rarely available, and, consequently, it can be challenging to include them in the mathematical formulation of the problem. This paper presents a new methodology to integrate multiple disconnected and irregular domain boundaries in wind farm layout optimization problems. The method relies on the analytical gradients of the distances between wind turbine locations and boundaries, which are represented by polygons. This parameterized representation of boundary locations allows for a continuous optimization formulation. A limitation of the method, if combined with gradient-based solvers, is that wind turbines are placed within the nearest polygons when the optimization is started in order to satisfy the boundary constraints; thus the allocation of wind turbines per polygon is highly dependent on the initial guess. To overcome this and improve the quality of the solutions, two independent strategies are proposed. A case study is presented to demonstrate the applicability of the method and the proposed strategies. In this study, a wind farm layout is optimized in order to maximize the annual energy production (AEP) in a non-uniform wind resource site. The problem is constrained by the minimum distance between wind turbines and five irregular polygon boundaries, defined as inclusion zones. Initial guesses are used to instantiate the optimization problem, which is solved following three independent approaches: (1) a baseline approach that uses a gradient-based solver; (2) approach 1 combined with the relaxation of the boundaries, which allows for a better design space exploration; and (3) the application of a heuristic algorithm, “smart-start”, prior to the gradient-based optimization, improving the allocation of wind turbines within the inclusion polygons based on the potential wind resource and the available area. The results show that the relaxation of boundaries combined with a gradient-based solver achieves on average + 10.2 % of AEP over the baseline, whilst the smart-start algorithm, combined with a gradient-based solver, finds on average +20.5 % of AEP with respect to the baseline and +9.4 % of AEP with respect to the relaxation strategy.
+
+**Cite this**
+
+Risco, JC, Rodrigues, RV, Friis-Møller, M, Quick, J, Pedersen, MM & Réthoré, PE 2024, 'Gradient-based wind farm layout optimization with inclusion and exclusion zones', Wind Energy Science, vol. 9, no. 3, pp. 585-600. https://doi.org/10.5194/wes-9-585-2024
+
+**Link**
+
+Download `here
+<https://orbit.dtu.dk/en/publications/gradient-based-wind-farm-layout-optimization-with-inclusion-and-e/>`_.
+
+.. tags:: Layout Optimization, Reduced Order Model, Load Constraint

@@ -1,0 +1,19 @@
+.. pub_1:
+
+Wind Farm Control Optimisation Under Load Constraints Via Surrogate Modelling
+========================================================================================================================
+
+**Abstract**
+
+In the field of wind farm control, wake steering has shown the potential to increase the power output of a wind farm by deflecting wakes away from downstream turbines. However, in some wake steering scenarios, the fatigue damage experienced by the turbines can increase, particularly when the wakes partially overlap a downstream rotor. It is for this reason that fatigue load constraints should be introduced into the control optimisation process. Unfortunately, wind turbine loads are notoriously difficult to predict, requiring expensive aeroelastic simulations. In this study, we present a wind farm control optimisation with load constraints using surrogate models to estimate the fatigue damage of each turbine in a wind farm designed for maximum energy production. We use the state-of-the-art aeroelastic wind farm simulator, HAWC2Farm, to produce a comprehensive data set of fatigue loads, which is then used to train surrogate models for rapid execution during an optimisation loop. The inputs of the surrogate model are chosen using the most significant modes from a proper orthogonal decomposition. Artificial neural networks are used for the surrogate models, and the wind farm control optimisation is carried out using OpenMDAO. Finally, a wind farm control optimisation with load constraints using wake steering is performed. The presented methodology for surrogate modelling and control optimisation is significant to produce accurate set point optimisations for wind farms while recognising the implications to turbine fatigue loads.
+
+**Cite this**
+
+Liew, J, Riva, R, Friis-Møller, M & Göçmen, T 2024, Wind Farm Control Optimisation Under Load Constraints Via Surrogate Modelling. in The Science of Making Torque from Wind (TORQUE 2024): Wind resource, wakes, and wind farms., 092039, IOP Publishing, Journal of Physics: Conference Series, no. 9, vol. 2767, The Science of Making Torque from Wind (TORQUE 2024), Florence, Italy, 29/05/2024. https://doi.org/10.1088/1742-6596/2767/9/092039
+
+**Link**
+
+Download `here
+<https://orbit.dtu.dk/en/publications/wind-farm-control-optimisation-under-load-constraints-via-surroga/>`_.
+
+.. tags:: Control Optimization, Reduced Order Model, Load Constraint

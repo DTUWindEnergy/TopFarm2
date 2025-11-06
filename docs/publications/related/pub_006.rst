@@ -1,0 +1,19 @@
+.. pub_6:
+
+Optimal open loop wind farm control
+========================================================================================================================
+
+**Abstract**
+
+This paper presents a general purpose platform for optimal open loop control of wind power plants as seen from a power production perspective. The general idea is to change the controller design criteria from greedy individual wind turbines to a controller design facilitating cooperative and interdependent elements of a wind power plant, with the overall aim to improve the wind power plant power production conditioned on ambient mean wind speed and mean wind direction. The flow within the wind power plant, including all essential interactions between the wind turbines, is modelled using a very fast linearized CFD RANS solver. The wind turbines are modelled as actuator discs, and two design variables per wind turbine - collective pitch, α, and tip speed ratio, λ - are initially defined for the optimization problem. However, a priory we expect one design variable to suffice - i.e. the unique set of (α, λ) representing the lowest thrust coefficient, CT , for a given power coefficient Cp . The conjectured collapse of the design space is justified in this paper. Optimized control schemes for the Lillgrund offshore wind farm are derived conditioned on ambient mean wind direction and wind speed. Aggregated over a year, using the site sector Weibull distributions, an increase in the annual energy production of 1% is demonstrated.
+
+**Cite this**
+
+Vitulli, JA, Larsen, GC, Pedersen, MM, Ott, S & Friis-Møller, M 2019, Optimal open loop wind farm control. in Proceedings of the Wake Conference 2019. 1 edn, vol. 1256, 012027, Journal of Physics: Conference Series, no. Conf. 1, vol. 1256, Wake Conference 2019, Visby, Sweden, 22/05/2019. https://doi.org/10.1088/1742-6596/1256/1/012027
+
+**Link**
+
+Download `here
+<https://orbit.dtu.dk/en/publications/optimal-open-loop-wind-farm-control/>`_.
+
+.. tags:: Control Optimization, Wind Farm Control

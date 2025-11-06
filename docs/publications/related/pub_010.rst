@@ -1,0 +1,19 @@
+.. pub_10:
+
+Wind Farm Layout Optimization Accounting for Uncertainty in Model Selection
+========================================================================================================================
+
+**Abstract**
+
+There is significant uncertainty around the choice of model in wind farm layout optimization. Optimizing based on power predictions from a single wake model may result in suboptimal performance outside of the model-specific assumptions. Wind farms with consistent mean power output across various models are considered less financially risky for developers. This paper addresses the problem using a multi-objective optimization approach that maximizes the mean Annual Energy Production (AEP) from an ensemble of engineering wake models, while minimizing the variance in AEP values from each model. A weighted sum of these objectives forms the main optimization criterion. The methodology is applied to various wind farm cases, differing in turbine numbers, boundary shapes, wind conditions, and minimum spacing constraints. Results indicate that the Pareto front is sensitive to minimum spacing constraints and boundary shape. Better consensus between the models was observed for larger wind farms. In many cases, reductions in wake loss uncertainty outweighed increases in wake loss. In the best case, a 0.26% reduction in uncertainty was observed for a 0.13% increase in wake loss. This study demonstrates that accounting for model selection uncertainty may lead to increased reliability in wake loss estimates, using a straightforward methodology.
+
+**Cite this**
+
+O’Neill, N, Réthoré, P-E, Mouradi, R-S, Mathieu, A & Quick, J 2025, Wind Farm Layout Optimization Accounting for Uncertainty in Model Selection. in Proceedings of Wake Conference 2025 10/06/2025 - 12/06/2025 Visby, Sweden., 012054, IOP Publishing, Journal of Physics: Conference Series, vol. 3016, Wake Conference 2025, Visby, Sweden, 10/06/2025. https://doi.org/10.1088/1742-6596/3016/1/012054
+
+**Link**
+
+Download `here
+<https://orbit.dtu.dk/en/publications/wind-farm-layout-optimization-accounting-for-uncertainty-in-model/>`_.
+
+.. tags:: Layout Optimization, Uncertainty Quantification

@@ -1,0 +1,19 @@
+.. pub_4:
+
+Wind farm layout optimization with load constraints using surrogate modelling
+========================================================================================================================
+
+**Abstract**
+
+Minimizing the cost of energy of a wind farm is a difficult task, which involves reducing the wake effects while satisfying several constraints. Due to its multidisciplinary nature, this problem is usually solved through numerical optimisers. TOPFARM is one of these tools, and in this paper, we have added to it a constraint on the fatigue loads. The efficiency of the implementation is guaranteed by an extensive use of gradients and load surrogate models. The paper is concluded by showing some case studies.
+
+**Cite this**
+
+Riva, R, Liew, JY, Friis-Møller, M, Dimitrov, N, Barlas, E, Réthoré, P-E & Beržonskis, A 2020, 'Wind farm layout optimization with load constraints using surrogate modelling', Journal of Physics: Conference Series, vol. 1618, no. 4, 042035. https://doi.org/10.1088/1742-6596/1618/4/042035
+
+**Link**
+
+Download `here
+<https://orbit.dtu.dk/en/publications/wind-farm-layout-optimization-with-load-constraints-using-surroga/>`_.
+
+.. tags:: Layout Optimization, Surrogate Model

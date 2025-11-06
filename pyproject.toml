@@ -90,6 +90,8 @@ hdf5 = ">=1.14.4,<2"
 pyoptsparse = ">=2.11.3,<3"
 numpy = "<2.3"
 cyipopt = ">=1.6.1,<2"
+sphinx-tags = ">=0.0.0,<1"
+
 
 [tool.pixi.pypi-dependencies]
 topfarm = { path = ".", editable = true }

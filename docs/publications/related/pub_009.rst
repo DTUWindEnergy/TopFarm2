@@ -1,0 +1,19 @@
+.. pub_9:
+
+Wind farm optimization with multiple hub heights using gradient-based methods
+========================================================================================================================
+
+**Abstract**
+
+Optimization of the Levelized Cost of Energy (LCoE) in wind farms helps ensure profitability and competitiveness of the project. Recent work has explored driving down LCoE by allowing multiple wind turbines in a single wind farm - with different hub heights, rotor diameters, and rated powers. In this work, we performed optimization of the Lillgrund wind farm with continuously varying hub-heights to mitigate wake interference, improve annual energy production (AEP) and reduce LCoE. The optimization converged to a configuration where the turbines were vertically staggered, resulting in an improvement in both AEP and internal rate of return (IRR) - a financial metric related to LCoE. Reducing the number of turbines to a discrete set of 2 or 3 retained nearly all the benefits of staggering but is more aligned with limitations related to manufacturing and logistics.
+
+**Cite this**
+
+Wolf Ciavarra, A, Valotta Rodrigues, R, Dykes, K & Réthoré, P-E 2022, Wind farm optimization with multiple hub heights using gradient-based methods. in Wind and Wind Farms; Measurement and Testing., 022012, IOP Publishing, Journal of Physics: Conference Series, no. 2, vol. 2265, The Science of Making Torque from Wind 2022, Delft, Netherlands, 01/06/2022. https://doi.org/10.1088/1742-6596/2265/2/022012
+
+**Link**
+
+Download `here
+<https://orbit.dtu.dk/en/publications/wind-farm-optimization-with-multiple-hub-heights-using-gradient-b/>`_.
+
+.. tags:: Layout Optimization, Gradient Based Optimization

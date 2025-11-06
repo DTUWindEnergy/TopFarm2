@@ -1,0 +1,19 @@
+.. pub_5:
+
+Blade erosion in wind farm layout and/or control optimization
+========================================================================================================================
+
+**Abstract**
+
+
+
+**Cite this**
+
+Arconada, JO, Réthoré, P-E, Hasager, CB, Bech, JI, Friis-Møller, M, Pedersen, MM, Verelst, DR & Skrzypinski, WR, Blade erosion in wind farm layout and/or control optimization, 2019, Sound/Visual production (digital).
+
+**Link**
+
+Download `here
+<https://orbit.dtu.dk/en/publications/blade-erosion-in-wind-farm-layout-andor-control-optimization/>`_.
+
+.. tags:: Control Optimization, Leading Edge Erosion

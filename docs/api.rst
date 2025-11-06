@@ -10,7 +10,6 @@ API Reference
 
     api_reference/topfarmproblem
     api_reference/cost
-    api_reference/dtucost
     api_reference/constraints
     api_reference/drivers
     api_reference/plotcomp

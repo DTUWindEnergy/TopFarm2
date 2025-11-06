@@ -1,0 +1,19 @@
+.. pub_2:
+
+Stochastic gradient descent for wind farm optimization
+========================================================================================================================
+
+**Abstract**
+
+It is important to optimize wind turbine positions to mitigate potential wake losses. To perform this optimization, atmospheric conditions, such as the inflow speed and direction, are assigned probability distributions according to measured data, which are propagated through engineering wake models to estimate the annual energy production (AEP). This study presents stochastic gradient descent (SGD) for wind farm optimization, which is an approach that estimates the gradient of the AEP using Monte Carlo simulation, allowing for the consideration of an arbitrarily large number of atmospheric conditions. SGD is demonstrated using wind farms with square and circular boundaries, considering cases with 100, 144, 225, and 325 turbines, and the results are compared to a deterministic optimization approach. It is shown that SGD finds a larger optimal AEP in substantially less time than the deterministic counterpart as the number of wind turbines is increased.
+
+**Cite this**
+
+Quick, J, Rethore, P-E, Pedersen, MM, Rodrigues, RV & Friis-Moller, M 2023, 'Stochastic gradient descent for wind farm optimization', Wind Energy Science, vol. 8, no. 8, pp. 1235-1250. https://doi.org/10.5194/wes-8-1235-2023
+
+**Link**
+
+Download `here
+<https://orbit.dtu.dk/en/publications/stochastic-gradient-descent-for-wind-farm-optimization/>`_.
+
+.. tags:: Layout Optimization, Stochastic Gradient Descent

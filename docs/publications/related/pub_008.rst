@@ -1,0 +1,19 @@
+.. pub_8:
+
+Integrated wind farm layout and control optimization
+========================================================================================================================
+
+**Abstract**
+
+The objective of this paper is to investigate the joint optimization of wind farm layout and wind farm control in terms of power production. A successful fulfilment of this goal requires the following: (1) an accurate and fast flow model, (2) selection of the minimum set of design parameters that rules or governs the problem, and (3) selection of an optimization algorithm with good scaling properties. For control of the individual wind farm turbines with the aim of wind farm production optimization, the two most obvious strategies are wake steering based on active wind turbine yaw control and wind turbine derating. The present investigation is limited to wind turbine derating. A high-speed linearized computational fluid dynamics (CFD) Reynolds-averaged Navier–Stokes (RANS) solver models the flow field and the crucial wind turbine wake interactions inside the wind farm. The actuator disc method is used to model the wind turbines, and utilizing an aerodynamic model, the design space of the optimization problem is reduced to only three variables per turbine– two geometric and one carefully selected variable specifying the individual wind turbine derating setting for each mean wind speed and direction. The full design space is spanned by these (2N NdNsN) parameters, where N is the number of wind farm turbines, Nd is the number of direction bins, and Ns is the number of mean wind speed bins. This design space is decomposedinto twosubsets, which in turn define anested set of optimization problems to achieve a significantly faster optimization procedure compared to a direct optimization based on the full design space. Following a simplistic sanity check of the platform functionality regarding wind farm layout and control optimization, the capability of the developed optimization platform is demonstrated on a Swedish offshore wind farm. For this particular wind farm, the analysis demonstrates that the expected annual energy production can be increased by 4% by integrating the wind farm control into the design of the wind farm layout, which is 1.2% higher than what is achieved by optimizing the layout only.
+
+**Cite this**
+
+Pedersen, M. M. and Larsen, G. C.: Integrated wind farm layout and control optimization, Wind Energ. Sci., 5, 1551–1566, https://doi.org/10.5194/wes-5-1551-2020, 2020.
+
+**Link**
+
+Download `here
+<https://orbit.dtu.dk/en/publications/integrated-wind-farm-layout-and-control-optimization/>`_.
+
+.. tags:: Layout Optimization, Control Optimization

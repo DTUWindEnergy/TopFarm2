@@ -1,0 +1,19 @@
+.. pub_0:
+
+Need For Speed: Fast Wind Farm Optimization
+=====================================================================================================
+
+**Abstract**
+
+The Wind in my Backyard (WIMBY) project is developing a web interface to aid communities in siting wind energy projects. As part of this siting tool, users will be able to find realistic wind farm layouts for any proposed site in Europe, given certain constraints. When designing this tool, there arises a need for speed: realistic layouts must be designed in computational times that are appropriate for a web interface. In this study, we compare two optimization algorithms: a gradient-based algorithm, referred to as stochastic gradient descent (SGD), and a gradient-free method, referred to as smart-start. The trade-offs between the optimal energy yield and optimization computational time are characterized via a parameter sweep, considering a site in Denmark. This analysis considered farms with 10, 25, and 50 turbines. We find that smart-start yielded the best results for very short computational times, and that SGD yielded layouts with higher energy yields when considering larger computational times.
+
+**Cite this**
+
+Sarcos, M, Quick, J, Hahmann, AN, Alonso-De-Linaje, NG, Davis, N & Friis-Møller, M 2024, Need For Speed: Fast Wind Farm Optimization. in The Science of Making Torque from Wind (TORQUE 2024): Wind resource, wakes, and wind farms., 092088, IOP Publishing, Journal of Physics: Conference Series, no. 9, vol. 2767, The Science of Making Torque from Wind (TORQUE 2024), Florence, Italy, 29/05/2024. https://doi.org/10.1088/1742-6596/2767/9/092088
+
+**Link**
+
+Download `here
+<https://orbit.dtu.dk/en/publications/need-for-speed-fast-wind-farm-optimization/>`_.
+
+.. tags:: Layout Optimization

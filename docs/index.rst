@@ -58,15 +58,25 @@ Citation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 If you are using TOPFARM, remember to cite it using:
 
-Riccardo Riva, Jaime Yikon Liew, Mikkel Friis-Møller, Nikolay Krasimirov Dimitrov, Emre Barlas, Pierre-Elouan Réthoré, Mads Mølgaard Pedersen, “Welcome to TOPFARM .” URL = https://topfarm.pages.windenergy.dtu.dk/TopFarm2/index.html
+Mikkel Friis-Møller, Mads Mølgaard Pedersen, Ernestas Simutis, Julian Quick, Riccardo Riva, Jaime Yikon Liew, Nikolay Krasimirov Dimitrov, Emre Barlas, Pierre-Elouan Réthoré, “Welcome to TOPFARM .” URL = https://topfarm.pages.windenergy.dtu.dk/TopFarm2/index.html
 
 Package Documentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     .. toctree::
         :maxdepth: 2
+	:caption: Contents
 
         installation
         user_guide
         basic_examples
-	advanced_examples
+        advanced_examples
         api
+
+    .. toctree::
+        :glob:
+        :maxdepth: 1
+	:caption: Publications
+    
+        pub_tool
+        pub_theses
+        pub_related

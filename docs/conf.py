@@ -46,10 +46,15 @@ extensions = ['sphinx.ext.autodoc',
 #	'nbsphinx_link',
     'sphinx.ext.inheritance_diagram',
     'nbsphinx',
-    'sphinx.ext.mathjax',]
+    'sphinx.ext.mathjax',
+    'sphinx_tags',
+]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
+
+# Spinx tags
+tags_create_tags = True
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:

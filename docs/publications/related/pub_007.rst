@@ -1,0 +1,19 @@
+.. pub_7:
+
+Speeding up large-wind-farm layout optimization using gradients, parallelization, and a heuristic algorithm for the initial layout
+=================================================================================================================================================
+
+**Abstract**
+
+As the use of wind energy expands worldwide, the wind energy industry is considering building larger clusters of turbines. Existing computational methods to design and optimize the layout of wind farms are well suited for medium-sized plants; however, these approaches need to be improved to ensure efficient scaling to large wind farms. This work investigates strategies for covering this gap, focusing on gradient-based (GB) approaches. We investigated the main bottlenecks of the problem, including the computational time per iteration, multi-start for GB optimization, and the number of iterations to achieve convergence. The open-source tools PyWake and TOPFARM were used to carry out the numerical experiments. The results show algorithmic differentiation (AD) as an effective strategy for reducing the time per iteration. The speedup reached by AD scales linearly with the number of wind turbines, reaching 75 times for a wind farm with 500 wind turbines. However, memory requirements may make AD unfeasible on personal computers or for larger farms. Moreover, flow case parallelization was found to reduce the time per iteration, but the speedup remains roughly constant with the number of wind turbines. Therefore, top-level parallelization of each multi-start was found to be a more efficient approach for GB optimization. The handling of spacing constraints was found to dominate the iteration time for large wind farms. In this study, we ran the optimizations without spacing constraints and observed that all wind turbines were separated by at least 1.4D. The number of iterations until convergence was found to scale linearly with the number of wind turbines by a factor of 2.3, but further investigation is necessary for generalizations. Furthermore, we have found that initializing the layouts using a heuristic approach called Smart-Start (SMAST) significantly reduced the number of multi-starts during GB optimization. Running only one optimization for a wind farm with 279 turbines initialized with SMAST resulted in a higher final annual energy production (AEP) than 5000 optimizations initialized with random layouts. Finally, estimates for the total time reduction were made assuming that the trends found in this work for the time per iteration, number of iterations, and number of multi-starts hold for larger wind farms. One optimization of a wind farm with 500 wind turbines combining SMAST, AD, and flow case parallelization and without spacing constraints takes 15.6h, whereas 5000 optimizations with random initial layouts, finite differences, spacing constraints, and top-level parallelization are expected to take around 300 years.
+
+**Cite this**
+
+Valotta Rodrigues, R, Pedersen, MM, Schøler, JP, Quick, J & Réthoré, PE 2024, 'Speeding up large-wind-farm layout optimization using gradients, parallelization, and a heuristic algorithm for the initial layout', Wind Energy Science, vol. 9, no. 2, pp. 321-341. https://doi.org/10.5194/wes-9-321-2024
+
+**Link**
+
+Download `here
+<https://orbit.dtu.dk/en/publications/speeding-up-large-wind-farm-layout-optimization-using-gradients-p/>`_.
+
+.. tags:: Layout Optimization, Smart Start
