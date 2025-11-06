@@ -2,7 +2,7 @@
 
 Theses
 ===========================
-This section includes MS theses using HyDesign 
+This section includes MS theses using Topfarm2 
 
     .. toctree::
         :maxdepth: 1

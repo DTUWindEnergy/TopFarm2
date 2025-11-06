@@ -2,7 +2,7 @@
 
 Tool Publications
 ===========================
-This section includes publications directly related to the HyDesign tool.
+This section includes publications directly related to the Topfarm2 tool.
 
     .. toctree::
         :maxdepth: 1

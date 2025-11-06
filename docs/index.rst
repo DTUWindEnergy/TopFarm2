@@ -44,7 +44,7 @@ Can I get a private/commercial version of TOPFARM?
 
 For proprietary developers, we offer the option of having a short-term private
 repository for co-development of cutting-edge plugins. Please contact the
-`TOPFARM development team <mailto:dave@dtu.dk>`_ for further details.
+`TOPFARM development team <mailto:mikf@dtu.dk>`_ for further details.
 
 
 How can I contribute to TOPFARM?
@@ -58,7 +58,9 @@ Citation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 If you are using TOPFARM, remember to cite it using:
 
-Mikkel Friis-Møller, Mads Mølgaard Pedersen, Ernestas Simutis, Julian Quick, Riccardo Riva, Jaime Yikon Liew, Nikolay Krasimirov Dimitrov, Emre Barlas, Pierre-Elouan Réthoré, “Welcome to TOPFARM .” URL = https://topfarm.pages.windenergy.dtu.dk/TopFarm2/index.html
+Mads M. Pedersen, Mikkel Friis-Møller, Pierre-Elouan Réthoré, Ernestas Simutis, Riccardo Riva, Julian Quick, Nikolay Krasimirov Dimitrov, Jenni Rinker, and Katherine Dykes.  
+*DTUWindEnergy/TopFarm2: Release of v2.6.1*. Zenodo, November 2025.  
+DOI: `10.5281/zenodo.17540961 <https://doi.org/10.5281/zenodo.17540961>`_
 
 Package Documentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
