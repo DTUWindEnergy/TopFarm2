@@ -56,11 +56,38 @@ or by volunteering to resolve an issue already in the queue.
 
 Citation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-If you are using TOPFARM, remember to cite it using:
+If you are using TOPFARM, please cite it using:
+    Mads M. Pedersen, Mikkel Friis-Møller, Pierre-Elouan Réthoré, Ernestas Simutis, Riccardo Riva, Julian Quick, Nikolay Krasimirov Dimitrov, Jenni Rinker, & Katherine Dykes. (2025). DTUWindEnergy/TopFarm2: Release of v2.6.1 (v2.6.1). Zenodo. https://doi.org/10.5281/zenodo.17540961
 
-Mads M. Pedersen, Mikkel Friis-Møller, Pierre-Elouan Réthoré, Ernestas Simutis, Riccardo Riva, Julian Quick, Nikolay Krasimirov Dimitrov, Jenni Rinker, and Katherine Dykes.  
-*DTUWindEnergy/TopFarm2: Release of v2.6.1*. Zenodo, November 2025.  
-DOI: `10.5281/zenodo.17540961 <https://doi.org/10.5281/zenodo.17540961>`_
+or
+
+.. code-block:: bibtex
+   :linenos:
+
+   @software{mads_m_pedersen_2025_17540961,
+     author       = {Mads M. Pedersen and
+                     Mikkel Friis-Møller and
+                     Pierre-Elouan Réthoré and
+                     Ernestas Simutis and
+                     Riccardo Riva and
+                     Julian Quick and
+                     Nikolay Krasimirov Dimitrov and
+                     Jenni Rinker and
+                     Katherine Dykes},
+     title        = {DTUWindEnergy/TopFarm2: Release of v2.6.1},
+     month        = nov,
+     year         = 2025,
+     publisher    = {Zenodo},
+     version      = {v2.6.1},
+     doi          = {10.5281/zenodo.17540961},
+     url          = {https://doi.org/10.5281/zenodo.17540961},
+     swhid        = {swh:1:dir:0b90c25a28df70dd7739ff61e9077571697874c5
+                     ;origin=https://doi.org/10.5281/zenodo.3247031;
+                     visit=swh:1:snp:1871c10015766a303da42aff0cbb412d38ac9652;
+                     anchor=swh:1:rel:6a7020bd9717aabad26630b0c1dafde08447fe5b;
+                     path=DTUWindEnergy-TopFarm2-fc9cb8d},
+   }
+
 
 Package Documentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
