@@ -40,7 +40,7 @@ turbines achieve nearly identical LCOE.
 
 **Cite this**
 
-Søndergaard, Freja Roed; Bonde, Christian, 2025
+Søndergaard, Freja Roed; Bonde, Christian. (2025). Influence of wind turbine size on Levelized Cost of Energy of the offshore wind farm Energy Island Bornholm.
 
 **Link**
 

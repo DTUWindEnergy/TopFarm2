@@ -38,7 +38,7 @@ collaboration between different departments in the industry.
 
 **Cite this**
 
-Jørgensen, Emma Koch; Jakobsen, Freja Rølle, 2024
+Jørgensen, Emma Koch; Jakobsen, Freja Rølle. (2024). Influence of Global Warming Potential taxation on Levelized Cost of Energy and Life Cycle Assessment of Off-shore Wind Farms.
 
 **Link**
 

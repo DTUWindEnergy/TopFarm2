@@ -20,7 +20,7 @@ high energy densities and equally good energy productions are possible.
 
 **Cite this**
 
-Nayakanti, Vikranth, 2022
+Nayakanti, Vikranth. (2022). Wind farm optimization to maximize AEP and energy density under loads constraints.
 
 **Link**
 

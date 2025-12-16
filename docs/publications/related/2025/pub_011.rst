@@ -1,0 +1,19 @@
+.. pub_11:
+
+Optimizing the layout of floating wind farms in Crete: A combined LCOE and visual impact minimization
+========================================================================================================================
+
+**Abstract**
+
+Wind energy is set to play a vital role in the green transition, yet the deployment of existing technology is constrained by limited available locations. Floating wind energy addresses this issue by unlocking the rich potential of deep-sea waters. However, the current technology cost remains high, amid concerns regarding the impact of wind farms on coastal tourism. This study introduces a novel methodology for floating wind farm layout optimization by balancing Levelized Cost of Electricity (LCOE) and Visual Impact (VI). This multi-objective approach utilizes the Vector Evaluated Particle Swarm Optimization (VEPSO) algorithm to maximize the economic feasibility of floating wind farms while preserving the natural beauty and touristic activity of coastal regions. The methodology incorporates site-specific criteria into the wind farm’s visual impact assessment, employing the principles of the Spanish Method. A case study in Crete, Greece, is explored through multiple scenarios, achieving up to a 3.1% reduction in LCOE and a 9.6% reduction in Visual Impact. The results underscore the potential of the method to support the sustainable development of floating wind farms and increase local support through optimal design.
+
+**Cite this**
+
+Tsarknias, N, Friis-Møller, M & Clausen, N-E 2025, 'Optimizing the layout of floating wind farms in Crete: A combined LCOE and visual impact minimization', Energy, vol. 337, 138645. https://doi.org/10.1016/j.energy.2025.138645
+
+**Link**
+
+Download `here
+<https://orbit.dtu.dk/en/publications/optimizing-the-layout-of-floating-wind-farms-in-crete-a-combined-/>`_.
+
+.. tags:: Layout Optimization, VEPSO, Visual Impact

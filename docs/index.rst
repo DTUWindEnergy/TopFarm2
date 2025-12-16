@@ -103,7 +103,7 @@ Package Documentation
 
     .. toctree::
         :glob:
-        :maxdepth: 1
+        :maxdepth: 0
 	:caption: Publications
     
         pub_tool

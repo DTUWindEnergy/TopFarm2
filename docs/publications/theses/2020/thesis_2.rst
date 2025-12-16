@@ -23,7 +23,7 @@ layout optimization for FOWT parks.
 
 **Cite this**
 
-Madsen, Mads Mohr, 2020
+Madsen, Mads Mohr. (2020). Cost optimization of catenary mooring for floating offshore wind farms using shared anchors with outlook to integration of this in farm design optimization.
 
 **Link**
 

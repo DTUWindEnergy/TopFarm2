@@ -18,7 +18,7 @@ by applying the ESM in contrast of not making use of this rotor control system.
 
 **Cite this**
 
-Arconada, Javier Ozores, 2019
+Arconada, Javier Ozores. (2019). Wind Farm Optimization Strategies.
 
 **Link**
 

@@ -32,7 +32,7 @@ for future turbine upgrades.
 
 **Cite this**
 
-Acheimastos, Spyridon Giaroslav, 2025
+Acheimastos, Spyridon Giaroslav. (2025). Discrete optimization for down selection of positions in offshore wind farm layouts.
 
 **Link**
 

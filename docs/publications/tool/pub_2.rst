@@ -11,19 +11,19 @@ In addition, it can compute other metrics such as the Internal Rate of Return (I
 
 Over the years, TOPFARM has become a highly versatile tool that is capable of solving several types of optimization problems with different design variables and objectives functions in mind. Throughout its development, TOPFARM has evolved from simple layout optimization problems to more complex and relevant wind farm optimization scenarios. Its capabilities and range were designed for both research and industry related topics. Today, TOPFARM can provide the user solutions in:
 
-Wind farm layout optimization for different turbine types
+- Wind farm layout optimization for different turbine types
 
-Wind farm layout optimization for different turbine hub heights
+- Wind farm layout optimization for different turbine hub heights
 
-Active control (wake steering) optimization
+- Active control (wake steering) optimization
 
-Load constrained layout optimization
+- Load constrained layout optimization
 
-Load constrained wake steering optimization
+- Load constrained wake steering optimization
 
-Optimization with bathymetry
+- Optimization with bathymetry
 
-LCoE-based layout optimization
+- LCoE-based layout optimization
 
 Additionally, the objective function in TOPFARM can be formulated in economical terms, that is with the inclusion of several financial factors that are inherent in the wind farm design process. These can include the financial balance, foundation costs, electrical costs (cabling), fatigue degradation of turbine components and Operation and Management (O&M) costs.
 
@@ -35,7 +35,7 @@ For installation instructions, please see the Installation Guide. The base code 
 
 **Cite this**
 
-Riccardo Riva, Jaime Yikon Liew, Mikkel Friis-Møller, Nikolay Krasimirov Dimitrov, Emre Barlas, Pierre-Elouan Réthoré, m.fl. TopFarm2. Zenodo; 2019
+Mads M. Pedersen, Mikkel Friis-Møller, Pierre-Elouan Réthoré, Ernestas Simutis, Riccardo Riva, Julian Quick, Nikolay Krasimirov Dimitrov, Jenni Rinker, & Katherine Dykes. (2025). DTUWindEnergy/TopFarm2: Release of v2.6.1 (v2.6.1). Zenodo. https://doi.org/10.5281/zenodo.17540961
 
 **Link**
 

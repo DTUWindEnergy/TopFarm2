@@ -35,7 +35,7 @@ could be explored.
 
 **Cite this**
 
-Araujo, Maria Virginia Sarcos, 2022
+Araujo, Maria Virginia Sarcos. (2022). Wind farm production maximization using combined layout and wake steering optimization under load constraint.
 
 **Link**
 

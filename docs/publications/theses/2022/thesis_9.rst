@@ -31,7 +31,7 @@ layout formations handle the trade-off between cable costs and AEP.
 
 **Cite this**
 
-Eagan, Erik, 2022
+Eagan, Erik. (2022). Layout optimization of floating offshore wind farms with shared anchors.
 
 **Link**
 

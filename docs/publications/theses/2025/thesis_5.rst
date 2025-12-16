@@ -32,7 +32,7 @@ and provides new insights into the scientific field of VI optimization.
 
 **Cite this**
 
-Laurberg, Emilie Lewis; Vejstrup, Adam, 2025
+Laurberg, Emilie Lewis; Vejstrup, Adam. (2025). Coupled optimization of visual impact and LCOE of near-shore wind farms: Insights from a Danish case study.
 
 **Link**
 
