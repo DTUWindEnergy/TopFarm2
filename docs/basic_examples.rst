@@ -21,6 +21,5 @@ In this section, only the most basic components of TOPFARM are explained. In add
     notebooks/constraints	
     notebooks/drivers
     notebooks/problems
-    notebooks/cost_models
 
 

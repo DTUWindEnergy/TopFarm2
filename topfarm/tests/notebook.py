@@ -13,7 +13,7 @@ class Notebook():
     pip_header = """# Install TopFarm if needed
 import importlib
 if not importlib.util.find_spec("topfarm"):
-    !pip install git+https://gitlab.windenergy.dtu.dk/TOPFARM/TopFarm2.git"""
+    %pip install git+https://gitlab.windenergy.dtu.dk/TOPFARM/TopFarm2.git"""
 
     def __init__(self, filename):
         self.filename = filename
