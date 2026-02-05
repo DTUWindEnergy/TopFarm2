@@ -93,6 +93,7 @@ cyipopt = ">=1.6.1,<2"
 sphinx-tags = ">=0.0.0,<1"
 gdal = ">=3.9,<4"  # Resolve GDAL via conda-forge (prebuilt osx-arm64), avoid pip build
 jsonschema-with-format-nongpl = ">=4.25.1,<5"  # Provides jsonschema 
+libsqlite = ">=3.40,<4"  # ensure a modern libsqlite3 is present in the env
 
 
 [tool.pixi.pypi-dependencies]
