@@ -1,3 +1,5 @@
+![TopFarm Logo](docs/TopFarm_logo.svg)
+
 [![pipeline status](https://gitlab.windenergy.dtu.dk/TOPFARM/TopFarm2/badges/master/pipeline.svg)](https://gitlab.windenergy.dtu.dk/TOPFARM/TopFarm2/commits/master)
 [![coverage report](https://gitlab.windenergy.dtu.dk/TOPFARM/TopFarm2/badges/master/coverage.svg)](https://gitlab.windenergy.dtu.dk/TOPFARM/TopFarm2/commits/master)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3247031.svg)](https://doi.org/10.5281/zenodo.3247031)
