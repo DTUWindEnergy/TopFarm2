@@ -1,0 +1,32 @@
+/* 
+ * Change the background color of the top sidebar header
+ * (logo + project name + search box)
+ */
+.wy-side-nav-search {
+    background-color: #ffffff;  /* Set header background to white */
+}
+
+/* 
+ * Ensure text and links inside the header remain readable
+ * after changing the background to white
+ */
+.wy-side-nav-search a,          /* Project name / logo link */
+.wy-side-nav-search input {     /* Search input text */
+    color: #000000;             /* Use black text for contrast */
+}
+
+/* 
+ * Style the placeholder text inside the search input
+ * to make it visible but visually softer than user input
+ */
+.wy-side-nav-search input::placeholder {
+    color: #666666;             /* Medium gray placeholder text */
+}
+
+/* 
+ * add margin under topfarm logo on the welcome page
+ */
+.topfarm-logo-frontpage {
+    margin-bottom: 1.5em;
+}
+

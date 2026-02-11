@@ -160,7 +160,11 @@ nbsphinx_prolog = r"""
 # a list of builtin themes.
 #
 html_theme = 'sphinx_rtd_theme'
+
+html_logo = "_static/TopFarm_logo.svg"
                                
+def setup(app):
+    app.add_css_file('custom.css')
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
