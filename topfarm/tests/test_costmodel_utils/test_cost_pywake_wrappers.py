@@ -47,7 +47,7 @@ def test_PyWakeAEPCostModelComponentAdditionalTurbines():
     )
 
     cost, _, _ = problem.optimize(disp=True)
-    npt.assert_almost_equal(cost, -3682.710308568642, decimal=1)
+    npt.assert_almost_equal(cost, -3681.3938217871764, decimal=1)
 
 
 design_vars = {

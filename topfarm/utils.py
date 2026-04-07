@@ -532,6 +532,7 @@ def downsample_ts(ws, wd, timestamps, start=None, end=None, freq='D'):
 def fit_sectorwise_weib(ws, wd, n_sectors=12):
     sector_width = 360 / n_sectors
     bins = np.linspace(0, 360, n_sectors + 1) - sector_width / 2
+    wd = np.array(wd, copy=True)
     wd[wd > 360 - sector_width / 2] = wd[wd > 360 - sector_width / 2] - 360
     df = pd.DataFrame({'WS': ws, 'WD': wd})
     df['sector'] = pd.cut(df.WD, bins=bins, labels=np.arange(n_sectors))

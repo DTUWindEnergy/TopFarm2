@@ -8,14 +8,40 @@ Created on Thu Jul  4 23:32:16 2024
 import pandas as pd
 import numpy as np
 import os
+import importlib.util
 
 from py_wake import Nygaard_2022
+from py_wake.deficit_models.gaussian import TurboGaussianDeficit
+from py_wake.deficit_models.utils import ct2a_mom1d
+from py_wake.ground_models.ground_models import Mirror
+from py_wake.rotor_avg_models.rotor_avg_model import CGIRotorAvg
 from py_wake.site.xrsite import UniformWeibullSite
+from py_wake.superposition_models import SquaredSum
+from py_wake.wind_farm_models.engineering_models import PropagateDownwind
 from py_wake.wind_turbines.generic_wind_turbines import GenericWindTurbine
 
 from topfarm.wind_farm_cluster import TopFarmCluster
 from topfarm.utils import downsample_ts, fit_sectorwise_weib
 from topfarm.examples import examples_filepath
+
+
+if importlib.util.find_spec('h5py') is None:
+    class Nygaard_2022(PropagateDownwind):
+        def __init__(self, site, windTurbines):
+            wake_deficitModel = TurboGaussianDeficit(
+                ct2a=ct2a_mom1d,
+                groundModel=Mirror(superpositionModel=SquaredSum()),
+                rotorAvgModel=CGIRotorAvg(7),
+                ctlim=0.96,
+            )
+            wake_deficitModel.WS_key = 'WS_jlk'
+            PropagateDownwind.__init__(
+                self,
+                site,
+                windTurbines,
+                wake_deficitModel=wake_deficitModel,
+                superpositionModel=SquaredSum(),
+            )
 
 
 class EnergyIsland(TopFarmCluster):
