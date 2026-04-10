@@ -4,6 +4,13 @@ Theses
 ===========================
 This section includes MS theses using Topfarm2 
 
+2026
+    .. toctree::
+        :maxdepth: 0
+        :glob:
+    
+        publications/theses/2026/*
+
 2025
     .. toctree::
         :maxdepth: 0
