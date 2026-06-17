@@ -33,4 +33,5 @@ In this section, more complex configurations for wind farm optimization are show
     notebooks/joint_multi_wf_optimization
     notebooks/economic_cost_models
     notebooks/cables
+    notebooks/external_drivers
     

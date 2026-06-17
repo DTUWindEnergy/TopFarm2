@@ -31,7 +31,6 @@ tensorflow = [
 external_drivers = [
   "pymoo",
   "pyoptsparse",
-  "modopt[open_source_optimizers] @ git+https://github.com/lsdolab/modopt.git@65c7e272b8d75b39c9360c15a95deb3d70753958",
 ]
 
 
@@ -58,9 +57,6 @@ local_scheme = "no-local-version"
 
 [tool.hatch.build.targets.wheel]
 packages = ["topfarm"]
-
-[tool.hatch.metadata]
-allow-direct-references = true
 
 [tool.pytest.ini_options]
 norecursedirs = ["topfarm/tests/deprecated_tests", "topfarm/tests/test_fuga"]
