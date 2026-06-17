@@ -42,7 +42,7 @@ class TurbineTypeDummyCost(DummyCost):
 
 
 class DummyCostPlotComp(XYPlotComp):
-    def __init__(self, optimal, memory=10, delay=0.001, **kwargs):
+    def __init__(self, optimal, memory=10, delay=0.05, **kwargs):
         super().__init__(memory, delay, **kwargs)
         self.optimal = optimal
 

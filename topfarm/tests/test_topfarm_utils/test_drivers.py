@@ -68,23 +68,31 @@ def topfarm_generator():
 
 
 @pytest.mark.parametrize(
-    "driver,tol",
+    "driver_factory,tol",
     [
-        (EasyScipyOptimizeDriver(disp=False), 1e-4),
-        (EasyScipyOptimizeDriver(tol=1e-3, disp=False), 1e-2),
-        (EasyScipyOptimizeDriver(maxiter=14, disp=False), 1e-1),
-        (EasyScipyOptimizeDriver(optimizer="COBYLA", disp=False, maxiter=500), 1e-2),
-        (EasyPyOptSparseIPOPT(), 1e-4),
-        (EasyPyOptSparseSNOPT(), 1e-4),
+        (lambda: EasyScipyOptimizeDriver(disp=False), 1e-4),
+        (lambda: EasyScipyOptimizeDriver(tol=1e-3, disp=False), 1e-2),
+        (lambda: EasyScipyOptimizeDriver(maxiter=14, disp=False), 1e-1),
+        (lambda: EasyScipyOptimizeDriver(optimizer="COBYLA", disp=False, maxiter=500), 1e-2),
+        (EasyPyOptSparseIPOPT, 1e-4),
+        (EasyPyOptSparseSNOPT, 1e-4),
     ],
 )
-def test_optimizers(driver, tol, topfarm_generator_scalable):
+def test_optimizers(driver_factory, tol, topfarm_generator_scalable):
+    try:
+        driver = driver_factory()
+    except ImportError as exc:
+        pytest.xfail(str(exc))
+
     if driver is None or driver.__class__.__name__ == "PyOptSparseMissingDriver":
         pytest.xfail("Driver missing")
 
     tf = topfarm_generator_scalable(driver)
     tf.evaluate()
-    cost, _, recorder = tf.optimize({'x': [6., 6., 1.], 'y': [-.01, -8., 1.]})
+    try:
+        cost, _, recorder = tf.optimize({'x': [6., 6., 1.], 'y': [-.01, -8., 1.]})
+    except ImportError as exc:
+        pytest.xfail(str(exc))
 
     tb_pos = tf.turbine_positions[:, :2]
 
@@ -95,18 +103,18 @@ def test_optimizers(driver, tol, topfarm_generator_scalable):
 
 
 @pytest.mark.parametrize(
-    "driver,tol,N",
+    "driver_factory,tol,N",
     [
-        (EasyScipyOptimizeDriver(disp=False), 1e-4, 30),
+        (lambda: EasyScipyOptimizeDriver(disp=False), 1e-4, 30),
         (
-            EasyScipyOptimizeDriver(
+            lambda: EasyScipyOptimizeDriver(
                 optimizer="COBYLA", tol=1e-3, disp=False, maxiter=500
             ),
             1e-1,
             500,
         ),
-        (EasyPyOptSparseIPOPT(), 1e-4, 25),
-        (EasyPyOptSparseSNOPT(), 1e-4, 39),
+        (EasyPyOptSparseIPOPT, 1e-4, 25),
+        (EasyPyOptSparseSNOPT, 1e-4, 39),
     ],
 )
 @pytest.mark.parametrize(
@@ -121,12 +129,20 @@ def test_optimizers(driver, tol, topfarm_generator_scalable):
         (1000, -200),
     ],
 )
-def test_optimizers_scaling(driver, tol, N, cost_scale, cost_offset, topfarm_generator_scalable):
+def test_optimizers_scaling(driver_factory, tol, N, cost_scale, cost_offset, topfarm_generator_scalable):
+    try:
+        driver = driver_factory()
+    except ImportError as exc:
+        pytest.xfail(str(exc))
+
     if driver.__class__.__name__ == "PyOptSparseMissingDriver":
         pytest.xfail(f"Driver missing; For class {driver.__class__.__name__}")
 
     tf = topfarm_generator_scalable(driver, cost_scale=cost_scale, cost_offset=cost_offset)
-    _, _, recorder = tf.optimize()
+    try:
+        _, _, recorder = tf.optimize()
+    except ImportError as exc:
+        pytest.xfail(str(exc))
     uta.assertLessEqual(recorder.num_cases, N)
 
     tb_pos = tf.turbine_positions[:, :2]

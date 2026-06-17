@@ -197,9 +197,7 @@ class TopFarmProblem(Problem):
             driver = DOEDriver(generator=driver)
         warnings.filterwarnings('ignore', category=OpenMDAOWarning)
         self.driver = driver
-        self.driver.recording_options['record_desvars'] = True
-        self.driver.recording_options['includes'] = ['*']
-        self.driver.recording_options['record_inputs'] = True
+        # self._configure_driver_recording()
 
         self.plot_comp = plot_comp
 
@@ -299,6 +297,9 @@ class TopFarmProblem(Problem):
                 objective_comp = penalty_comp
         else:
             objective_comp = DummyObjectiveComponent()
+        if plot_comp and not isinstance(plot_comp, NoPlot):
+            objective_comp.add_input('plot_counter')  # OpenMDAO will skip components that does not do anything, but this will cause problems for the live plotting so this artifically forces it to run the plotting component
+            objective_comp.declare_partials('*', 'plot_counter', val=0)
         self.model.add_subsystem('objective_comp', objective_comp, promotes=['*'])
         if cost_comp:
             if expected_cost is None:
@@ -323,6 +324,7 @@ class TopFarmProblem(Problem):
             self.model.add_subsystem('plot_comp', plot_comp, promotes=['*'])
             plot_comp.problem = self
             plot_comp.n_wt = self.n_wt
+            plot_comp.declare_partials('*', '*', val=0)
 
         self.setup()
 
@@ -336,6 +338,12 @@ class TopFarmProblem(Problem):
     #         activate_reports(self._reports, driver)
     #     except ModuleNotFoundError:
     #         pass
+
+    def _configure_driver_recording(self):
+        if hasattr(self, 'driver') and self.driver is not None:
+            self.driver.recording_options['record_desvars'] = True
+            self.driver.recording_options['includes'] = ['*']
+            self.driver.recording_options['record_inputs'] = True
 
     @property
     def cost(self):
@@ -391,6 +399,7 @@ class TopFarmProblem(Problem):
                 topfarm.x_key: x, topfarm.y_key: y, 'c': c}
 
     def setup(self):
+        self._configure_driver_recording()
         if not self._metadata:
             Problem.setup(self)
         if self._metadata['setup_status'] == _SetupStatus.PRE_SETUP:

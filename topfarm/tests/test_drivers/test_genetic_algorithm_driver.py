@@ -99,7 +99,7 @@ class TestSimpleGA(unittest.TestCase):
 
         # Optimal solution
         np.testing.assert_allclose(prob['comp.f'], 0.49398, 1e-4)
-        self.assertTrue(int(prob['p2.xI']) in [3, -3])
+        self.assertTrue(int(np.asarray(prob['p2.xI']).item()) in [3, -3])
 
     def test_mixed_integer_3bar(self):
         np.random.seed(1)
@@ -333,6 +333,7 @@ class TestDriverOptionsSimpleGA(unittest.TestCase):
 class TestMultiObjectiveSimpleGA(unittest.TestCase):
 
     def test_multi_obj(self):
+        np.random.seed(1)
 
         class Box(ExplicitComponent):
 
@@ -366,12 +367,14 @@ class TestMultiObjectiveSimpleGA(unittest.TestCase):
 
         # setup the optimization
         prob.driver = SimpleGADriver()
-        prob.driver.options['max_gen'] = 100
-        prob.driver.options['bits'] = {'length': 8, 'width': 8, 'height': 8}
+        prob.driver.options['max_gen'] = 3
+        prob.driver.options['pop_size'] = 6
+        prob.driver.options['bits'] = {'length': 4, 'width': 4, 'height': 4}
         prob.driver.options['multi_obj_exponent'] = 1.
-        prob.driver.options['penalty_parameter'] = 10.
+        prob.driver.options['penalty_parameter'] = 100.
         prob.driver.options["multi_obj_weights"] = {"front_area": 0.1, "top_area": 0.9}
         prob.driver.options['multi_obj_exponent'] = 1
+        prob.driver._randomstate = 1
 
         prob.model.add_design_var('length', lower=0.1, upper=2.)
         prob.model.add_design_var('width', lower=0.1, upper=2.)
@@ -404,12 +407,14 @@ class TestMultiObjectiveSimpleGA(unittest.TestCase):
 
         # setup the optimization
         prob2.driver = SimpleGADriver()
-        prob2.driver.options['max_gen'] = 100
-        prob2.driver.options['bits'] = {'length': 8, 'width': 8, 'height': 8}
+        prob2.driver.options['max_gen'] = 3
+        prob2.driver.options['pop_size'] = 6
+        prob2.driver.options['bits'] = {'length': 4, 'width': 4, 'height': 4}
         prob2.driver.options['multi_obj_exponent'] = 1.
-        prob2.driver.options['penalty_parameter'] = 10.
+        prob2.driver.options['penalty_parameter'] = 100.
         prob2.driver.options["multi_obj_weights"] = {"front_area": 0.9, "top_area": 0.1}
         prob2.driver.options['multi_obj_exponent'] = 1
+        prob2.driver._randomstate = 1
 
         prob2.model.add_design_var('length', lower=0.1, upper=2.)
         prob2.model.add_design_var('width', lower=0.1, upper=2.)

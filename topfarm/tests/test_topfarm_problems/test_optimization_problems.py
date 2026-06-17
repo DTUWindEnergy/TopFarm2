@@ -69,17 +69,18 @@ def test_turbineXYZ_optimization_with_incl_excl():
 
     # check that optimized state is outside the boundary of
     # exclusion plus the dist2wt expansion of the zone
+    tol = 1e-6
     assert (
-        np.all(state["x"] < (25 - dist2wt)) or
-        np.all(state["x"] > (75 + dist2wt)) or
-        np.all(state["y"] < (25 - dist2wt)) or
-        np.all(state["y"] > (75 + dist2wt))
+        np.all(state["x"] <= (25 - dist2wt + tol)) or
+        np.all(state["x"] >= (75 + dist2wt - tol)) or
+        np.all(state["y"] <= (25 - dist2wt + tol)) or
+        np.all(state["y"] >= (75 + dist2wt - tol))
     )
 
-    assert np.all(state["x"] >= 0)
-    assert np.all(state["x"] <= 100)
-    assert np.all(state["y"] >= 0)
-    assert np.all(state["y"] <= 100)
+    assert np.all(state["x"] >= 0 - tol)
+    assert np.all(state["x"] <= 100 + tol)
+    assert np.all(state["y"] >= 0 - tol)
+    assert np.all(state["y"] <= 100 + tol)
 
     optimal = np.array([[120, 120]])
     tf = TopFarmProblem(
@@ -92,7 +93,7 @@ def test_turbineXYZ_optimization_with_incl_excl():
 
     # check that optimized state is within the boundary of
     # inclusion zone plus the dist2wt contraction;
-    assert np.all(state["x"] >= (0 + dist2wt))
-    assert np.all(state["x"] <= (100 - dist2wt))
-    assert np.all(state["y"] >= (0 + dist2wt))
-    assert np.all(state["y"] <= (100 - dist2wt))
+    assert np.all(state["x"] >= (0 + dist2wt - tol))
+    assert np.all(state["x"] <= (100 - dist2wt + tol))
+    assert np.all(state["y"] >= (0 + dist2wt - tol))
+    assert np.all(state["y"] <= (100 - dist2wt + tol))

@@ -134,3 +134,5 @@ topfarm/_version.py
 topfarm/tests/.testout/
 topfarm/tests/test_files/tmp/
 topfarm/tests/test_files/recordings/test_TopFarmListRecorder_continue.pkl
+/run_pycodestyle.bat
+/run_test_docs.bat

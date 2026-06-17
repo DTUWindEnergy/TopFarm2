@@ -305,7 +305,7 @@ class SpacingTypeComp(SpacingComp):
             return xy if not isinstance(xy, tuple) else xy[0]
 
         for x, y, t in zip(get_xy('x'), get_xy('y'), get_xy('type')):
-            circle = Circle((x, y), self.get_min_eff_spacing(t).ravel() / 2, color='k', ls='--', fill=False)
+            circle = Circle((x, y), self.get_min_eff_spacing(t).ravel()[0] / 2, color='k', ls='--', fill=False)
             ax.add_artist(circle)
 
     def satisfy(self, state, n_iter=100, step_size=0.1):

@@ -76,8 +76,8 @@ def test_TopFarmProblemXYBoundaryConstraint():
     # new scipy version
     for i, xy in enumerate('xy'):
         if tf.driver._has_scaling:
-            for lu, z in zip(['lower', 'upper'], (0, 1)):
-                npt.assert_equal(desvars[xy][lu], z)
+            for ref_key, z in zip(['ref0', 'ref'], (0, 1)):
+                npt.assert_equal(desvars[xy][ref_key], z)
         else:
             for lu, func in zip(['lower', 'upper'], (np.min, np.max)):
                 npt.assert_equal(desvars[xy][lu], func(xy3tb.boundary[:, i]))

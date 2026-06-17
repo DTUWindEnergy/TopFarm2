@@ -16,7 +16,7 @@ test_topfarm_precommit:
   stage: # build, test, deploy defined by default [2]
     test
   script:
-    - apt update && apt install -y git
+    - apt update && apt install -y git build-essential gfortran
     - pixi run -e default pre-commit run --all-files
   cache:
     key: pre-commit-cache # Retains cache across all branches
@@ -34,7 +34,7 @@ test_topfarm:
   stage: # build, test, deploy defined by default [2]
     test
   script:
-    - apt update && apt install -y git
+    - apt update && apt install -y git build-essential gfortran
     - pixi run test-latest
   artifacts:
     paths:
@@ -50,7 +50,7 @@ test_topfarm_all_py_versions:
   stage: # build, test, deploy defined by default [2]
     test
   script:
-    - apt update && apt install -y git
+    - apt update && apt install -y git build-essential gfortran
     - pixi run test-all
   tags: # only runners with this tag can do the job [3]
     - linux
@@ -61,8 +61,8 @@ test_topfarm_all_py_versions:
 test_topfarm_windows:
   image: registry.windenergy.dtu.dk/dockerimages/windows-pixi:ltsc2019
   script:
-    - pixi run pip install .
-    - pixi run test-latest
+    - pixi run -e default-windows pip install .[tensorflow]
+    - pixi run -e default-windows test-latest
   needs:
     - test_topfarm_precommit
   variables:
@@ -79,8 +79,8 @@ test_topfarm_windows:
 test_topfarm_windows_all_py_versions:
   image: registry.windenergy.dtu.dk/dockerimages/windows-pixi:ltsc2019
   script:
-    - pixi run pip install .
-    - pixi run test-all
+    - pixi run -e default-windows pip install .
+    - pixi run -e default-windows test-all
   variables:
     GIT_SUBMODULE_STRATEGY: normal
     GIT_CLEAN_FLAGS: -ffdx
@@ -108,7 +108,7 @@ test_topfarm_deploy:
   stage: # build, test, deploy defined by default [2]
     deploy
   script:
-    - apt update && apt install -y git
+    - apt update && apt install -y git build-essential gfortran
     - rm -rf topfarm/examples/input_ts.csv # reduce upload size 75%
     - pixi run -e default hatch build
     - pixi run -e default hatch publish -r test -u $HATCH_INDEX_USER -a $HATCH_INDEX_AUTH
@@ -122,7 +122,7 @@ pypi_deploy:
   image: ghcr.io/prefix-dev/pixi:latest
   stage: deploy
   script:
-    - apt update && apt install -y git
+    - apt update && apt install -y git build-essential gfortran
     - eval "$(pixi shell-hook -e default)"
     - export SETUPTOOLS_SCM_PRETEND_VERSION=$(hatch version | sed 's/\.post0$//') # remove post for pypi
     - echo $SETUPTOOLS_SCM_PRETEND_VERSION # pypi version
@@ -139,7 +139,7 @@ test_docs_build: # "pages" is a job specifically for GitLab pages [1]
   stage: # build, test, deploy defined by default [2]
     deploy
   script: # use sphinx to build docs
-    - apt update && apt install -y git
+    - apt update && apt install -y git build-essential gfortran
     - pixi run -e default "cd docs; sphinx-build -j auto . build/html"
   tags: # only runners with this tag can do the job [3]
     - linux
@@ -156,7 +156,7 @@ pages: # "pages" is a job specifically for GitLab pages [1]
   stage: # build, test, deploy defined by default [2]
     deploy
   script: # use sphinx to build docs, move to public page
-    - apt update && apt install -y git
+    - apt update && apt install -y git build-essential gfortran
     - pixi run -e default "cd docs; sphinx-build -j auto . build/html"
     - mv docs/build/html public/
   artifacts: # required for GitLab pages [1]

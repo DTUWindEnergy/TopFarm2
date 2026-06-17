@@ -1,23 +1,19 @@
-import matplotlib
 import os
 from openmdao.api import ExplicitComponent
 import matplotlib.pyplot as plt
 import numpy as np
 import topfarm
 import sys
+from IPython.display import display
+import uuid
 
 
-def mypause(interval):
-    # pause without show
-    backend = plt.rcParams['backend']
-    if backend in matplotlib.rcsetup.interactive_bk:
-        figManager = matplotlib._pylab_helpers.Gcf.get_active()
-        if figManager is not None:
-            canvas = figManager.canvas
-            if canvas.figure.stale:
-                canvas.draw()
-            canvas.start_event_loop(interval)
-            return
+def in_notebook():
+    try:
+        from IPython import get_ipython
+        return get_ipython() is not None
+    except BaseException:
+        return False
 
 
 class NoPlot():
@@ -39,7 +35,7 @@ class XYPlotComp(ExplicitComponent):
     """Plotting component for turbine locations"""
     colors = BASE_COLORS * (2000 // len(BASE_COLORS) + 1)  # ~2000 colors delay tech-debt
 
-    def __init__(self, memory=10, delay=0.001, plot_initial=True, plot_improvements_only=False, ax=None, legendloc=1, save_plot_per_iteration=False, folder_name='Figures', file_prefix='iteration', callback=None):
+    def __init__(self, memory=10, delay=0.05, plot_initial=True, plot_improvements_only=False, ax=None, legendloc=1, save_plot_per_iteration=False, folder_name='Figures', file_prefix='iteration', callback=None):
         """Initialize component for plotting turbine locations
 
         Parameters
@@ -79,9 +75,17 @@ class XYPlotComp(ExplicitComponent):
         self.file_prefix = file_prefix
         self.save_plot_per_iteration = save_plot_per_iteration
 
+        self._use_notebook = in_notebook()
+
+        if ax is None:
+            self._fig, self._ax = plt.subplots()
+        else:
+            self._ax = ax
+            self._fig = ax.figure
+
     @property
     def ax(self):
-        return self._ax or plt.gca()
+        return self._ax
 
     def show(self):
         plt.show()
@@ -179,16 +183,36 @@ class XYPlotComp(ExplicitComponent):
             return pw['x0'], pw['y0'], cost0
 
     def compute(self, inputs, outputs):
-        if self.by_pass is False:
-            cost = inputs[self.cost_key][0]
 
+        if self.by_pass is False:
+
+            rec = self.problem.recorder
+
+            cost = inputs[self.cost_key][0]
             if (self.plot_improvements_only and
-                'cost' in self.problem.recorder.driver_iteration_dict and
-                len(self.problem.recorder['cost']) and
-                    cost > self.problem.recorder['cost'].min()):
+                'cost' in rec.driver_iteration_dict and
+                len(rec['cost']) and
+                    cost > rec['cost'].min()):
                 return
 
+            # detect new optimization run
+            if self._use_notebook:
+                if not hasattr(self, "_last_num_cases"):
+                    self._last_num_cases = -1
+
+                if rec.num_cases < self._last_num_cases:
+                    # new run detected → reset display
+                    if hasattr(self, "_display_id"):
+                        del self._display_id
+
+                self._last_num_cases = rec.num_cases
+
+                if not hasattr(self, "_display_id"):
+                    self._display_id = str(uuid.uuid4())
+                    display(self._fig, display_id=self._display_id)
+
             # find limits
+
             def get_lim(key):
                 if (key in self.problem.design_vars and
                         isinstance(self.problem.design_vars[key], tuple) and
@@ -220,25 +244,29 @@ class XYPlotComp(ExplicitComponent):
             self.set_title(cost0, cost)
             self.ax.legend(loc=self.legendloc)
 
-            if self.counter == 0:
-                plt.pause(1e-6)
-            mypause(self.delay)
+            if self._use_notebook:
+                from IPython.display import update_display
+                update_display(self._fig, display_id=self._display_id)
+                import time
+                time.sleep(self.delay)
+            else:
+                plt.draw()
+                plt.pause(self.delay)
 
             self.counter += 1
-            outputs['plot_counter'] = self.counter
+            outputs['plot_counter'] = np.sum(inputs[topfarm.x_key]) * 0.0 + self.counter
 
             if self.callback is not None:
                 self.callback(self.ax)
 
             if self.save_plot_per_iteration:
-                fig = self.ax
                 if not os.path.exists(self.folder_name):
                     os.makedirs(self.folder_name)
                 plt.savefig(f'{self.folder_name}/{self.file_prefix}_%s.png' % self.counter)
 
 
 class PlotComp(XYPlotComp):
-    def __init__(self, memory=10, delay=0.001, plot_initial=True, plot_improvements_only=False, ax=None):
+    def __init__(self, memory=10, delay=0.05, plot_initial=True, plot_improvements_only=False, ax=None):
         XYPlotComp.__init__(self, memory=memory, delay=delay, plot_initial=plot_initial,
                             plot_improvements_only=plot_improvements_only, ax=ax)
         sys.stderr.write("%s is deprecated. Use XYPlotComp instead\n" % self.__class__.__name__)
@@ -305,98 +333,3 @@ class TurbineTypePlotComponent(XYPlotComp):
         for m, c, x_, y_ in zip(self.markers[self.types], self.colors[self.types], x, y):
             # self.ax.plot(x_, y_, 'o', color=c, ms=5)
             self.ax.plot(x_, y_, m + 'k', markeredgecolor=c, markeredgewidth=1, ms=20)
-
-
-# class TurbineCablePlotComponent(XYPlotComp):
-#     """Plotting component for electrical colletion system"""
-#     colors = ['b', 'r', 'm', 'c', 'g', 'y', 'orange', 'indigo', 'grey'] * 100
-
-#     def __init__(self, ecsga, **kwargs):
-#         """Initialize component for plotting turbine types
-
-#         Parameters
-#         ----------
-#         turbine_type_names : list of str
-#             Names of turbine types for legend
-#         **kwargs : keyword arguments, optional
-#             Keyword arguments that can be passed into XYPlotComp
-#         """
-#         self.ecsga = ecsga
-#         XYPlotComp.__init__(self, **kwargs)
-
-#     def setup(self):
-#         XYPlotComp.setup(self)
-#         self.add_input('tree', np.zeros((self.n_wt, 5)))
-
-#     def compute(self, inputs, outputs):
-#         self.tree = np.asarray(inputs['tree'])
-#         XYPlotComp.compute(self, inputs, outputs)
-
-#     def init_plot(self, limits):
-#         XYPlotComp.init_plot(self, limits)
-#         for n, cable_type in enumerate(self.ecsga.Cable.ID):
-#             index = self.tree[:, 3] == n
-#             if index.any():
-#                 self.ax.plot([], [], self.colors[n], label='Cable: {} mm2'.format(self.ecsga.Cable.CrossSection[n]))
-#         self.ax.legend()
-
-#     def plot_current_position(self, x, y):
-#         CoordX = self.ecsga.CoordX
-#         CoordY = self.ecsga.CoordY
-#         CoordX[1:] = x
-#         CoordY[1:] = y
-#         self.ax.plot(CoordX[0], CoordY[0], 'ro', markersize=10, label='OSS')
-#         for n, cable_type in enumerate(self.ecsga.Cable.ID):
-#             index = self.tree[:, 3].astype(int) == n
-#             if index.any():
-#                 xs = CoordX[(self.tree[index].T[:2] - 1).astype(int)]
-#                 ys = CoordY[(self.tree[index].T[:2] - 1).astype(int)]
-#                 self.ax.plot(xs, ys, self.colors[n])
-
-
-# class AggregatedConstraintsPlotComponent(XYPlotComp):
-
-#     colors = np.array(['b', 'r', 'm', 'c', 'g', 'y', 'orange', 'indigo', 'grey'] * 10)
-#     markers = np.array(list("123v^<>.o48spP*hH+xXDd|_"))
-
-#     def show(self):
-#         pass
-
-#     def plot_constraints(self):
-#         # if len(self.problem.model.aggr_comp.constraints) != 0:
-#         #     for constr in self.problem.model.aggr_comp.constraints[0].constraints:
-#         #         constr.constraintComponent.plot(self.ax)
-#         # else:
-#         for constr in self.problem.model.constraint_components:
-#             constr.plot(self.ax)
-
-#     def plot_history(self, x, y):
-#         rec = self.problem.recorder
-#         if rec.num_cases > 0:
-#             def get(xy, xy_key, pw):
-#                 rec_xy = pw[xy_key][-self.memory:]
-#                 if len(rec_xy.shape) == 1:
-#                     rec_xy = rec_xy[:, np.newaxis]
-#                 return np.r_[rec_xy, [xy]]
-#             pw = self.problem.get_vars_from_recorder()
-#             x = get(x, topfarm.x_key, pw)
-#             y = get(y, topfarm.y_key, pw)
-#             for c, x_, y_ in zip(self.colors, x.T, y.T):
-#                 self.ax.plot(x_, y_, '--', color=c)
-
-#     def plot_initial2current(self, x0, y0, x, y):
-#         rec = self.problem.recorder
-#         if rec.num_cases > 0:
-#             pw = self.problem.get_vars_from_recorder()
-#             x0 = np.atleast_1d(pw['x0'])
-#             y0 = np.atleast_1d(pw['y0'])
-#             for c, x0_, y0_, x_, y_ in zip(self.colors, x0, y0, x, y):
-#                 self.ax.plot(x0_, y0_, '>', markerfacecolor=c, markeredgecolor='k')
-#                 self.ax.plot((x0_, x_), (y0_, y_), '-', color=c)
-#             self.ax.plot([], [], '>k', markerfacecolor="#00000000", markeredgecolor='k', label='Initial position')
-
-#     def plot_current_position(self, x, y):
-#         for c, x_, y_ in zip(self.colors, x, y):
-#             self.ax.plot(x_, y_, 'o', color=c, ms=5)
-#             self.ax.plot(x_, y_, 'xk', ms=4)
-#         self.ax.plot([], [], 'xk', label='Current position')

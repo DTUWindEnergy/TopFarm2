@@ -32,6 +32,7 @@ excluded = [
     "layout_and_loads.ipynb",  # gives error from tensorflow on synnefo machine
     "wake_steering_and_loads.ipynb",  # ok but many warnings from tensorflow
     "wind_farm_cluster.ipynb",  # too long runtime
+    "external_drivers.ipynb",  # requires OpenMDAO >=3.44
 ]
 
 notebooks = get_notebooks()

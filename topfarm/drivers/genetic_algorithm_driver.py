@@ -375,7 +375,7 @@ class SimpleGADriver(Driver):
             self.set_design_var(name, x[i:j])
 
         # a very large number, but smaller than the result of nan_to_num in Numpy
-        almost_inf = openmdao.INF_BOUND
+        almost_inf = np.inf
 
         # Execute the model
         with RecordingDebugging('SimpleGA', self.iter_count, self) as rec:
@@ -436,7 +436,7 @@ class SimpleGADriver(Driver):
         # print("Functions calculated")
         # print(x)
         # print(obj)
-        return fun, success, icase
+        return np.asarray(fun).item(), success, icase
 
 
 class GeneticAlgorithm(object):
