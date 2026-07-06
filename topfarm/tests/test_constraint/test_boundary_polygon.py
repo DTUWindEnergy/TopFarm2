@@ -6,8 +6,18 @@ from topfarm.constraint_components.boundary import XYBoundaryConstraint, \
     PolygonBoundaryComp, InclusionZone, ExclusionZone, MultiPolygonBoundaryComp
 from topfarm._topfarm import TopFarmProblem
 from topfarm.tests.utils import __assert_equal_unordered
-import unittest
+import pytest
 from shapely import Polygon
+
+
+@pytest.fixture
+def multi_polygon_zones():
+    return [
+        InclusionZone([(0, 0), (5, 0), (5, 2), (3, 2), (3, 1), (2, 1), (2, 2), (0, 2), (0, 0)]),
+        InclusionZone([(3.5, 0.5), (4.5, 0.5), (4.5, 1.5), (3.5, 1.5)]),
+        ExclusionZone([(0.5, 0.5), (1.75, 0.5), (1.75, 1.5), (0.5, 1.5)]),
+        ExclusionZone([(0.75, 0.75), (1.25, 0.75), (1.25, 1.25), (0.75, 1.25)]),
+    ]
 
 
 def get_tf(initial, optimal, boundary, plot_comp=NoPlot(), boundary_type='polygon'):
@@ -20,7 +30,7 @@ def get_tf(initial, optimal, boundary, plot_comp=NoPlot(), boundary_type='polygo
         plot_comp=plot_comp)
 
 
-def testPolygon():
+def test_polygon():
     boundary = [(0, 0), (1, 1), (2, 0), (2, 2), (0, 2)]
     b = PolygonBoundaryComp(0, boundary)
     np.testing.assert_array_equal(b.xy_boundary[:, :2], [[0, 0],
@@ -31,7 +41,7 @@ def testPolygon():
                                                          [0, 0]])
 
 
-def testPolygonConcave():
+def test_polygon_concave():
     optimal = [(1.5, 1.3), (4, 1)]
     boundary = [(0, 0), (5, 0), (5, 2), (3, 2), (3, 1), (2, 1), (2, 2), (0, 2), (0, 0)]
     plot_comp = NoPlot()
@@ -42,7 +52,7 @@ def testPolygonConcave():
     plot_comp.show()
 
 
-def testPolygonTwoRegionsStartInWrong():
+def test_polygon_two_regions_start_in_wrong():
     optimal = [(1, 1), (4, 1)]
     boundary = [(0, 0), (5, 0), (5, 2), (3, 2), (3, 0), (2, 0), (2, 2), (0, 2), (0, 0)]
     plot_comp = NoPlot()
@@ -53,7 +63,7 @@ def testPolygonTwoRegionsStartInWrong():
     np.testing.assert_array_almost_equal(tf.turbine_positions[:, :2], optimal, 4)
 
 
-def testMultiPolygon():
+def test_multi_polygon():
     optimal = [(1.75, 1.3), (4, 1)]
     boundary = [InclusionZone([(0, 0), (5, 0), (5, 2), (3, 2), (3, 1), (2, 1), (2, 2), (0, 2), (0, 0)]),
                 InclusionZone([(3.5, 0.5), (4.5, 0.5), (4.5, 1.5), (3.5, 1.5)]),
@@ -100,12 +110,8 @@ def test_calculate_distance_to_boundary():
                                    [6., 14., 14., 6., 1.41421356]])
 
 
-def testDistanceRelaxation():
-    boundary = [InclusionZone([(0, 0), (5, 0), (5, 2), (3, 2), (3, 1), (2, 1), (2, 2), (0, 2), (0, 0)]),
-                InclusionZone([(3.5, 0.5), (4.5, 0.5), (4.5, 1.5), (3.5, 1.5)]),
-                ExclusionZone([(0.5, 0.5), (1.75, 0.5), (1.75, 1.5), (0.5, 1.5)]),
-                ExclusionZone([(0.75, 0.75), (1.25, 0.75), (1.25, 1.25), (0.75, 1.25)]),
-                ]
+def test_distance_relaxation(multi_polygon_zones):
+    boundary = multi_polygon_zones
     initial = [(-0, .1), (4, 1.5)][::-1]
     optimal = [(1.75, 1.3), (4, 1)]
     initial, optimal = map(np.array, [initial, optimal])
@@ -128,13 +134,8 @@ def testDistanceRelaxation():
         == tf.model.constraint_components[0].gradients(np.array([1.5]), np.array([8]))[2][1]
 
 
-def testDistanceRelaxationPolygons():
-    zones = [InclusionZone([(0, 0), (5, 0), (5, 2), (3, 2), (3, 1), (2, 1), (2, 2), (0, 2), (0, 0)]),
-             InclusionZone([(3.5, 0.5), (4.5, 0.5), (4.5, 1.5), (3.5, 1.5)]),
-             ExclusionZone([(0.5, 0.5), (1.75, 0.5), (1.75, 1.5), (0.5, 1.5)]),
-             ExclusionZone([(0.75, 0.75), (1.25, 0.75), (1.25, 1.25), (0.75, 1.25)]),
-             ]
-    MPBC = MultiPolygonBoundaryComp(1, zones, relaxation=(0.1, 10))
+def test_distance_relaxation_polygons(multi_polygon_zones):
+    MPBC = MultiPolygonBoundaryComp(1, multi_polygon_zones, relaxation=(0.1, 10))
     (rp1, rp2) = MPBC.relaxed_polygons(7)
     bp1 = MPBC.get_boundary_properties(*rp1)
     bp2 = MPBC.get_boundary_properties(*rp2)
@@ -153,14 +154,8 @@ def testDistanceRelaxationPolygons():
                                                [1.45, 0.8]]))
 
 
-def testChangingNumberOfTurbines():
-    zones = [InclusionZone([(0, 0), (5, 0), (5, 2), (3, 2), (3, 1), (2, 1), (2, 2), (0, 2), (0, 0)]),
-             InclusionZone([(3.5, 0.5), (4.5, 0.5), (4.5, 1.5), (3.5, 1.5)]),
-             ExclusionZone([(0.5, 0.5), (1.75, 0.5), (1.75, 1.5), (0.5, 1.5)]),
-             ExclusionZone([(0.75, 0.75), (1.25, 0.75), (1.25, 1.25), (0.75, 1.25)]),
-             ]
-
-    MPBC = MultiPolygonBoundaryComp(1, zones)
+def test_changing_number_of_turbines(multi_polygon_zones):
+    MPBC = MultiPolygonBoundaryComp(1, multi_polygon_zones)
 
     xs, ys = np.linspace(0, 5, 5), np.linspace(0, 2, 5)
     XS, YS = np.meshgrid(xs, ys)
@@ -177,195 +172,76 @@ def testChangingNumberOfTurbines():
     np.testing.assert_allclose(sign2, sign_ref2)
 
 
-class TestMultiPolygonBoundaryCompResultingPolygons(unittest.TestCase):
-    def test_single_inclusion(self):
-        """Test basic case of single inclusion polygon"""
-        square = Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
-        polygons = [square]
-        incl_excls = [True]
+def test_resulting_polygons_single_inclusion():
+    square = Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+    result = MultiPolygonBoundaryComp._calc_resulting_polygons([square], [True])
+    assert len(result) == 1
+    assert result[0].equals(square)
 
-        result = MultiPolygonBoundaryComp._calc_resulting_polygons(polygons, incl_excls)
 
-        assert len(result) == 1
-        assert result[0].equals(square)
+def test_resulting_polygons_multiple_non_overlapping():
+    square1 = Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+    square2 = Polygon([(2, 0), (3, 0), (3, 1), (2, 1)])
+    result = MultiPolygonBoundaryComp._calc_resulting_polygons([square1, square2], [True, True])
+    assert len(result) == 2
 
-    def test_multiple_non_overlapping(self):
-        """Test multiple non-overlapping inclusion polygons"""
-        square1 = Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
-        square2 = Polygon([(2, 0), (3, 0), (3, 1), (2, 1)])
-        polygons = [square1, square2]
-        incl_excls = [True, True]
 
-        result = MultiPolygonBoundaryComp._calc_resulting_polygons(polygons, incl_excls)
+def test_resulting_polygons_overlapping_inclusions():
+    square1 = Polygon([(0, 0), (2, 0), (2, 2), (0, 2)])
+    square2 = Polygon([(1, 1), (3, 1), (3, 3), (1, 3)])
+    result = MultiPolygonBoundaryComp._calc_resulting_polygons([square1, square2], [True, True])
+    assert len(result) == 1
+    assert result[0].area == 7
 
-        assert len(result) == 2
+    d = Polygon([(0.1, 0.1), (1.1, 0.1), (1.1, 1.1), (0.1, 1.1), (0.1, 0.1)])
+    b = Polygon([(0, 0), (2, 0), (2, 2), (0, 2), (0, 0)])
+    result = MultiPolygonBoundaryComp._calc_resulting_polygons([d, b], [True, True])
+    assert len(result) == 1
+    assert result[0].area == 4
 
-    def test_overlapping_inclusions(self):
-        """Test overlapping inclusion polygons"""
-        square1 = Polygon([(0, 0), (2, 0), (2, 2), (0, 2)])
-        square2 = Polygon([(1, 1), (3, 1), (3, 3), (1, 3)])
-        polygons = [square1, square2]
-        incl_excls = [True, True]
 
-        result = MultiPolygonBoundaryComp._calc_resulting_polygons(polygons, incl_excls)
+def test_resulting_polygons_inclusion_with_hole():
+    outer = Polygon([(0, 0), (3, 0), (3, 3), (0, 3)])
+    inner = Polygon([(1, 1), (2, 1), (2, 2), (1, 2)])
+    result = MultiPolygonBoundaryComp._calc_resulting_polygons([outer, inner], [True, False])
+    assert len(result) == 1
+    assert result[0].area == outer.area - inner.area
 
-        assert len(result) == 1
-        assert result[0].area == 7  # Area of union
 
-        d = Polygon([(0.1, 0.1), (1.1, 0.1), (1.1, 1.1), (0.1, 1.1), (0.1, 0.1)])
-        b = Polygon([(0, 0), (2, 0), (2, 2), (0, 2), (0, 0)])
-        polygons = [d, b]
-        incl_excls = [True, True]
+def test_resulting_polygons_multiple_exclusions():
+    main = Polygon([(0, 0), (4, 0), (4, 4), (0, 4)])
+    excl1 = Polygon([(1, 1), (2, 1), (2, 2), (1, 2)])
+    excl2 = Polygon([(3, 3), (3.5, 3), (3.5, 3.5), (3, 3.5)])
+    result = MultiPolygonBoundaryComp._calc_resulting_polygons([main, excl1, excl2], [True, False, False])
+    assert len(result) == 1
+    assert abs(result[0].area - (main.area - excl1.area - excl2.area)) < 1e-10
 
-        result = MultiPolygonBoundaryComp._calc_resulting_polygons(polygons, incl_excls)
 
-        assert len(result) == 1
-        assert result[0].area == 4  # Area of union
+def test_resulting_polygons_tiny_polygons():
+    main = Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+    tiny = Polygon([(0.1, 0.1), (0.11, 0.1), (0.11, 0.11), (0.1, 0.11)])
+    result = MultiPolygonBoundaryComp._calc_resulting_polygons([main, tiny], [True, True])
+    assert len(result) == 1
+    assert result[0].equals(main)
 
-    def test_inclusion_with_hole(self):
-        """Test inclusion with hole (exclusion inside)"""
-        outer = Polygon([(0, 0), (3, 0), (3, 3), (0, 3)])
-        inner = Polygon([(1, 1), (2, 1), (2, 2), (1, 2)])
-        polygons = [outer, inner]
-        incl_excls = [True, False]
 
-        result = MultiPolygonBoundaryComp._calc_resulting_polygons(polygons, incl_excls)
+def test_resulting_polygons_empty_input():
+    assert len(MultiPolygonBoundaryComp._calc_resulting_polygons([], [])) == 0
 
-        assert len(result) == 1
-        assert result[0].area == outer.area - inner.area
 
-    def test_multiple_exclusions(self):
-        """Test multiple exclusion areas"""
-        main = Polygon([(0, 0), (4, 0), (4, 4), (0, 4)])
-        excl1 = Polygon([(1, 1), (2, 1), (2, 2), (1, 2)])
-        excl2 = Polygon([(3, 3), (3.5, 3), (3.5, 3.5), (3, 3.5)])
-        polygons = [main, excl1, excl2]
-        incl_excls = [True, False, False]
+def test_resulting_polygons_complex_case():
+    main = Polygon([(0, 0), (10, 0), (10, 10), (0, 10)])
+    incl1 = Polygon([(12, 0), (15, 0), (15, 5), (12, 5)])
+    excl1 = Polygon([(2, 2), (4, 2), (4, 4), (2, 4)])
+    excl2 = Polygon([(13, 1), (14, 1), (14, 2), (13, 2)])
+    result = MultiPolygonBoundaryComp._calc_resulting_polygons([main, incl1, excl1, excl2], [True, True, False, False])
+    assert len(result) > 0
+    assert abs(sum(p.area for p in result) - (main.area + incl1.area - excl1.area - excl2.area)) < 1e-10
 
-        result = MultiPolygonBoundaryComp._calc_resulting_polygons(polygons, incl_excls)
 
-        assert len(result) == 1
-        expected_area = main.area - excl1.area - excl2.area
-        assert abs(result[0].area - expected_area) < 1e-10
-
-    def test_tiny_polygons(self):
-        """Test handling of tiny polygons (area < 1e-3)"""
-        main = Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
-        tiny = Polygon([(0.1, 0.1), (0.11, 0.1), (0.11, 0.11), (0.1, 0.11)])
-        polygons = [main, tiny]
-        incl_excls = [True, True]
-
-        result = MultiPolygonBoundaryComp._calc_resulting_polygons(polygons, incl_excls)
-
-        assert len(result) == 1  # Tiny polygon should be filtered out
-        assert result[0].equals(main)
-
-    def test_empty_input(self):
-        """Test empty input handling"""
-        result = MultiPolygonBoundaryComp._calc_resulting_polygons([], [])
-        assert len(result) == 0
-
-    def test_complex_case(self):
-        """Test complex case with multiple inclusions/exclusions"""
-        # Create complex arrangement of polygons
-        main = Polygon([(0, 0), (10, 0), (10, 10), (0, 10)])
-        incl1 = Polygon([(12, 0), (15, 0), (15, 5), (12, 5)])
-        excl1 = Polygon([(2, 2), (4, 2), (4, 4), (2, 4)])
-        excl2 = Polygon([(13, 1), (14, 1), (14, 2), (13, 2)])
-
-        polygons = [main, incl1, excl1, excl2]
-        incl_excls = [True, True, False, False]
-
-        result = MultiPolygonBoundaryComp._calc_resulting_polygons(polygons, incl_excls)
-
-        assert len(result) > 0
-        total_area = sum(p.area for p in result)
-        expected_area = main.area + incl1.area - excl1.area - excl2.area
-        assert abs(total_area - expected_area) < 1e-10
-
-    def test_touching_polygons(self):
-        """Test handling of touching polygons"""
-        square1 = Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
-        square2 = Polygon([(1, 0), (2, 0), (2, 1), (1, 1)])  # Touches square1
-        polygons = [square1, square2]
-        incl_excls = [True, True]
-
-        result = MultiPolygonBoundaryComp._calc_resulting_polygons(polygons, incl_excls)
-
-        assert len(result) == 1  # Should merge into single polygon
-        assert result[0].area == square1.area + square2.area
-
-    def test_single_inclusion(self):
-        # Create a simple square inclusion zone
-        square = Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
-        boundary_polygons = [square]
-        incl_excls = [True]
-
-        result = MultiPolygonBoundaryComp._calc_resulting_polygons(
-            boundary_polygons, incl_excls
-        )
-
-        assert len(result) == 1
-        assert result[0].equals(square)
-
-    def test_multiple_inclusions_not_overlapping(self):
-        # Two separate squares
-        square1 = Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
-        square2 = Polygon([(2, 0), (3, 0), (3, 1), (2, 1)])
-        boundary_polygons = [square1, square2]
-        incl_excls = [True, True]
-
-        result = MultiPolygonBoundaryComp._calc_resulting_polygons(
-            boundary_polygons, incl_excls
-        )
-
-        assert len(result) == 2
-        assert result[0].equals(square1)
-        assert result[1].equals(square2)
-
-    def test_multiple_inclusions_overlapping(self):
-        # Two overlapping squares
-        square1 = Polygon([(0, 0), (2, 0), (2, 2), (0, 2)])
-        square2 = Polygon([(1, 1), (3, 1), (3, 3), (1, 3)])
-        boundary_polygons = [square1, square2]
-        incl_excls = [True, True]
-
-        result = MultiPolygonBoundaryComp._calc_resulting_polygons(
-            boundary_polygons, incl_excls
-        )
-
-        # Should merge into single polygon
-        assert len(result) == 1
-        expected_area = 7  # Total area minus overlap
-        assert abs(result[0].area - expected_area) < 1e-10
-
-    def test_exclusion_in_inclusion(self):
-        # Square with hole
-        outer = Polygon([(0, 0), (2, 0), (2, 2), (0, 2)])
-        inner = Polygon([(0.5, 0.5), (1.5, 0.5), (1.5, 1.5), (0.5, 1.5)])
-        boundary_polygons = [outer, inner]
-        incl_excls = [True, False]
-
-        result = MultiPolygonBoundaryComp._calc_resulting_polygons(
-            boundary_polygons, incl_excls
-        )
-
-        assert len(result) == 1
-        expected_area = outer.area - inner.area
-        assert abs(result[0].area - expected_area) < 1e-10
-
-    def test_multiple_exclusions(self):
-        # Square with two holes
-        outer = Polygon([(0, 0), (3, 0), (3, 3), (0, 3)])
-        hole1 = Polygon([(0.5, 0.5), (1.5, 0.5), (1.5, 1.5), (0.5, 1.5)])
-        hole2 = Polygon([(2, 2), (2.5, 2), (2.5, 2.5), (2, 2.5)])
-        boundary_polygons = [outer, hole1, hole2]
-        incl_excls = [True, False, False]
-
-        result = MultiPolygonBoundaryComp._calc_resulting_polygons(
-            boundary_polygons, incl_excls
-        )
-
-        assert len(result) == 1
-        expected_area = outer.area - hole1.area - hole2.area
-        assert abs(result[0].area - expected_area) < 1e-10
+def test_resulting_polygons_touching_polygons():
+    square1 = Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+    square2 = Polygon([(1, 0), (2, 0), (2, 1), (1, 1)])
+    result = MultiPolygonBoundaryComp._calc_resulting_polygons([square1, square2], [True, True])
+    assert len(result) == 1
+    assert result[0].area == square1.area + square2.area

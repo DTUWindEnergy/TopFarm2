@@ -51,7 +51,8 @@ def smart_start(XX, YY, ZZ, N_WT, min_space, radius=None, random_pct=0, plot=Fal
     XX, YY and ZZ can be 1D or 2D, but must have same size. If multiple turbine types
     ZZ must have the shape (n_types, shape_like_XX)
     """
-    assert 0 <= random_pct <= 100
+    if not (0 <= random_pct <= 100):
+        raise ValueError(f"random_pct must be between 0 and 100, got {random_pct}")
     ZZ_is_func = hasattr(ZZ, '__call__')
     if types:
         n_types = len(types)

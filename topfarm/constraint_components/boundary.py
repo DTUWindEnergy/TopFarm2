@@ -41,7 +41,8 @@ class XYBoundaryConstraint(Constraint):
             self.boundary = np.asarray(self.zones[0].boundary)
         elif boundary_type == 'turbine_specific':
             self.zones = boundary
-            assert 'turbines' in list(kwargs)
+            if 'turbines' not in kwargs:
+                raise ValueError("boundary_type='turbine_specific' requires a 'turbines' keyword argument")
             self.turbines = kwargs['turbines']
             self.boundary = np.asarray(self.zones[0].boundary)
         else:
@@ -66,9 +67,8 @@ class XYBoundaryConstraint(Constraint):
 
     @property
     def constraintComponent(self):
-        assert hasattr(
-            self, "boundary_comp"
-        ), "Boundary component not initialized, call setup first"
+        if not hasattr(self, "boundary_comp"):
+            raise RuntimeError("Boundary component not initialized, call setup first")
         return self.boundary_comp
 
     def set_design_var_limits(self, design_vars):
@@ -361,7 +361,8 @@ class PolygonBoundaryComp(BoundaryBaseComp):
             x1, y1 = A = vertices[:-1].T
             x2, y2 = B = vertices[1:].T
             double_area = np.sum((x1 - x2) * (y1 + y2))  # 2 x Area (+: counterclockwise
-            assert double_area != 0, "Area must be non-zero"
+            if double_area == 0:
+                raise ValueError("Boundary area must be non-zero")
             if (counter_clockwise and double_area < 0) or (not counter_clockwise and double_area > 0):  #
                 return get_edges(vertices[::-1], counter_clockwise)
             else:
@@ -1037,20 +1038,14 @@ class MultiCircleBoundaryComp(PolygonBoundaryComp):
             hasattr(g[0], "__iter__") and len(g[0]) == 2 for g in geometry
         )
 
-        assert all(
-            [
-                does_len_match,
-                centers_and_radii_given,
-                are_radii_scalar,
-                are_centers_all_2x_coords,
-            ]
-        ), (
-            "Invalid input for Circle: Ensure the number of geometries matches the number of wt_groups, "
-            "each geometry is a tuple of center and radius, and the center is a tuple of x and y "
-            "with the radius being a scalar. For instance, geometry = [((0, 0), 100), ...] and "
-            "wt_groups = [[0, 1], ...]; Here, the first geometry is a circle with center at (0, 0) "
-            "and radius 100, and turbines 0 and 1 are assigned for the circle constraint 0."
-        )
+        if not all([does_len_match, centers_and_radii_given, are_radii_scalar, are_centers_all_2x_coords]):
+            raise ValueError(
+                "Invalid input for Circle: Ensure the number of geometries matches the number of wt_groups, "
+                "each geometry is a tuple of center and radius, and the center is a tuple of x and y "
+                "with the radius being a scalar. For instance, geometry = [((0, 0), 100), ...] and "
+                "wt_groups = [[0, 1], ...]; Here, the first geometry is a circle with center at (0, 0) "
+                "and radius 100, and turbines 0 and 1 are assigned for the circle constraint 0."
+            )
 
     def plot(self, ax=None):
         ax = ax or plt.gca()
@@ -1059,9 +1054,8 @@ class MultiCircleBoundaryComp(PolygonBoundaryComp):
             ax.add_artist(circle)
 
     def distances(self, x, y):
-        assert (
-            x.shape == y.shape == self.masks[0].shape
-        ), f"{x.shape} != {y.shape} != {self.masks[0].shape}"
+        if x.shape != y.shape or x.shape != self.masks[0].shape:
+            raise ValueError(f"Shape mismatch: x={x.shape}, y={y.shape}, mask={self.masks[0].shape}")
         distances = np.zeros_like(x)
         for center, radius, mask in zip(self.center, self.radius, self.masks):
             distances += mask * (
@@ -1115,13 +1109,15 @@ class Boundary(object):
 
     def __validate(self):
         self.vertices = np.asarray(self.vertices)
-        assert self.vertices.ndim == 2, "Boundary must be a 2D array"
-        assert any(
-            [x for x in self.vertices.shape if x == 2]
-        ), "Boundary must have shape (n, 2) or (2, n)"
+        if self.vertices.ndim != 2:
+            raise ValueError("Boundary must be a 2D array")
+        if not any(x == 2 for x in self.vertices.shape):
+            raise ValueError("Boundary must have shape (n, 2) or (2, n)")
         self.vertices = self.vertices.reshape(-1, 2)
-        assert self.vertices.shape[0] > 2, "Boundary must have at least 3 vertices"
-        assert self.design_var_mask.ndim == 1, "design_var_mask must 1 dimensional"
+        if self.vertices.shape[0] <= 2:
+            raise ValueError("Boundary must have at least 3 vertices")
+        if self.design_var_mask.ndim != 1:
+            raise ValueError("design_var_mask must be 1 dimensional")
         self.design_var_mask = np.asarray(self.design_var_mask, dtype=bool)
 
 
@@ -1149,9 +1145,11 @@ class MultiConvexBoundaryComp(BoundaryBaseComp):
                 b.vertices = np.r_[b.vertices, b.vertices[:1]]
             self.turbine_vertice_prod += b.n_turbines * b.n_vertices
             total_n_active_turbines += b.n_turbines
-        assert (
-            total_n_active_turbines == n_wt
-        ), "Number of active turbines in boundaries must match number of total turbines; Check that masks sum up to n_wt i.e. np.concatenate(all_masks).sum() == n_wt."
+        if total_n_active_turbines != n_wt:
+            raise ValueError(
+                "Number of active turbines in boundaries must match number of total turbines; "
+                "Check that masks sum up to n_wt i.e. np.concatenate(all_masks).sum() == n_wt."
+            )
         self.calculate_gradients()
         self.zeros = np.zeros(self.turbine_vertice_prod)
 
@@ -1197,12 +1195,10 @@ class MultiConvexBoundaryComp(BoundaryBaseComp):
         final_dx = np.zeros([self.turbine_vertice_prod, self.n_wt])
         final_dy = np.zeros([self.turbine_vertice_prod, self.n_wt])
         for bi, boundary in enumerate(self.xy_boundaries):
-            assert (
-                boundary.design_var_mask is not None
-            ), "Design variable mask must be provided"
-            assert self.n_wt == len(
-                boundary.design_var_mask
-            ), "Design variable mask must must be the same length as the number of turbines"
+            if boundary.design_var_mask is None:
+                raise ValueError("Design variable mask must be provided")
+            if self.n_wt != len(boundary.design_var_mask):
+                raise ValueError("Design variable mask must be the same length as the number of turbines")
 
             unit_normals = boundary.normals
             n_vertices = boundary.n_vertices
@@ -1454,9 +1450,8 @@ class MultiWFBoundaryConstraint(XYBoundaryConstraint):
         self.const_id = f"wf_boundary_comp_{id(self)}"
         self.units = units
         self.wt_groups = wt_groups
-        assert len(geometry) == len(
-            wt_groups
-        ), "Number of geometries and groups must match"
+        if len(geometry) != len(wt_groups):
+            raise ValueError("Number of geometries and groups must match")
 
     BD2COMP = {
         BoundaryType.CIRCLE: MultiCircleBoundaryComp,
@@ -1465,10 +1460,10 @@ class MultiWFBoundaryConstraint(XYBoundaryConstraint):
     }
 
     def get_comp(self, n_wt):
-        assert n_wt > 0, "Number of turbines must be greater than 0"
-        assert n_wt >= len(
-            self.wt_groups
-        ), "Number of turbines must be greater than or equal to the number of groups"
+        if n_wt <= 0:
+            raise ValueError("Number of turbines must be greater than 0")
+        if n_wt < len(self.wt_groups):
+            raise ValueError("Number of turbines must be greater than or equal to the number of groups")
 
         if hasattr(self, "boundary_comp"):
             return self.boundary_comp

@@ -101,7 +101,7 @@ def tests_smart_start_random():
     XX, YY, val = egg_tray_map()
     np.random.seed(0)
 
-    with pytest.raises(expected_exception=AssertionError):
+    with pytest.raises(expected_exception=ValueError):
         xs, ys = smart_start(XX, YY, val, N_WT, min_space, random_pct=101, seed=0)
     xs, ys = smart_start(XX, YY, val, N_WT, min_space, random_pct=1, seed=0, plot=False)
 

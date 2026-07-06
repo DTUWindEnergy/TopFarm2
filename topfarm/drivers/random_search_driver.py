@@ -105,7 +105,8 @@ class RandomSearchDriver(Driver):
             x0[i:j] = desvar_vals[name]
         max_iter = self.options['max_iter'] or 1e20
         max_time = self.options['max_time'] or 1e20
-        assert max_iter < 1e20 or max_time < 1e20, "max_iter or max_time must be set"
+        if not (max_iter < 1e20 or max_time < 1e20):
+            raise ValueError("max_iter or max_time must be set")
 
         disp = self.options['disp']
 

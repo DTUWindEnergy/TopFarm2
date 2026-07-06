@@ -10,7 +10,7 @@ from topfarm.constraint_components.boundary import PolygonBoundaryComp
     [(0, 0), (0, 2), (2, 2), (2, 0), (1, 1)],  # Clockwise
     [(0, 0), (0, 2), (2, 2), (2, 0), (1, 1), (0, 0)]  # StartEqEndClockwise
 ])
-def testPolygon(boundary):
+def test_polygon(boundary):
     pbc = PolygonBoundaryComp(1, boundary)
     np.testing.assert_array_equal(pbc.xy_boundary, [[0, 0],
                                                     [1, 1],
@@ -66,9 +66,9 @@ def test_calc_distance_point_horizontal():
                              np.sqrt(.1**2 + .2**2), np.sqrt(2 * .2**2), np.sqrt(.2**2 / 2)], 1e-6)
 
 
-def testPolygon_Line():
+def test_polygon_line():
     boundary = [(0, 0), (0, 2)]
-    with pytest.raises(AssertionError, match="Area must be non-zero"):
+    with pytest.raises(ValueError, match="Boundary area must be non-zero"):
         PolygonBoundaryComp(1, boundary)
 
 

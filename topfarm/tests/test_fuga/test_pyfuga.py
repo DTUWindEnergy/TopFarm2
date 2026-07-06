@@ -7,7 +7,6 @@ import pytest
 import numpy as np
 import topfarm
 from topfarm.cost_models import fuga
-from topfarm.tests import uta
 from topfarm.plotting import NoPlot
 from topfarm.cost_models.cost_model_wrappers import AEPCostModelComponent
 from topfarm.easy_drivers import EasyScipyOptimizeDriver
@@ -58,7 +57,7 @@ def _test_parallel(i):
         time.sleep(1)
 
 
-def testCheckVersion(get_fuga):
+def test_check_version(get_fuga):
     check_lib_exists()
     from py_colonel.py_colonel_lib import fugalib_path, PascalDLL
     from topfarm.cost_models.fuga.py_fuga import fuga_path
@@ -69,7 +68,7 @@ def testCheckVersion(get_fuga):
     pyFuga.cleanup()
 
 
-def testSetup(get_fuga):
+def test_setup(get_fuga):
     pyFuga = get_fuga()
     assert pyFuga.get_no_turbines() == 2
     assert "Loading" in pyFuga.log
@@ -80,14 +79,14 @@ def testSetup(get_fuga):
     pyFuga.cleanup()
 
 
-def testAEP_one_tb(get_fuga):
+def test_aep_one_tb(get_fuga):
     pyFuga = get_fuga([0], [0])
     np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0], [0]]).T), [
                                          8.2896689155874324, 8.2896689155874324, 0.472841, 1.])
     pyFuga.cleanup()
 
 
-def testAEP(pyFuga):
+def test_aep(pyFuga):
     np.testing.assert_array_almost_equal(pyFuga.get_aep(np.array([[0, 1000], [0, 0]]).T), [
                                          2 * 8.2896689155874324, 2 * 8.2896689155874324, 0.472841, 1.])
     np.testing.assert_array_almost_equal(pyFuga.get_aep_gradients(np.array([[0, 1000], [0, 0]]).T), [[0, 0],
@@ -107,7 +106,7 @@ def testAEP(pyFuga):
     pyFuga.cleanup()
 
 
-def testLargeOffset(pyFuga):
+def test_large_offset(pyFuga):
     o = 1.e16
     np.testing.assert_array_almost_equal(pyFuga.get_aep(
         np.array([[0 + o, 0 + o], [0 + o, 200 + o]]).T), [14.472994, 16.579338, 0.412768, 0.872954])
@@ -125,7 +124,7 @@ def get_tf(init_pos, pyFuga, boundary, boundary_type='convex_hull'):
         driver=EasyScipyOptimizeDriver(disp=False))
 
 
-def testAEP_topfarm(get_fuga):
+def test_aep_topfarm(get_fuga):
     pyFuga = get_fuga()
     init_pos = np.array([[0, 0], [1000, 0]])
     tf = get_tf(init_pos, pyFuga, init_pos, 'square')
@@ -141,7 +140,7 @@ def test_pyfuga_cmd():
     assert pyFuga.log.strip().split("\n")[-1] == 'ColonelInit'
 
 
-def testAEP_topfarm_optimization_4tb(get_fuga):
+def test_aep_topfarm_optimization_4tb(get_fuga):
     D = 80.0
     B = 3 * D + 10
     init_pos = np.array([(0, 3 * D), (0, D), (0, -D), (0, -3 * D)])
@@ -157,7 +156,7 @@ def testAEP_topfarm_optimization_4tb(get_fuga):
     # plot_comp= PlotComp()
     tf = get_tf(init_pos, pyFuga, boundary)
     cost, _, rec = tf.optimize()
-    uta.assertAlmostEqual(-cost, AEP_pr_tb * 4, delta=.2)
+    assert -cost == pytest.approx(AEP_pr_tb * 4, abs=.2)
 
     tf.plot_comp.show()
 
@@ -170,7 +169,7 @@ def testAEP_topfarm_optimization_4tb(get_fuga):
 @pytest.mark.parametrize('scale', [(.001),
                                    (1),
                                    (1000)])
-def testAEP_topfarm_optimization_2tb_scale(get_fuga, scale):
+def test_aep_topfarm_optimization_2tb_scale(get_fuga, scale):
     D = 80.0
     B = 2 * D + 10
     init_pos = np.array([(-10, 1 * D), (10, - D)])
@@ -198,7 +197,7 @@ def testAEP_topfarm_optimization_2tb_scale(get_fuga, scale):
         expected_cost=AEP_pr_tb * 2 * scale)
     cost, _, rec = tf.optimize()
     tf.plot_comp.show()
-    uta.assertAlmostEqual(-cost / scale, AEP_pr_tb * 2, delta=.02)
+    assert -cost / scale == pytest.approx(AEP_pr_tb * 2, abs=.02)
 
 
 #     # Plot wake map

@@ -12,7 +12,7 @@ from topfarm.tests import npt
 from topfarm.constants import CONSTRAINT_PENALTY
 
 
-def testCircle():
+def test_circle():
     b = CircleBoundaryComp(3, [1, 2], 3)
     np.testing.assert_array_almost_equal(((b.xy_boundary - [1, 2])**2).sum(1), 3**2)
 

@@ -8,37 +8,23 @@ from topfarm._topfarm import TopFarmProblem
 from topfarm.cost_models.dummy import DummyCost
 
 
-def testSquare():
-    boundary = [(0, 0), (1, 3)]
-    b = ConvexBoundaryComp(0, boundary, 'square')
-    np.testing.assert_array_equal(b.xy_boundary, [[-1, 0],
-                                                  [2, 0],
-                                                  [2, 3],
-                                                  [-1, 3],
-                                                  [-1, 0]])
+@pytest.mark.parametrize('boundary_type,boundary,expected', [
+    ('square',
+     [(0, 0), (1, 3)],
+     [[-1, 0], [2, 0], [2, 3], [-1, 3], [-1, 0]]),
+    ('rectangle',
+     [(0, 0), (1, 3)],
+     [[0, 0], [1, 0], [1, 3], [0, 3], [0, 0]]),
+    ('convex_hull',
+     [(0, 0), (1, 1), (2, 0), (2, 2), (0, 2)],
+     [[0, 0], [2, 0], [2, 2], [0, 2], [0, 0]]),
+])
+def test_boundary_shape(boundary_type, boundary, expected):
+    b = ConvexBoundaryComp(0, boundary, boundary_type)
+    np.testing.assert_array_equal(b.xy_boundary, expected)
 
 
-def testRectangle():
-    boundary = [(0, 0), (1, 3)]
-    b = ConvexBoundaryComp(0, boundary, 'rectangle')
-    np.testing.assert_array_equal(b.xy_boundary, [[0, 0],
-                                                  [1, 0],
-                                                  [1, 3],
-                                                  [0, 3],
-                                                  [0, 0]])
-
-
-def testConvexHull():
-    boundary = [(0, 0), (1, 1), (2, 0), (2, 2), (0, 2)]
-    b = ConvexBoundaryComp(0, boundary, 'convex_hull')
-    np.testing.assert_array_equal(b.xy_boundary, [[0, 0],
-                                                  [2, 0],
-                                                  [2, 2],
-                                                  [0, 2],
-                                                  [0, 0]])
-
-
-def testNotImplemented():
+def test_not_implemented():
     boundary = [(0, 0), (1, 1), (2, 0), (2, 2), (0, 2)]
     with pytest.raises(NotImplementedError, match="Boundary type 'Something' is not implemented"):
         ConvexBoundaryComp(0, boundary, boundary_type='Something')

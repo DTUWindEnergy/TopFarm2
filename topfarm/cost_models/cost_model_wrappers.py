@@ -67,7 +67,8 @@ class CostModelComponent(ExplicitComponent):
             output_vals = [kwargs['output_val']]
             kwargs.pop('output_val')
         super().__init__(**kwargs)
-        assert isinstance(n_wt, int), n_wt
+        if not isinstance(n_wt, int):
+            raise TypeError(f"n_wt must be an integer, got {type(n_wt).__name__}: {n_wt}")
         self.input_keys = list(input_keys)
         self.input_keys_only = list([(i, i[0])[isinstance(i, tuple)] for i in self.input_keys])
         self.additional_input = additional_input

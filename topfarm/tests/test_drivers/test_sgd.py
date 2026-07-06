@@ -1,4 +1,5 @@
 import time
+import pytest
 import numpy as np
 from py_wake.wind_turbines import WindTurbine
 from topfarm import TopFarmProblem
@@ -93,7 +94,7 @@ def test_extreme_sgd_threshold_value():
     tic = time.time()
     cost, state, recorder = tf.optimize()
     toc = time.time()
-    assert recorder["sgd_constraint"][-1] < 1e-6
+    assert recorder["sgd_constraint"][-1] == pytest.approx(0, abs=1e-6)
 
     print(
         "Optimization with SGD took: {:.0f}s".format(toc - tic),

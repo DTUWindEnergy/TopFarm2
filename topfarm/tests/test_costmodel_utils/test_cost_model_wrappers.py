@@ -53,13 +53,13 @@ def test_CostModelComponent():
     np.testing.assert_array_almost_equal(tf.turbine_positions[:, :2], optimal_with_constraints, 5)
 
 
-def testCostModelComponent_no_gradients():
+def test_cost_model_component_no_gradients():
     tf = get_tf(CostModelComponent(['x', 'y'], 4, cost, None))
     tf.optimize()
     np.testing.assert_array_almost_equal(tf.turbine_positions[:, :2], optimal_with_constraints, 4)
 
 
-def testAEPCostModelComponent():
+def test_aep_cost_model_component():
     tf = get_tf(AEPCostModelComponent(['x', 'y'], 4, aep_cost, aep_gradients))
     tf.optimize()
     np.testing.assert_array_almost_equal(tf.turbine_positions[:, :2], optimal_with_constraints, 5)
@@ -75,7 +75,7 @@ def test_maxiter_CostModelComponent():
     npt.assert_array_equal(recorder['AEP'][tf.cost_comp.n_func_eval], recorder['AEP'][tf.cost_comp.n_func_eval:])
 
 
-def testCostModelComponentDiffShapeInput():
+def test_cost_model_component_diff_shape_input():
     def aep_cost(x, y, h):
         opt_x, opt_y = optimal.T
         return -np.sum((x - opt_x)**2 + (y - opt_y)**2) + h, {'add_out': sum(x)}
@@ -91,7 +91,7 @@ def testCostModelComponentDiffShapeInput():
     npt.assert_almost_equal(cost10, cost0 - 10)
 
 
-def testCostModelComponentAdditionalOutput():
+def test_cost_model_component_additional_output():
     def aep_cost(x, y):
         opt_x, opt_y = optimal.T
         return -np.sum((x - opt_x)**2 + (y - opt_y)**2), {'add_out': sum(x)}
@@ -113,7 +113,7 @@ def test_AEPMaxLoadCostModelComponent_as_penalty():
         plot_comp=None)
 
     # check normal result that satisfies the penalty
-    assert tf.evaluate({'x': np.pi / 2})[0] == 1
+    assert tf.evaluate({'x': np.pi / 2})[0] == pytest.approx(1)
     # check penalized result if capacity constraint is not satisfied
     for x, y in [(4, 0), (0, 4)]:
         assert tf.evaluate({'x': x, 'y': y})[0] == CONSTRAINT_PENALTY + 1
@@ -132,7 +132,7 @@ def test_AEPMaxLoadCostModelComponent_as_penalty_multi_wt():
         plot_comp=None)
 
     # check normal result that satisfies the penalty
-    assert tf.evaluate({'x': [np.pi / 2, -np.pi / 2]})[0] == 2
+    assert tf.evaluate({'x': [np.pi / 2, -np.pi / 2]})[0] == pytest.approx(2)
     # check penalized result if capacity constraint is not satisfied
     for x, y in [([4, 0], [0, 0]), ([0, 0], [4, 0]), ([4, 4], [0, 0])]:
         assert tf.evaluate({'x': x, 'y': y})[0] == CONSTRAINT_PENALTY + 1

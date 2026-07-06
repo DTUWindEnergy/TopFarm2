@@ -574,8 +574,8 @@ class TopFarmProblem(Problem):
 
     def get_DOE_list(self):
         self.setup()
-        assert isinstance(
-            self.driver, DOEDriver), 'get_DOE_list only applies to DOEDrivers, and the current driver is: %s' % type(self.driver)
+        if not isinstance(self.driver, DOEDriver):
+            raise TypeError('get_DOE_list only applies to DOEDrivers, and the current driver is: %s' % type(self.driver))
         case_gen = self.driver.options['generator']
         return [c for c in case_gen(self.model.get_design_vars(recurse=True), self.model)]
 
@@ -587,7 +587,8 @@ class TopFarmProblem(Problem):
         return np.array([self[k] for k in [topfarm.x_key, topfarm.y_key]]).T
 
     def smart_start(self, XX, YY, ZZ=None, min_space=None, radius=None, random_pct=0, plot=False, seed=None, types=None, show_progress=True):
-        assert XX.shape == YY.shape
+        if XX.shape != YY.shape:
+            raise ValueError(f"XX and YY must have the same shape, got {XX.shape} and {YY.shape}")
         ZZ_is_func = hasattr(ZZ, '__call__')
         spacing_comp_lst = [c for c in self.model.constraint_components if isinstance(c, SpacingComp)]
         if min_space is not None:

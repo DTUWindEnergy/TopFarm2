@@ -2,7 +2,6 @@ from topfarm.drivers.genetic_algorithm_driver import SimpleGADriver
 from topfarm.cost_models.dummy import DummyCost
 from topfarm import TopFarmProblem
 from topfarm.plotting import NoPlot
-import unittest
 from topfarm.constraint_components.boundary import (
     MultiConvexBoundaryComp,
     Boundary,
@@ -195,7 +194,7 @@ def test_boundary_obj_fails_gracefully_with_less_than_3_vertices():
     v2 = np.random.randn(n_vertices, 2)
     m1 = np.zeros(n_wt, dtype=bool)
     with pytest.raises(
-        AssertionError,
+        ValueError,
         match="Boundary must have at least 3 vertices",
     ):
         Boundary(v2, m1)
@@ -212,7 +211,7 @@ def test_initialization():
 
 def test_initialization_invalid_vertices():
     mask = np.array([True, False, True, True])
-    with pytest.raises(AssertionError, match="Boundary must be a 2D array"):
+    with pytest.raises(ValueError, match="Boundary must be a 2D array"):
         Boundary(np.array([0, 1, 2]), mask)
 
     for vert in [
@@ -224,7 +223,7 @@ def test_initialization_invalid_vertices():
         np.random.randn(3, 5),
     ]:
         msg = "Boundary must have shape \\(n, 2\\) or \\(2, n\\)"
-        with pytest.raises(AssertionError, match=msg):
+        with pytest.raises(ValueError, match=msg):
             Boundary(vert, mask)
 
 
@@ -292,345 +291,273 @@ def test_plot(setup):
     plt.close(fig)
 
 
-class TestMultiCircleBoundaryConstraint(unittest.TestCase):
-    def setUp(self):
-        self.centers = [(0, 0), (1, 1)]
-        self.radii = [1.0, 2.0]
-        self.masks = [np.array([1, 0]), np.array([0, 1])]
-        self.constraint = MultiWFBoundaryConstraint(
-            geometry=[(c, r) for c, r in zip(self.centers, self.radii)],
-            wt_groups=[np.arange(1), np.arange(1, 2)],
-            boundtype=BoundaryType.CIRCLE,
+@pytest.fixture
+def multi_circle_constraint():
+    centers = [(0, 0), (1, 1)]
+    radii = [1.0, 2.0]
+    masks = [np.array([1, 0]), np.array([0, 1])]
+    constraint = MultiWFBoundaryConstraint(
+        geometry=[(c, r) for c, r in zip(centers, radii)],
+        wt_groups=[np.arange(1), np.arange(1, 2)],
+        boundtype=BoundaryType.CIRCLE,
+    )
+    return constraint, centers, radii, masks
+
+
+def test_multi_circle_boundary_constraint_initialization(multi_circle_constraint):
+    constraint, centers, radii, masks = multi_circle_constraint
+    comp = constraint.get_comp(2)
+    np.testing.assert_array_equal(comp.center, np.array(centers))
+    np.testing.assert_array_equal(comp.radius, np.array(radii))
+    np.testing.assert_array_equal(comp.masks, np.array(masks))
+
+
+def test_multi_circle_boundary_constraint_get_comp(multi_circle_constraint):
+    constraint, *_ = multi_circle_constraint
+    assert isinstance(constraint.get_comp(2), MultiCircleBoundaryComp)
+
+
+def test_multi_circle_boundary_constraint_gradients(multi_circle_constraint):
+    constraint, *_ = multi_circle_constraint
+    optimal = np.arange(4).reshape(2, 2)
+    desvar = dict(zip("xy", optimal.T + 1.5))
+    tf = TopFarmProblem(
+        desvar,
+        DummyCost(optimal, "xy"),
+        constraints=[constraint],
+        plot_comp=NoPlot(),
+        driver=SimpleGADriver(),
+    )
+    tf.check_gradients(True)
+
+
+@pytest.fixture
+def multi_circle_comp():
+    centers = [(0, 0), (1, 1)]
+    radii = [1.0, 2.0]
+    masks = [np.array([1, 0]), np.array([0, 1])]
+    n_wt = 2
+    comp = MultiCircleBoundaryComp(n_wt, [(c, r) for c, r in zip(centers, radii)], [[0], [1]])
+    return comp, centers, radii, masks, n_wt
+
+
+def test_multi_circle_boundary_comp_initialization(multi_circle_comp):
+    comp, centers, radii, masks, n_wt = multi_circle_comp
+    assert comp.n_wt == n_wt
+    assert comp.center == centers
+    assert comp.radius == radii
+
+
+def test_multi_circle_boundary_comp_distances(multi_circle_comp):
+    comp, centers, radii, masks, _ = multi_circle_comp
+    x = np.array([0.5, 1.5])
+    y = np.array([0.5, 1.5])
+    distances = comp.distances(x, y)
+    expected_distances = np.zeros_like(x)
+    for center, radius, mask in zip(centers, radii, masks):
+        expected_distances += mask * (
+            radius - np.sqrt((x - center[0]) ** 2 + (y - center[1]) ** 2)
         )
-
-    def test_initialization(self):
-        n_wt = 2
-        comp = self.constraint.get_comp(n_wt)
-        np.testing.assert_array_equal(comp.center, np.array(self.centers))
-        np.testing.assert_array_equal(comp.radius, np.array(self.radii))
-        np.testing.assert_array_equal(comp.masks, np.array(self.masks))
-
-    def test_get_comp(self):
-        n_wt = 2
-        comp = self.constraint.get_comp(n_wt)
-        self.assertIsInstance(comp, MultiCircleBoundaryComp)
-
-    def test_gradients(self):
-        optimal = np.arange(4).reshape(2, 2)
-        desvar = dict(zip("xy", optimal.T + 1.5))
-        plot_comp = NoPlot()
-        tf = TopFarmProblem(
-            desvar,
-            DummyCost(optimal, "xy"),
-            constraints=[self.constraint],
-            plot_comp=plot_comp,
-            driver=SimpleGADriver(),
-        )
-        tf.check_gradients(True)
+    np.testing.assert_array_almost_equal(distances, expected_distances)
 
 
-class TestMultiCircleBoundaryComp(unittest.TestCase):
-    def setUp(self):
-        self.centers = [(0, 0), (1, 1)]
-        self.radii = [1.0, 2.0]
-        self.masks = [np.array([1, 0]), np.array([0, 1])]
-        self.n_wt = 2
-        self.comp = MultiCircleBoundaryComp(
-            self.n_wt, [(c, r) for c, r in zip(self.centers, self.radii)], [[0], [1]]
-        )
-
-    def test_initialization(self):
-        self.assertEqual(self.comp.n_wt, self.n_wt)
-        self.assertEqual(self.comp.center, self.centers)
-        self.assertEqual(self.comp.radius, self.radii)
-
-    def test_distances(self):
-        x = np.array([0.5, 1.5])
-        y = np.array([0.5, 1.5])
-        distances = self.comp.distances(x, y)
-        expected_distances = np.zeros_like(x)
-        for center, radius, mask in zip(self.centers, self.radii, self.masks):
-            expected_distances += mask * (
-                radius - np.sqrt((x - center[0]) ** 2 + (y - center[1]) ** 2)
-            )
-        np.testing.assert_array_almost_equal(distances, expected_distances)
+@pytest.fixture
+def sample_wf_polygon():
+    sample_boundary = np.array([[0, 0], [1, 0], [1, 1], [0, 1]])
+    return {
+        'boundary': sample_boundary,
+        'boundaries': [sample_boundary, sample_boundary + 2],
+        'turbine_groups': [np.arange(2), np.arange(2, 4)],
+    }
 
 
-class TestMultiWFPolygonBoundaryComp(unittest.TestCase):
+def test_single_group_equivalence():
+    boundary_coords = np.array(
+        [[0.0, 0.0], [1.0, 0.0], [0.5, 1.0], [0.0, 0.0]]  # Close the polygon
+    )
+    x = np.array([0.25, 0.75, 0.5, -0.2])
+    y = np.array([0.25, 0.25, 1.2, 0.5])
+    n_wt = len(x)
 
-    def test_single_group_equivalence(self):
+    single = PolygonBoundaryComp(n_wt, boundary_coords)
+    d0 = single.distances(x, y)
+    dx0, dy0 = single.gradients(x, y)
 
-        boundary_coords = np.array(
-            [[0.0, 0.0], [1.0, 0.0], [0.5, 1.0], [0.0, 0.0]]  # Close the polygon
-        )
-        x = np.array([0.25, 0.75, 0.5, -0.2])
-        y = np.array([0.25, 0.25, 1.2, 0.5])
-        n_wt = len(x)
+    multi = MultiWFPolygonBoundaryComp(
+        n_wt,
+        [boundary_coords],
+        [np.arange(n_wt)],
+    )
+    d1 = multi.distances(x, y)
+    dx1, dy1 = multi.gradients(x, y)
 
-        single = PolygonBoundaryComp(n_wt, boundary_coords)
-        d0 = single.distances(x, y)
-        dx0, dy0 = single.gradients(x, y)
+    np.testing.assert_array_almost_equal(
+        d0, d1, decimal=6,
+        err_msg="Distances don't match between single and multi boundary",
+    )
+    np.testing.assert_array_almost_equal(
+        dx0, dx1, decimal=6,
+        err_msg="X gradients don't match between single and multi boundary",
+    )
+    np.testing.assert_array_almost_equal(
+        dy0, dy1, decimal=6,
+        err_msg="Y gradients don't match between single and multi boundary",
+    )
 
-        multi = MultiWFPolygonBoundaryComp(
-            n_wt,
-            [boundary_coords],
-            [np.arange(n_wt)],
-        )
-        d1 = multi.distances(x, y)
-        dx1, dy1 = multi.gradients(x, y)
 
-        np.testing.assert_array_almost_equal(
-            d0,
-            d1,
-            decimal=6,
-            err_msg="Distances don't match between single and multi boundary",
-        )
-        np.testing.assert_array_almost_equal(
-            dx0,
-            dx1,
-            decimal=6,
-            err_msg="X gradients don't match between single and multi boundary",
-        )
-        np.testing.assert_array_almost_equal(
-            dy0,
-            dy1,
-            decimal=6,
-            err_msg="Y gradients don't match between single and multi boundary",
-        )
+def test_two_group_equivalence():
+    boundary_coords = [
+        np.random.rand(4, 2),
+        np.random.rand(4, 2),
+    ]
+    x = np.random.rand(8)
+    y = np.random.rand(8)
+    n_wt = len(x)
+    hn_wt = n_wt // 2
 
-    def test_two_group_equivalence(self):
-        boundary_coords = [
-            np.random.rand(4, 2),
-            np.random.rand(4, 2),
-        ]
-        x = np.random.rand(8)
-        y = np.random.rand(8)
-        n_wt = len(x)
-        hn_wt = n_wt // 2
+    single_1b = PolygonBoundaryComp(hn_wt, boundary_coords[0])
+    d0_1b = single_1b.distances(x[:hn_wt], y[:hn_wt])
+    dx0_1b, dy0_1b = single_1b.gradients(x[:hn_wt], y[:hn_wt])
+    single_2b = PolygonBoundaryComp(hn_wt, boundary_coords[1])
+    d0_2b = single_2b.distances(x[hn_wt:], y[hn_wt:])
+    dx0_2b, dy0_2b = single_2b.gradients(x[hn_wt:], y[hn_wt:])
 
-        single_1b = PolygonBoundaryComp(hn_wt, boundary_coords[0])
-        d0_1b = single_1b.distances(x[:hn_wt], y[:hn_wt])
-        dx0_1b, dy0_1b = single_1b.gradients(x[:hn_wt], y[:hn_wt])
-        single_2b = PolygonBoundaryComp(hn_wt, boundary_coords[1])
-        d0_2b = single_2b.distances(x[hn_wt:], y[hn_wt:])
-        dx0_2b, dy0_2b = single_2b.gradients(x[hn_wt:], y[hn_wt:])
+    multi = MultiWFPolygonBoundaryComp(
+        n_wt,
+        boundary_coords,
+        [np.arange(hn_wt), np.arange(hn_wt, n_wt)],
+    )
+    d1 = multi.distances(x, y)
+    dx1, dy1 = multi.gradients(x, y)
 
-        multi = MultiWFPolygonBoundaryComp(
-            n_wt,
-            boundary_coords,
-            [np.arange(hn_wt), np.arange(hn_wt, n_wt)],
-        )
-        d1 = multi.distances(x, y)
-        dx1, dy1 = multi.gradients(x, y)
+    np.testing.assert_array_almost_equal(
+        d0_1b, d1[:hn_wt], decimal=6,
+        err_msg="Distances don't match between single and multi boundary",
+    )
+    np.testing.assert_array_almost_equal(
+        d0_2b, d1[hn_wt:], decimal=6,
+        err_msg="Distances don't match between single and multi boundary",
+    )
+    np.testing.assert_array_almost_equal(
+        dx0_1b, dx1[:hn_wt, :hn_wt], decimal=6,
+        err_msg="X gradients don't match between single and multi boundary",
+    )
+    np.testing.assert_array_almost_equal(
+        dx0_2b, dx1[hn_wt:, hn_wt:], decimal=6,
+        err_msg="X gradients don't match between single and multi boundary",
+    )
+    np.testing.assert_array_almost_equal(
+        dy0_1b, dy1[:hn_wt, :hn_wt], decimal=6,
+        err_msg="Y gradients don't match between single and multi boundary",
+    )
+    np.testing.assert_array_almost_equal(
+        dy0_2b, dy1[hn_wt:, hn_wt:], decimal=6,
+        err_msg="Y gradients don't match between single and multi boundary",
+    )
 
-        np.testing.assert_array_almost_equal(
-            d0_1b,
-            d1[:hn_wt],
-            decimal=6,
-            err_msg="Distances don't match between single and multi boundary",
-        )
-        np.testing.assert_array_almost_equal(
-            d0_2b,
-            d1[hn_wt:],
-            decimal=6,
-            err_msg="Distances don't match between single and multi boundary",
-        )
 
-        np.testing.assert_array_almost_equal(
-            dx0_1b,
-            dx1[:hn_wt, :hn_wt],
-            decimal=6,
-            err_msg="X gradients don't match between single and multi boundary",
-        )
-        np.testing.assert_array_almost_equal(
-            dx0_2b,
-            dx1[hn_wt:, hn_wt:],
-            decimal=6,
-            err_msg="X gradients don't match between single and multi boundary",
-        )
+def test_group_boundary_order_impact_on_result():
+    boundary_coords = [
+        np.random.rand(4, 2),
+        np.random.rand(4, 2),
+    ]
+    x = np.random.rand(8)
+    y = np.random.rand(8)
+    n_wt = len(x)
+    hn_wt = n_wt // 2
 
-        np.testing.assert_array_almost_equal(
-            dy0_1b,
-            dy1[:hn_wt, :hn_wt],
-            decimal=6,
-            err_msg="Y gradients don't match between single and multi boundary",
-        )
-        np.testing.assert_array_almost_equal(
-            dy0_2b,
-            dy1[hn_wt:, hn_wt:],
-            decimal=6,
-            err_msg="Y gradients don't match between single and multi boundary",
-        )
+    multi = MultiWFPolygonBoundaryComp(
+        n_wt,
+        boundary_coords,
+        [np.arange(hn_wt), np.arange(hn_wt, n_wt)],
+    )
+    d1 = multi.distances(x, y)
 
-    def test_group_boundary_order_impact_on_result(self):
-        boundary_coords = [
-            np.random.rand(4, 2),
-            np.random.rand(4, 2),
-        ]
-        x = np.random.rand(8)
-        y = np.random.rand(8)
-        n_wt = len(x)
-        hn_wt = n_wt // 2
+    multi = MultiWFPolygonBoundaryComp(
+        n_wt,
+        reversed(boundary_coords),
+        [np.arange(hn_wt, n_wt), np.arange(hn_wt)],
+    )
+    d2 = multi.distances(x, y)
+    np.testing.assert_array_almost_equal(
+        d1, d2, decimal=6,
+        err_msg="Distances don't match between different group order",
+    )
 
-        multi = MultiWFPolygonBoundaryComp(
-            n_wt,
-            boundary_coords,
-            [np.arange(hn_wt), np.arange(hn_wt, n_wt)],
-        )
-        d1 = multi.distances(x, y)
+    multi = MultiWFPolygonBoundaryComp(
+        n_wt,
+        reversed(boundary_coords),
+        [np.arange(hn_wt), np.arange(hn_wt, n_wt)],
+    )
+    d3 = multi.distances(x, y)
 
-        multi = MultiWFPolygonBoundaryComp(
-            n_wt,
-            reversed(boundary_coords),
-            [np.arange(hn_wt, n_wt), np.arange(hn_wt)],
-        )
-        d2 = multi.distances(x, y)
-        np.testing.assert_array_almost_equal(
-            d1,
-            d2,
-            decimal=6,
-            err_msg="Distances don't match between different group order",
-        )
+    assert not np.allclose(d1, d3)
+    assert not np.allclose(d2, d3)
 
-        multi = MultiWFPolygonBoundaryComp(
-            n_wt,
-            reversed(boundary_coords),
-            [np.arange(hn_wt), np.arange(hn_wt, n_wt)],
-        )
-        d3 = multi.distances(x, y)
 
-        assert not np.allclose(d1, d3)
-        assert not np.allclose(d2, d3)
+def test_validate_boundary_coordinates(sample_wf_polygon):
+    invalid_boundaries = {1: 123}
+    with pytest.raises(
+        TypeError,
+        match="Boundary coordinates must be a numpy array or a list of lists",
+    ):
+        MultiWFPolygonBoundaryComp(2, invalid_boundaries, sample_wf_polygon['turbine_groups'])
 
-    def setUp(self):
-        self.sample_boundary = np.array([[0, 0], [1, 0], [1, 1], [0, 1]])
-        self.sample_boundaries = [
-            self.sample_boundary,
-            self.sample_boundary + 2,
-        ]
-        self.sample_turbine_groups = [
-            np.arange(2),
-            np.arange(2, 4),
-        ]
 
-    def test_validate_boundary_coordinates(self):
-        # Test invalid type
-        invalid_boundaries = {1: 123}  # Not array-like
-        with pytest.raises(
-            TypeError,
-            match="Boundary coordinates must be a numpy array or a list of lists",
-        ):
-            MultiWFPolygonBoundaryComp(
-                2, invalid_boundaries, self.sample_turbine_groups
-            )
+def test_single_group_distance_calculation(sample_wf_polygon):
+    comp = MultiWFPolygonBoundaryComp(2, [sample_wf_polygon['boundary']], [[0, 1]])
+    x_in, y_in = np.array([0.5, 0.5]), np.array([0.5, 0.5])
+    assert np.all(comp.distances(x_in, y_in) > 0)
+    x_out, y_out = np.array([-1.0, -1.0]), np.array([-1.0, -1.0])
+    assert np.all(comp.distances(x_out, y_out) < 0)
 
-    def test_single_group_distance_calculation(self):
-        comp = MultiWFPolygonBoundaryComp(
-            2, [self.sample_boundary], [[0, 1]]
-        )
-        # Test points inside boundary
-        x = np.array([0.5, 0.5])
-        y = np.array([0.5, 0.5])
-        distances = comp.distances(x, y)
-        assert np.all(distances > 0)  # Points inside should have positive distance
 
-        # Test points outside boundary
-        x = np.array([-1.0, -1.0])
-        y = np.array([-1.0, -1.0])
-        distances = comp.distances(x, y)
-        assert np.all(distances < 0)  # Points outside should have negative distance
+def test_multiple_group_distance_calculation(sample_wf_polygon):
+    comp = MultiWFPolygonBoundaryComp(4, sample_wf_polygon['boundaries'], sample_wf_polygon['turbine_groups'])
+    x = np.array([0.5, 0.5, 2.5, 2.5])
+    y = np.array([0.5, 0.5, 2.5, 2.5])
+    distances = comp.distances(x, y)
+    assert len(distances) == 4
+    assert np.all(distances > 0)
 
-    def test_multiple_group_distance_calculation(self):
-        comp = MultiWFPolygonBoundaryComp(
-            4,
-            self.sample_boundaries,
-            self.sample_turbine_groups,
-        )
 
-        # Test points with mixed positions
-        x = np.array(
-            [0.5, 0.5, 2.5, 2.5]
-        )  # First two for group 1, last two for group 2
-        y = np.array([0.5, 0.5, 2.5, 2.5])
-        distances = comp.distances(x, y)
+def test_gradient_calculation_mf_polygon(sample_wf_polygon):
+    comp = MultiWFPolygonBoundaryComp(4, sample_wf_polygon['boundaries'], sample_wf_polygon['turbine_groups'])
+    x = np.random.rand(4)
+    y = np.random.rand(4)
+    dx, dy = comp.gradients(x, y)
+    assert dx.shape == (4, 4)
+    assert dy.shape == (4, 4)
+    eps = 1e-6
+    numerical_dx = (comp.distances(x + eps, y) - comp.distances(x, y)) / eps
+    np.testing.assert_allclose(np.diag(dx), numerical_dx, rtol=1e-5,
+                               err_msg="Analytical gradients don't match numerical gradients")
 
-        # Check that each point gets evaluated against its assigned boundary
-        assert len(distances) == 4
-        assert np.all(
-            distances > 0
-        )  # All points are inside their respective boundaries
 
-    def test_gradient_calculation_mf_polygon(self):
-        comp = MultiWFPolygonBoundaryComp(
-            4,
-            self.sample_boundaries,
-            self.sample_turbine_groups,
-        )
+def test_group_order_independence(sample_wf_polygon):
+    boundaries = sample_wf_polygon['boundaries']
+    groups = sample_wf_polygon['turbine_groups']
+    comp1 = MultiWFPolygonBoundaryComp(4, boundaries, groups)
+    comp2 = MultiWFPolygonBoundaryComp(4, reversed(boundaries), reversed(groups))
+    x = np.array([0.5, 0.5, 2.5, 2.5])
+    y = np.array([0.5, 0.5, 2.5, 2.5])
+    np.testing.assert_allclose(comp1.distances(x, y), comp2.distances(x, y), rtol=1e-10)
+    dx1, dy1 = comp1.gradients(x, y)
+    dx2, dy2 = comp2.gradients(x, y)
+    np.testing.assert_allclose(dx1, dx2, rtol=1e-10)
+    np.testing.assert_allclose(dy1, dy2, rtol=1e-10)
 
-        x = np.random.rand(4)
-        y = np.random.rand(4)
 
-        # Calculate gradients
-        dx, dy = comp.gradients(x, y)
-
-        # Check shapes
-        assert dx.shape == (4, 4)
-        assert dy.shape == (4, 4)
-
-        # Verify gradients using finite differences
-        eps = 1e-6
-        x_perturbed = x + eps
-        numerical_dx = (comp.distances(x_perturbed, y) - comp.distances(x, y)) / eps
-
-        # Compare analytical vs numerical gradients
-        np.testing.assert_allclose(
-            np.diag(dx),
-            numerical_dx,
-            rtol=1e-5,
-            err_msg="Analytical gradients don't match numerical gradients",
-        )
-
-    def test_group_order_independence(self):
-        # Create component with original order
-        comp1 = MultiWFPolygonBoundaryComp(
-            4,
-            self.sample_boundaries,
-            self.sample_turbine_groups,
-        )
-
-        # Create component with reversed group order
-        comp2 = MultiWFPolygonBoundaryComp(
-            4, reversed(self.sample_boundaries), reversed(self.sample_turbine_groups)
-        )
-
-        x = np.array([0.5, 0.5, 2.5, 2.5])
-        y = np.array([0.5, 0.5, 2.5, 2.5])
-
-        # Results should be the same regardless of group order
-        np.testing.assert_allclose(
-            comp1.distances(x, y), comp2.distances(x, y), rtol=1e-10
-        )
-
-        dx1, dy1 = comp1.gradients(x, y)
-        dx2, dy2 = comp2.gradients(x, y)
-        np.testing.assert_allclose(dx1, dx2, rtol=1e-10)
-        np.testing.assert_allclose(dy1, dy2, rtol=1e-10)
-
-    def test_polygon_gradient_with_large_number_of_vertices(self):
-        N = 100
-        boundary_coords = np.array(
-            [[np.cos(2 * np.pi * i / N), np.sin(2 * np.pi * i / N)] for i in range(N)]
-        )
-        x = np.array([0.25, 0.75, 0.5, -0.2])
-        y = np.array([0.25, 0.25, 1.2, 0.5])
-        n_wt = len(x)
-        multi = MultiWFPolygonBoundaryComp(
-            n_wt,
-            [boundary_coords],
-            [np.arange(n_wt)],
-        )
-        # should not fail
-        _ = multi.gradients(x, y)
+def test_polygon_gradient_with_large_number_of_vertices():
+    N = 100
+    boundary_coords = np.array(
+        [[np.cos(2 * np.pi * i / N), np.sin(2 * np.pi * i / N)] for i in range(N)]
+    )
+    x = np.array([0.25, 0.75, 0.5, -0.2])
+    y = np.array([0.25, 0.25, 1.2, 0.5])
+    n_wt = len(x)
+    multi = MultiWFPolygonBoundaryComp(n_wt, [boundary_coords], [np.arange(n_wt)])
+    _ = multi.gradients(x, y)
 
 
 @pytest.fixture
@@ -756,51 +683,37 @@ def test_simplify_maintains_types(sample_zones):
     assert np.array_equal(comp.incl_excls, original_incl_excls)
 
 
-class TestMultiWFCircleValidation(unittest.TestCase):
+def test_validate_input_happy_path():
+    geometry = [((0, 0), 1), ((1, 1), 2)]
+    wt_groups = [[0, 1], [2, 3]]
+    comp = MultiCircleBoundaryComp(4, geometry, wt_groups)
+    assert len(comp.center) == 2
+    assert len(comp.radius) == 2
+    assert len(comp.masks) == 2
 
-    def test_validate_input_happy_path(self):
-        # Setup valid test inputs
-        geometry = [((0, 0), 1), ((1, 1), 2)]  # List of (center, radius) tuples
-        wt_groups = [[0, 1], [2, 3]]  # List of lists with turbine indices
-        n_wt = 4
-        comp = MultiCircleBoundaryComp(n_wt, geometry, wt_groups)
-        assert len(comp.center) == 2
-        assert len(comp.radius) == 2
-        assert len(comp.masks) == 2
 
-    def test_validate_input_mismatched_lengths(self):
-        # Setup test inputs with mismatched lengths
-        geometry = [((0, 0), 1)]  # Only one boundary
-        wt_groups = [[0, 1], [2, 3]]  # But two groups
-        n_wt = 4
+def test_validate_input_mismatched_lengths():
+    with pytest.raises(ValueError):
+        MultiCircleBoundaryComp(4, [((0, 0), 1)], [[0, 1], [2, 3]])
 
-        with pytest.raises(AssertionError):
-            MultiCircleBoundaryComp(n_wt, geometry, wt_groups)
 
-    def test_validate_input_invalid_geometry_format(self):
-        # Test cases with invalid geometry format
-        invalid_cases = [
-            ([[0, 1]], [[0, 1]]),  # geometry not a tuple
-            ([(0, 0)], [[0, 1]]),  # missing radius
-            ([(0, 0, 1)], [[0, 1]]),  # not a tuple of (center, radius)
-            ([((0,), 1)], [[0, 1]]),  # center not 2D
-        ]
+@pytest.mark.parametrize("geometry,wt_groups", [
+    ([[0, 1]], [[0, 1]]),
+    ([(0, 0)], [[0, 1]]),
+    ([(0, 0, 1)], [[0, 1]]),
+    ([((0,), 1)], [[0, 1]]),
+])
+def test_validate_input_invalid_geometry_format(geometry, wt_groups):
+    with pytest.raises(ValueError):
+        MultiCircleBoundaryComp(2, geometry, wt_groups)
 
-        n_wt = 2
-        for geometry, wt_groups in invalid_cases:
-            with pytest.raises(AssertionError):
-                MultiCircleBoundaryComp(n_wt, geometry, wt_groups)
 
-    def test_validate_input_invalid_center_radius_format(self):
-        # Test cases with invalid center/radius format
-        invalid_cases = [
-            ([((0, 0, 0), 1)], [[0, 1]]),  # center is 3D
-            ([((0,), 1)], [[0, 1]]),  # center is 1D
-            ([((0, 0), (1, 1))], [[0, 1]]),  # radius is 2D
-            ([((0, 0), [1])], [[0, 1]]),  # radius is list instead of scalar
-        ]
-
-        n_wt = 2
-        for geometry, wt_groups in invalid_cases:
-            with pytest.raises(AssertionError):
-                MultiCircleBoundaryComp(n_wt, geometry, wt_groups)
+@pytest.mark.parametrize("geometry,wt_groups", [
+    ([((0, 0, 0), 1)], [[0, 1]]),
+    ([((0,), 1)], [[0, 1]]),
+    ([((0, 0), (1, 1))], [[0, 1]]),
+    ([((0, 0), [1])], [[0, 1]]),
+])
+def test_validate_input_invalid_center_radius_format(geometry, wt_groups):
+    with pytest.raises(ValueError):
+        MultiCircleBoundaryComp(2, geometry, wt_groups)

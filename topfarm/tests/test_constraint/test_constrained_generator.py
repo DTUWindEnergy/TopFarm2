@@ -3,7 +3,7 @@ from openmdao.drivers.doe_generators import ListGenerator, UniformGenerator
 import pytest
 import numpy as np
 from topfarm.cost_models.dummy import DummyCost
-from topfarm.tests import npt, uta
+from topfarm.tests import npt
 from topfarm.constraint_components.constrained_generator import ConstrainedXYZGenerator, \
     ConstrainedGenerator, ConstrainedDiscardGenerator
 from topfarm.constraint_components.boundary import XYBoundaryConstraint
@@ -54,8 +54,8 @@ def test_with_convex_boundary(get_tf, driver):
                 driver=driver)
     arr = tf.get_DOE_array()
     x, y = [arr[:, i] for i in range(2)]
-    uta.assertGreaterEqual(x.min(), 0)  # x
-    uta.assertGreaterEqual(y.min(), 0)  # y
+    assert x.min() >= 0  # x
+    assert y.min() >= 0  # y
     npt.assert_array_less(y, x)
 
 
@@ -67,8 +67,8 @@ def test_with_constrained_generator_polygon(get_tf, driver):
                 driver=driver)
     arr = tf.get_DOE_array()
     x, y = [arr[:, i] for i in range(2)]
-    uta.assertGreaterEqual(x.min(), 0)  # x
-    uta.assertGreaterEqual(y.min(), 0)  # y
+    assert x.min() >= 0  # x
+    assert y.min() >= 0  # y
     npt.assert_array_less(y, x)
 
 
@@ -93,8 +93,8 @@ def test_with_convex_boundary_and_constrain(get_tf, driver):
                 min_spacing=2, driver=driver)
     arr = tf.get_DOE_array()
     x, y = [arr[:, i] for i in range(2)]
-    uta.assertGreaterEqual(x.min(), 0)  # x
-    uta.assertGreaterEqual(y.min(), 0)  # y
+    assert x.min() >= 0  # x
+    assert y.min() >= 0  # y
     npt.assert_array_less(y, x)
     assert all(np.sqrt(np.diff(x)**2 + np.diff(y)**2) >= 2)
 
@@ -104,6 +104,6 @@ if __name__ == '__main__':
                                            min_spacing=2, driver=ConstrainedDiscardGenerator(UniformGenerator(10, 0)))
     arr = tf.get_DOE_array()
     x, y = [arr[:, i] for i in range(2)]
-    uta.assertGreaterEqual(x.min(), 0)  # x
-    uta.assertGreaterEqual(y.min(), 0)  # y
+    assert x.min() >= 0  # x
+    assert y.min() >= 0  # y
     npt.assert_array_less(y, x)

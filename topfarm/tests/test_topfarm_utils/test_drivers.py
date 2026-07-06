@@ -8,7 +8,7 @@ from topfarm.drivers.random_search_driver import RandomizeTurbinePosition_Circle
     RandomizeAllUniform, RandomizeAllRelativeMaxStep, RandomizeNUniform
 from topfarm.easy_drivers import EasyScipyOptimizeDriver, EasyRandomSearchDriver, EasyPyOptSparseSNOPT, EasyPyOptSparseIPOPT
 from topfarm.plotting import NoPlot
-from topfarm.tests import uta, npt
+from topfarm.tests import npt
 from topfarm.constraint_components.spacing import SpacingConstraint
 from topfarm.constraint_components.boundary import XYBoundaryConstraint
 from topfarm._topfarm import TopFarmProblem
@@ -143,7 +143,7 @@ def test_optimizers_scaling(driver_factory, tol, N, cost_scale, cost_offset, top
         _, _, recorder = tf.optimize()
     except ImportError as exc:
         pytest.xfail(str(exc))
-    uta.assertLessEqual(recorder.num_cases, N)
+    assert recorder.num_cases <= N
 
     tb_pos = tf.turbine_positions[:, :2]
     tf.plot_comp.show()

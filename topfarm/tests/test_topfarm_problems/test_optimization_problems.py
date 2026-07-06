@@ -3,6 +3,7 @@ from openmdao.drivers.doe_driver import DOEDriver
 from topfarm.cost_models.dummy import DummyCost
 from topfarm.tests import npt
 import numpy as np
+import pytest
 from topfarm._topfarm import TopFarmProblem
 from topfarm.constraint_components.boundary import XYBoundaryConstraint
 from topfarm.easy_drivers import EasyScipyOptimizeDriver
@@ -16,7 +17,7 @@ def test_turbineType_optimization():
         cost_comp=DummyCost(optimal_state=optimal, inputs=['type']),
         driver=DOEDriver(FullFactorialGenerator(2)))
     cost, state, _ = tf.optimize()
-    assert cost == 0
+    assert cost == pytest.approx(0)
     npt.assert_array_equal(state['type'], [1, 0])
 
 
@@ -36,11 +37,11 @@ def test_turbineXYZ_optimization():
         constraints=[XYBoundaryConstraint(xy_boundary, 'square')])
 
     cost, state = tf.evaluate()
-    assert cost == 52
+    assert cost == pytest.approx(52)
     np.testing.assert_array_equal(state['x'], [0, 2])
 
     cost = tf.optimize()[0]
-    assert cost < 1e-6
+    assert cost == pytest.approx(0, abs=1e-6)
     np.testing.assert_array_almost_equal(tf.turbine_positions, optimal[:, :2], 3)
 
 

@@ -48,14 +48,14 @@ def test_design_var_list(turbineTypeOptimizationProblem, design_vars):
         driver=DOEDriver(FullFactorialGenerator(3)))
     cost, _, = tf.evaluate()
     npt.assert_equal(tf.cost, cost)
-    assert tf.cost == 5
+    assert tf.cost == pytest.approx(5)
 
 
 def test_cost(turbineTypeOptimizationProblem):
     tf = turbineTypeOptimizationProblem
     cost, _, = tf.evaluate()
     npt.assert_equal(tf.cost, cost)
-    assert tf.cost == 5
+    assert tf.cost == pytest.approx(5)
 
 
 def test_state(turbineTypeOptimizationProblem):
@@ -90,7 +90,7 @@ def test_update_state(turbineTypeOptimizationProblem, types, cost):
 def test_evaluate(turbineTypeOptimizationProblem):
     tf = turbineTypeOptimizationProblem
     cost, state = tf.evaluate()
-    assert cost == 5
+    assert cost == pytest.approx(5)
     np.testing.assert_array_equal(state['type'], [0, 0, 0])
     tf.evaluate(disp=True)  # test that disp=True does not fail
 
@@ -98,7 +98,7 @@ def test_evaluate(turbineTypeOptimizationProblem):
 def test_optimize(turbineTypeOptimizationProblem):
     tf = turbineTypeOptimizationProblem
     cost, state, recorder = tf.optimize()
-    assert cost == 0
+    assert cost == pytest.approx(0)
     np.testing.assert_array_equal(state['type'], [2, 0, 1])
     doe_list = np.squeeze(tf.get_DOE_array())
     np.testing.assert_array_almost_equal(recorder.get('cost'), np.sum((doe_list - [2, 0, 1])**2, 1))
@@ -149,7 +149,7 @@ def wrong_gradients(x, y):
             (2 * y - 2 * optimal[:, 1]))
 
 
-def testTopFarmProblem_check_gradients(turbineXYZOptimizationProblem_generator):
+def test_check_gradients(turbineXYZOptimizationProblem_generator):
     # Check that gradients check does not raise exception for correct gradients
     tf = turbineXYZOptimizationProblem_generator(gradients)
     tf.check_gradients(True)
@@ -160,7 +160,7 @@ def testTopFarmProblem_check_gradients(turbineXYZOptimizationProblem_generator):
         tf.check_gradients()
 
 
-def testTopFarmProblem_check_gradients_Income(turbineXYZOptimizationProblem_generator):
+def test_check_gradients_income(turbineXYZOptimizationProblem_generator):
     # Check that gradients check does not raise exception for correct gradients
     cost_comp = CostModelComponent('xy', 4, income, income_gradients, maximize=True)
     tf = turbineXYZOptimizationProblem_generator(None, cost_comp)
@@ -173,19 +173,19 @@ def testTopFarmProblem_check_gradients_Income(turbineXYZOptimizationProblem_gene
         tf.check_gradients()
 
 
-def testTopFarmProblem_evaluate_gradients(turbineXYZOptimizationProblem_generator):
+def test_evaluate_gradients(turbineXYZOptimizationProblem_generator):
     tf = turbineXYZOptimizationProblem_generator(gradients)
     np.testing.assert_array_equal(tf.evaluate_gradients(disp=True)['final_cost']['x'], [[-6., -14., -8., -6.]])
 
 
-def testTopFarmProblem_as_component(turbineTypeOptimizationProblem):
+def test_as_component(turbineTypeOptimizationProblem):
     tf = turbineTypeOptimizationProblem
     c = tf.as_component()
     npt.assert_equal(c.__class__, ProblemComponent)
     assert c.problem == tf
 
 
-def testTopFarmProblem_get_DOE_list(turbineTypeOptimizationProblem):
+def test_get_doe_list(turbineTypeOptimizationProblem):
     tf = turbineTypeOptimizationProblem
     npt.assert_array_equal(len(tf.get_DOE_list()), 27)
     ((k, v),) = tf.get_DOE_list()[1]
@@ -196,7 +196,7 @@ def testTopFarmProblem_get_DOE_list(turbineTypeOptimizationProblem):
     npt.assert_array_equal(v, [0, 0, 0])
 
 
-def testTopFarmProblem_get_DOE_array(turbineTypeOptimizationProblem):
+def test_get_doe_array(turbineTypeOptimizationProblem):
     tf = turbineTypeOptimizationProblem
     npt.assert_array_equal(tf.get_DOE_array().shape, (27, 1, 3))
     npt.assert_array_equal(tf.get_DOE_array()[:5], [[[0, 0, 0]],
@@ -206,7 +206,7 @@ def testTopFarmProblem_get_DOE_array(turbineTypeOptimizationProblem):
                                                     [[1, 1, 0]]])
 
 
-def testTopFarmProblem_turbine_positions():
+def test_turbine_positions():
     tf = xy3tb.get_tf()
     np.testing.assert_array_equal(tf.turbine_positions, xy3tb.initial)
 
@@ -291,16 +291,16 @@ def test_smart_start_polygon_boundary():
     npt.assert_array_almost_equal(tf.turbine_positions, np.array([xs_ref, ys_ref]).T)
 
 
-def testTopFarmProblem_approx_totols():
+def test_approx_totals():
     tf = xy3tb.get_tf(approx_totals=True)
     np.testing.assert_array_equal(tf.turbine_positions, xy3tb.initial)
 
 
-def testTopFarmProblem_expected_cost():
+def test_expected_cost():
     tf = xy3tb.get_tf(expected_cost=None)
     np.testing.assert_array_equal(tf.turbine_positions, xy3tb.initial)
 
 
-def testTopFarmProblem_update_reports(turbineTypeOptimizationProblem):
+def test_update_reports(turbineTypeOptimizationProblem):
     tf = turbineTypeOptimizationProblem
     tf._update_reports(DOEDriver(FullFactorialGenerator(3)))
