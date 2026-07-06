@@ -9,6 +9,7 @@ from topfarm.constraint_components.boundary import CircleBoundaryConstraint, Cir
 from topfarm.cost_models.dummy import DummyCost
 from topfarm.plotting import NoPlot, PlotComp
 from topfarm.tests import npt
+from topfarm.constants import CONSTRAINT_PENALTY
 
 
 def testCircle():
@@ -30,8 +31,8 @@ def test_TopFarmProblem_with_cirleboundary_penalty():
     tf.plot_comp.show()
     np.testing.assert_array_almost_equal(
         ((b.constraintComponent.xy_boundary - [1, 2])**2).sum(1), 3**2)
-    npt.assert_array_less(tf.evaluate({'x': [3.9], 'y': [2]})[0], 1e10)
-    npt.assert_array_less(1e10, tf.evaluate({'x': [4.1], 'y': [2]})[0])
+    npt.assert_array_less(tf.evaluate({'x': [3.9], 'y': [2]})[0], CONSTRAINT_PENALTY)
+    npt.assert_array_less(CONSTRAINT_PENALTY, tf.evaluate({'x': [4.1], 'y': [2]})[0])
 
 
 def test_TopFarmProblem_with_cirleboundary_constraint():

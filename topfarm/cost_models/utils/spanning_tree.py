@@ -1,6 +1,5 @@
 from numpy import argmin, array, sqrt
 import sys
-from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import minimum_spanning_tree
 import numpy as np
 from numpy import newaxis as na

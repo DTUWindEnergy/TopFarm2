@@ -3,9 +3,6 @@ import numpy as np
 import os
 import pickle
 import topfarm
-from copy import deepcopy
-from openmdao.core.driver import Driver
-from openmdao.core.system import System
 
 
 def split_record_id(record_id):
@@ -145,8 +142,13 @@ class TopFarmListRecorder(SqliteRecorder):
         init()
 
         def update(frame):
-            title.set_text("%f (%.2f%%)" % (cost[frame],
-                                            (cost[frame] - cost[0]) / cost[0] * 100))
+            base_cost = float(cost[0])
+            current_cost = float(cost[frame])
+            if np.isfinite(base_cost) and base_cost != 0.0:
+                delta_pct = (current_cost - base_cost) / base_cost * 100.0
+                title.set_text(f"{current_cost:.2f} ({delta_pct:.2f}%)")
+            else:
+                title.set_text(f"{current_cost:.2f} (n/a)")
             for i in range(n_wt):
                 ln[i].set_data(x[max(0, frame - tail):frame + 1, i], y[max(0, frame - tail):frame + 1, i])
                 if plot_initial:

@@ -22,7 +22,6 @@ import time
 import numpy as np
 import warnings
 import copy
-import inspect
 from openmdao.api import Problem, IndepVarComp, Group, ParallelGroup, \
     ExplicitComponent, ListGenerator, DOEDriver, SimpleGADriver, OpenMDAOWarning
 from openmdao.drivers.doe_generators import DOEGenerator
@@ -34,14 +33,21 @@ from topfarm.recorders import NestedTopFarmListRecorder, \
 from topfarm.plotting import NoPlot
 from topfarm.easy_drivers import EasyScipyOptimizeDriver, EasySimpleGADriver, EasyDriverBase, EasySGDDriver
 from topfarm.utils import smart_start
-from topfarm.constraint_components.spacing import SpacingComp, SpacingTypeComp
+from topfarm.constraint_components.spacing import SpacingComp
 from topfarm.constraint_components.boundary import BoundaryBaseComp
 # from topfarm.constraint_components.penalty_component import ConstraintViolationComponent, PenaltyComponent #, PostPenaltyComponent
 from topfarm.cost_models.topfarm_components import ObjectiveComponent, DummyObjectiveComponent, ConstraintViolationComponent
 from topfarm.cost_models.cost_model_wrappers import CostModelComponent
 # from topfarm.constraint_components.post_constraint import PostConstraint
 from topfarm.constraint_components import Constraint
-from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
+
+__all__ = [
+    "TopFarmBaseGroup",
+    "TopFarmGroup",
+    "TopFarmParallelGroup",
+    "TopFarmProblem",
+    "ProblemComponent",
+]
 
 
 class TopFarmBaseGroup(Group):
@@ -407,23 +413,23 @@ class TopFarmProblem(Problem):
         if self._metadata['setup_status'] < _SetupStatus.POST_FINAL_SETUP:
             with warnings.catch_warnings():
                 warnings.filterwarnings('error')
+                tmp_recorder = None
                 try:
                     if len(self.driver._rec_mgr._recorders) == 0:
                         tmp_recorder = TopFarmListRecorder()
                         self.driver.add_recorder(tmp_recorder)
-                        Problem.final_setup(self)
-                    else:
-                        Problem.final_setup(self)
+                    Problem.final_setup(self)
                 except Warning as w:
                     if str(w).startswith('Inefficient choice of derivative mode'):
                         Problem.setup(self, mode='fwd')
                     else:
                         raise w
                 finally:
-                    try:
-                        self.driver._rec_mgr._recorders.remove(tmp_recorder)
-                    except Exception:
-                        pass
+                    if tmp_recorder is not None:
+                        try:
+                            self.driver._rec_mgr._recorders.remove(tmp_recorder)
+                        except ValueError:
+                            pass
 
     def evaluate(self, state={}, disp=False):
         """Evaluate the cost model

@@ -3,9 +3,9 @@ from six import iteritems
 import numpy as np
 from openmdao.core.analysis_error import AnalysisError
 import topfarm
+from topfarm.constants import CONSTRAINT_PENALTY
 import time
 from openmdao.utils.concurrent_utils import concurrent_eval
-from openmdao.utils.record_util import create_local_meta
 
 
 class RandomSearchDriver(Driver):
@@ -159,7 +159,7 @@ class RandomSearchDriver(Driver):
                         x0 = cases[i][0][0].copy()
                         obj_value_x0 = obj_value_x1
                         # n_iter += 1
-                    elif obj_value_x1 < 1e10:
+                    elif obj_value_x1 < CONSTRAINT_PENALTY:
                         one_success = True
                     # n_iter += 1
                 if one_success:
@@ -184,7 +184,7 @@ class RandomSearchDriver(Driver):
                     if disp:
                         print(n_iter, obj_value_x1)
                 else:
-                    if obj_value_x1 < 1e10:
+                    if obj_value_x1 < CONSTRAINT_PENALTY:
                         n_iter += 1
                 if not success or obj_value_x1 > obj_value_x0:
                     obj_value_x1, success = self.objective_callback(x0, record=True)

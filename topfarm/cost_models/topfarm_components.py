@@ -3,6 +3,7 @@ import numpy as np
 import warnings
 from topfarm.constraint_components.boundary import BoundaryBaseComp
 from topfarm.constraint_components.spacing import SpacingComp, SpacingTypeComp
+from topfarm.constants import CONSTRAINT_PENALTY
 from topfarm.constraint_components.capacity import CapacityComp
 
 
@@ -105,7 +106,7 @@ class ObjectiveComponent(ExplicitComponent):
     def compute(self, inputs, outputs):
         total_constraint_violation = self._compute(inputs)
         if total_constraint_violation > 0:
-            outputs['final_cost'] = 1e10 + total_constraint_violation
+            outputs['final_cost'] = CONSTRAINT_PENALTY + total_constraint_violation
         else:
             outputs['final_cost'] = inputs['cost']
 

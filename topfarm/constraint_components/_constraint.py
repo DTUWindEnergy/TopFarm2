@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from openmdao.core.explicitcomponent import ExplicitComponent
 
+__all__ = ['Constraint', 'ConstraintComponent']
+
 
 class Constraint(ABC):
 

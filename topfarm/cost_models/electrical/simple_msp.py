@@ -2,7 +2,7 @@ import topfarm
 import openmdao.api as om
 from topfarm.cost_models.utils.spanning_tree import mst
 from topfarm.cost_models.cost_model_wrappers import CostModelComponent
-from topfarm.plotting import XYPlotComp, NoPlot
+from topfarm.plotting import XYPlotComp
 from IPython.display import display
 
 import numpy as np

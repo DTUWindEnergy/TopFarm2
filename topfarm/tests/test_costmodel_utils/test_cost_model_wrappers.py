@@ -9,6 +9,7 @@ from topfarm.easy_drivers import EasyScipyOptimizeDriver, EasySimpleGADriver
 from topfarm.plotting import NoPlot, XYPlotComp
 from topfarm.tests import npt
 from topfarm.tests.test_files import xy3tb
+from topfarm.constants import CONSTRAINT_PENALTY
 
 
 boundary = [(0, 0), (6, 0), (6, -10), (0, -10)]  # turbine boundaries
@@ -115,7 +116,7 @@ def test_AEPMaxLoadCostModelComponent_as_penalty():
     assert tf.evaluate({'x': np.pi / 2})[0] == 1
     # check penalized result if capacity constraint is not satisfied
     for x, y in [(4, 0), (0, 4)]:
-        assert tf.evaluate({'x': x, 'y': y})[0] == 1e10 + 1
+        assert tf.evaluate({'x': x, 'y': y})[0] == CONSTRAINT_PENALTY + 1
 
 
 def test_AEPMaxLoadCostModelComponent_as_penalty_multi_wt():
@@ -134,7 +135,7 @@ def test_AEPMaxLoadCostModelComponent_as_penalty_multi_wt():
     assert tf.evaluate({'x': [np.pi / 2, -np.pi / 2]})[0] == 2
     # check penalized result if capacity constraint is not satisfied
     for x, y in [([4, 0], [0, 0]), ([0, 0], [4, 0]), ([4, 4], [0, 0])]:
-        assert tf.evaluate({'x': x, 'y': y})[0] == 1e10 + 1
+        assert tf.evaluate({'x': x, 'y': y})[0] == CONSTRAINT_PENALTY + 1
 
 
 def test_AEPMaxLoadCostModelComponent_constraint():

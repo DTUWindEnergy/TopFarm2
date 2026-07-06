@@ -6,6 +6,7 @@ from topfarm.constraint_components.spacing import SpacingConstraint
 from topfarm.constraint_components.boundary import XYBoundaryConstraint
 import numpy as np
 import scipy
+from topfarm.constants import CONSTRAINT_PENALTY
 
 
 def test_TopFarmProblem():
@@ -49,7 +50,7 @@ def test_TopFarmProblemSpacingPenalty():
                       constraints=[SpacingConstraint(2)])
     # spacing violated
     cost, _ = tf.evaluate({'x': xy3tb.desired[:, 0], 'y': xy3tb.desired[:, 1]})
-    npt.assert_array_less(1e10, cost)
+    npt.assert_array_less(CONSTRAINT_PENALTY, cost)
 
     # spacing satisfied
     cost, _ = tf.evaluate({'x': xy3tb.optimal[:, 0], 'y': xy3tb.optimal[:, 1]})
@@ -101,7 +102,7 @@ def test_TopFarmProblemXYBoundaryPenalty():
                       constraints=[XYBoundaryConstraint(xy3tb.boundary)])
     # spacing violated
     cost, _ = tf.evaluate({'x': xy3tb.desired[:, 0], 'y': xy3tb.desired[:, 1]})
-    npt.assert_array_less(1e10, cost)
+    npt.assert_array_less(CONSTRAINT_PENALTY, cost)
 
     # spacing satisfied
     cost, _ = tf.evaluate({'x': xy3tb.optimal[:, 0], 'y': xy3tb.optimal[:, 1]})

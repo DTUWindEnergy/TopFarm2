@@ -1,7 +1,6 @@
 from openmdao.core.explicitcomponent import ExplicitComponent
 import numpy as np
 import time
-from _collections import defaultdict
 # from topfarm.constraint_components.post_constraint import PostConstraint
 import warnings
 

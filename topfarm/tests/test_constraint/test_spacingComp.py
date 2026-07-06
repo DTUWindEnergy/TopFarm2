@@ -1,4 +1,5 @@
 from topfarm.cost_models.dummy import DummyCost, DummyCostPlotComp
+from topfarm.constants import CONSTRAINT_PENALTY
 from topfarm.plotting import NoPlot
 from openmdao.drivers.genetic_algorithm_driver import SimpleGADriver
 from topfarm.tests.test_files import xy3tb
@@ -112,7 +113,7 @@ def test_spacing_as_penalty():
     # check normal result if spacing constraint is satisfied
     assert tf.evaluate()[0] == 45
     # check penalized result if spacing constraint is not satisfied
-    assert tf.evaluate({'x': [3, 7, 4.], 'y': [-3., -7., -3.], 'z': [0., 0., 0.]})[0] == 1e10 + 3
+    assert tf.evaluate({'x': [3, 7, 4.], 'y': [-3., -7., -3.], 'z': [0., 0., 0.]})[0] == CONSTRAINT_PENALTY + 3
 
 
 def test_satisfy():

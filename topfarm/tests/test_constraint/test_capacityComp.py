@@ -4,6 +4,7 @@ import topfarm
 from topfarm.tests.test_files import xy3tb
 from topfarm._topfarm import TopFarmProblem
 from topfarm.easy_drivers import EasySimpleGADriver
+from topfarm.constants import CONSTRAINT_PENALTY
 
 
 def test_capacity_as_penalty():
@@ -15,7 +16,7 @@ def test_capacity_as_penalty():
     # check normal result that satisfies the penalty
     assert tf.evaluate()[0] == 141.0
     # check penalized result if capacity constraint is not satisfied
-    assert tf.evaluate({'type': np.array([0, 1, 1])})[0] == 1e10 + 15.1
+    assert tf.evaluate({'type': np.array([0, 1, 1])})[0] == CONSTRAINT_PENALTY + 15.1
 
 
 def test_capacity_tf():

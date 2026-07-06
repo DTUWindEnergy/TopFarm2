@@ -6,6 +6,7 @@ from topfarm.constraint_components.boundary import XYBoundaryConstraint
 from topfarm.easy_drivers import EasyScipyOptimizeDriver
 from topfarm import TopFarmProblem
 from openmdao.drivers.genetic_algorithm_driver import SimpleGADriver
+from topfarm.constants import CONSTRAINT_PENALTY
 
 
 initial = np.array([[0, 0, 0], [6, 0, 0], [6, -10, 0]])  # initial turbine layouts
@@ -69,7 +70,7 @@ def test_setup_as_penalty_xy():
     # check normal result if boundary constraint is satisfied
     assert tf.evaluate()[0] == 121
     # check penalized result if boundary constraint is not satisfied
-    assert tf.evaluate({'x': [2.5, 7, 4.5], 'y': [-3., -7., -3.], 'z': [0., 0., 0.]})[0] == 1e10 + 1
+    assert tf.evaluate({'x': [2.5, 7, 4.5], 'y': [-3., -7., -3.], 'z': [0., 0., 0.]})[0] == CONSTRAINT_PENALTY + 1
 
 
 def test_setup_as_penalty_none():
