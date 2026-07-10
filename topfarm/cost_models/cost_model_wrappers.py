@@ -155,7 +155,7 @@ class CostModelComponent(ExplicitComponent):
         return int(counter)
 
     def compute(self, inputs, outputs):
-        """Compute cost model"""
+        """Evaluate the wrapped cost function."""
         if self.use_constraint_violation:
             if (inputs['constraint_violation'] > 1e5) and (self.n_func_eval > 0):
                 return

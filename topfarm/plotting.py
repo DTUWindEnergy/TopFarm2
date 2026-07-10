@@ -1,3 +1,4 @@
+"""Plotting components and utilities for TopFarm optimizations."""
 import os
 from openmdao.api import ExplicitComponent
 import matplotlib.pyplot as plt

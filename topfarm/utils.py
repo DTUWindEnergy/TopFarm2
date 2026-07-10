@@ -1,3 +1,4 @@
+"""General-purpose utilities for TopFarm."""
 import numpy as np
 import matplotlib.pyplot as plt
 from numpy import newaxis as na

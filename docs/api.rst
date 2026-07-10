@@ -13,4 +13,6 @@ API Reference
     api_reference/constraints
     api_reference/drivers
     api_reference/plotcomp
-    
+    api_reference/plotting
+    api_reference/utils
+

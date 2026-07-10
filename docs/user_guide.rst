@@ -47,6 +47,7 @@ Other wrappers available are:
     * ``AEPCostModelComponent``: serves as a sub class from the ``CostModelComponent`` in which the objective function is the AEP by default.
     * ``AEPMaxLoadCostModelComponent``: another sub class from the ``CostModelComponent`` that it is used to incorporate fatigue loading into the objective function. It includes an option to constrain the loads to a maximum value as well to return the calculated fatigue loads.
     * ``PyWakeAEPCostModelComponent``: calculates the AEP as the objective function with the addition of a variety of engineering wake models.
+    * ``WFNComponent``: optimises the electrical cable network layout using `OptiWindNet <https://topfarm.pages.windenergy.dtu.dk/OptiWindNet/>`_.
 
 For more information about these classes and their inputs, see the :ref:`api`.
 

@@ -7,7 +7,7 @@ Welcome to TOPFARM
       :width: 60%
       :align: center
 
-TOPFARM is a Python package developed by *DTU Wind Energy* that serves as a wind farm optimizer for both onshore and offshore wind farms. It uses the `OpenMDAO <http://openmdao.org/>`_ package for optimization and wraps the `PyWake <https://topfarm.pages.windenergy.dtu.dk/PyWake/>`_ package for easy computation of a wind farm’s Annual Energy Production (AEP).
+TOPFARM is a Python package developed by *DTU Wind Energy* that serves as a wind farm optimizer for both onshore and offshore wind farms. It uses the `OpenMDAO <http://openmdao.org/>`_ package for optimization, wraps the `PyWake <https://topfarm.pages.windenergy.dtu.dk/PyWake/>`_ package for easy computation of a wind farm’s Annual Energy Production (AEP), and integrates with `OptiWindNet <https://topfarm.pages.windenergy.dtu.dk/OptiWindNet/>`_ for electrical cable network optimisation.
 
 In addition, it can compute other metrics such as the Internal Rate of Return (IRR) and Net Present Value (NPV) and utilizes different engineering wake models available in PyWake to perform the flow simulations.
 

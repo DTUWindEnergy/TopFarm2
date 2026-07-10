@@ -1,3 +1,4 @@
+"""Constraint components for TopFarm optimization problems."""
 from ._constraint import *
 from .boundary import (
     XYBoundaryConstraint,

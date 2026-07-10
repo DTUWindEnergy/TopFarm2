@@ -21,7 +21,7 @@ To set up Anaconda, you should:
 
 It is recommended to create a new environment to install TOPFARM if you have other Python programs. This ensures that the dependencies for the different packages do not conflict with one another. In the command prompt, create and active an environment with::
 
-   conda create --name topfarm "python<3.12"
+   conda create --name topfarm "python>=3.11,<3.14"
    conda activate topfarm
 
 Simple Installation
@@ -55,3 +55,13 @@ Please install `pre-commit` hooks to ensure that your code is formatted correctl
 
    pip install pre-commit
    pre-commit install
+
+Troubleshooting
+-------------------------------
+
+**Pre-commit hook failures**
+   Run the formatter manually before committing::
+
+      pre-commit run --all-files
+
+   If autopep8 reformats a file, stage the changes and commit again.

@@ -94,6 +94,7 @@ class SpacingComp(ConstraintComponent):
                                   rows=rows, cols=cols)
 
     def compute(self, inputs, outputs):
+        """Compute squared inter-turbine separations."""
         self.x = inputs[topfarm.x_key]
         self.y = inputs[topfarm.y_key]
         separation_squared = self._compute(self.x, self.y)
@@ -119,6 +120,7 @@ class SpacingComp(ConstraintComponent):
         return dXY2[np.triu_indices(n_wt, 1)]
 
     def compute_partials(self, inputs, J):
+        """Compute spacing partial derivatives."""
         # obtain necessary inputs
         x = inputs[topfarm.x_key]
         y = inputs[topfarm.y_key]
