@@ -11,7 +11,7 @@ class DummyCost(CostModelComponent):
        f(x,..) = SUM((x_i - optx_i)^2 + ...).
     """
 
-    def __init__(self, optimal_state, inputs=[topfarm.x_key, topfarm.y_key]):
+    def __init__(self, optimal_state, inputs=None):
         """
         Parameters
         ----------
@@ -20,6 +20,8 @@ class DummyCost(CostModelComponent):
         inputs : array_like
             list of input names
         """
+        if inputs is None:
+            inputs = [topfarm.x_key, topfarm.y_key]
         self.optimal_state = np.array(optimal_state)
         self.n_wt = self.optimal_state.shape[0]
 

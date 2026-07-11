@@ -76,8 +76,13 @@ class PyWakeAEPCostModelComponent(AEPCostModelComponent):
                                        output_unit='GWh',
                                        max_eval=max_eval, **kwargs)
 
-    def get_aep4smart_start(self, ws=[6, 8, 10, 12, 14], wd=np.arange(360), type=0, **kwargs):
+    def get_aep4smart_start(self, ws=None, wd=None, type=0, **kwargs):
         """Compute AEP with a smart start approach"""
+        if ws is None:
+            ws = [6, 8, 10, 12, 14]
+        if wd is None:
+            wd = np.arange(360)
+
         def aep4smart_start(X, Y, wt_x, wt_y, T=0, wt_t=0):
             H = np.full(X.shape, self.windFarmModel.windTurbines.hub_height())
             if type == 0:

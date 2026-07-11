@@ -7,6 +7,7 @@ import sys
 import numpy as np
 import openmdao
 import scipy
+from typing import Dict, List, Optional
 
 
 class EasyDriverBase():
@@ -27,7 +28,11 @@ class EasyDriverBase():
 
 class EasyScipyOptimizeDriver(ScipyOptimizeDriver, EasyDriverBase):
 
-    def __init__(self, optimizer='SLSQP', maxiter=200, tol=1e-8, disp=True, auto_scale=False, **kwargs):
+    def __init__(
+        self, optimizer: str = 'SLSQP', maxiter: int = 200,
+        tol: float = 1e-8, disp: bool = True, auto_scale: bool = False,
+        **kwargs
+    ):
         """
         Parameters
         ----------
@@ -243,8 +248,13 @@ except (ModuleNotFoundError, Exception) as e:
 
 
 class EasySimpleGADriver(SimpleGADriver, EasyDriverBase):
-    def __init__(self, max_gen=100, pop_size=25, Pm=None, Pc=.5, elitism=True,
-                 bits={}, debug_print=[], run_parallel=False, random_state=None):
+    def __init__(
+        self, max_gen: int = 100, pop_size: int = 25,
+        Pm: Optional[float] = None, Pc: float = .5,
+        elitism: bool = True, bits: Optional[Dict] = None,
+        debug_print: Optional[List] = None, run_parallel: bool = False,
+        random_state=None
+    ):
         """SimpleGA driver with optional arguments
 
         Parameters
@@ -271,6 +281,10 @@ class EasySimpleGADriver(SimpleGADriver, EasyDriverBase):
         run_parallel : bool
             Set to True to execute the points in a generation in parallel.
         """
+        if bits is None:
+            bits = {}
+        if debug_print is None:
+            debug_print = []
         SimpleGADriver.__init__(self, max_gen=self.max_iter or max_gen, pop_size=pop_size, Pm=Pm, Pc=Pc, elitism=elitism,
                                 bits=bits, debug_print=debug_print, run_parallel=run_parallel)
         self.supports['inequality_constraints'] = False
@@ -298,9 +312,11 @@ class EasyRandomSearchDriver(RandomSearchDriver, EasyDriverBase):
 
 
 class EasySGDDriver(SGDDriver, EasyDriverBase):
-    def __init__(self, maxiter=100, disp=False, run_parallel=False,
-                 learning_rate=10, upper=0.1, lower=0, beta1=0.1, beta2=0.2, gamma_min_factor=1e-2,
-                 speedupSGD=False, sgd_thresh=0.1, additional_constant_lr_iterations=0):
+    def __init__(self, maxiter: int = 100, disp: bool = False, run_parallel: bool = False,
+                 learning_rate: float = 10, upper: float = 0.1, lower: float = 0,
+                 beta1: float = 0.1, beta2: float = 0.2, gamma_min_factor: float = 1e-2,
+                 speedupSGD: bool = False, sgd_thresh: float = 0.1,
+                 additional_constant_lr_iterations: int = 0):
         """Easy initialization of Stochastic Gradient Descent (SGD) Driver
 
         Parameters

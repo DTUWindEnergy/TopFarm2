@@ -4,7 +4,7 @@ import topfarm
 
 
 class CapacityConstraint(Constraint):
-    def __init__(self, max_capacity=500, rated_power_array=[3000]):
+    def __init__(self, max_capacity=500, rated_power_array=None):
         """Initialize CapacityConstraint
 
         Parameters
@@ -14,6 +14,8 @@ class CapacityConstraint(Constraint):
         rated_power_array : list
             Rated power list corresponding to turbine type order [kW]
         """
+        if rated_power_array is None:
+            rated_power_array = [3000]
         self.max_capacity = max_capacity
         self.rated_power_array = np.array(rated_power_array) / 1e3
         self.const_id = 'capacity_comp_{}'.format(int(max_capacity))

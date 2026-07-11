@@ -6,6 +6,7 @@ import topfarm
 from topfarm.constants import CONSTRAINT_PENALTY
 import time
 from openmdao.utils.concurrent_utils import concurrent_eval
+from typing import Callable, Dict, List, Optional, Tuple
 
 
 class RandomSearchDriver(Driver):
@@ -253,33 +254,33 @@ class RandomSearchDriver(Driver):
         return obj, success
 
 
-def randomize_turbine_type(desvar_dict, i_wt=None):
+def randomize_turbine_type(desvar_dict: Dict, i_wt: Optional[int] = None) -> Dict:
     types, lbound, ubound = desvar_dict[topfarm.type_key]
     i_wt = i_wt or np.random.randint(len(types))
     types[i_wt] = np.random.randint(lbound[i_wt], ubound[i_wt] + 1)
     return desvar_dict
 
 
-def xy_step_circle(max_step_xy):
+def xy_step_circle(max_step_xy: List[float]) -> Tuple[float, float]:
     step = np.random.rand() * max(max_step_xy)
     theta = np.random.rand() * np.pi * 2
     return step * np.cos(theta), step * np.sin(theta)
 
 
-def xy_step_square(max_step_xy):
+def xy_step_square(max_step_xy: List[float]) -> Tuple[float, float]:
     return (np.random.rand() * 2 - 1) * max_step_xy[0], (np.random.rand() * 2 - 1) * max_step_xy[1]
 
 
-def xy_step_normal(max_step_xy):
+def xy_step_normal(max_step_xy: List[float]) -> Tuple[float, float]:
     return np.random.normal(0, max_step_xy[0] / 2), np.random.normal(0, max_step_xy[1] / 2)
 
 
 class RandomizeTurbinePosition():
-    def __init__(self, max_step=None, xy_step_function=xy_step_circle):
+    def __init__(self, max_step: Optional[float] = None, xy_step_function: Callable = xy_step_circle):
         self.max_step = max_step
         self.xy_step_function = xy_step_function
 
-    def __call__(self, desvar_dict, i_wt=None):
+    def __call__(self, desvar_dict: Dict, i_wt: Optional[int] = None) -> Dict:
         i_wt = i_wt or np.random.randint(len(desvar_dict[topfarm.x_key][0]))
 
         max_step_xy = [self.max_step or (desvar_dict[xy][2][i_wt] - desvar_dict[xy][1][i_wt])
@@ -292,25 +293,25 @@ class RandomizeTurbinePosition():
 
 
 class RandomizeTurbinePosition_Circle(RandomizeTurbinePosition):
-    def __init__(self, max_step=None):
+    def __init__(self, max_step: Optional[float] = None):
         RandomizeTurbinePosition.__init__(self, max_step=max_step, xy_step_function=xy_step_circle)
 
 
 class RandomizeTurbinePosition_Square(RandomizeTurbinePosition):
-    def __init__(self, max_step=None):
+    def __init__(self, max_step: Optional[float] = None):
         RandomizeTurbinePosition.__init__(self, max_step=max_step, xy_step_function=xy_step_square)
 
 
 class RandomizeTurbinePosition_Normal(RandomizeTurbinePosition):
-    def __init__(self, max_step=None):
+    def __init__(self, max_step: Optional[float] = None):
         RandomizeTurbinePosition.__init__(self, max_step=max_step, xy_step_function=xy_step_normal)
 
 
 class RandomizeTurbineTypeAndPosition(RandomizeTurbinePosition):
-    def __init__(self, max_step=None, xy_step_function=xy_step_circle):
+    def __init__(self, max_step: Optional[float] = None, xy_step_function: Callable = xy_step_circle):
         RandomizeTurbinePosition.__init__(self, xy_step_function=xy_step_function, max_step=max_step)
 
-    def __call__(self, desvar_dict, i_wt=None):
+    def __call__(self, desvar_dict: Dict, i_wt: Optional[int] = None) -> Dict:
         i_wt = i_wt or np.random.randint(len(desvar_dict[topfarm.x_key][0]))
         desvar_dict = randomize_turbine_type(desvar_dict, i_wt=i_wt)
         desvar_dict = RandomizeTurbinePosition.__call__(self, desvar_dict, i_wt=i_wt)
@@ -318,7 +319,7 @@ class RandomizeTurbineTypeAndPosition(RandomizeTurbinePosition):
 
 
 class RandomizeAllUniform():
-    def __init__(self, int_design_vars_lst=[]):
+    def __init__(self, int_design_vars_lst: Optional[List[str]] = None):
         """Initialize RandomizeAllUniform
 
         Parameters
@@ -326,9 +327,9 @@ class RandomizeAllUniform():
         int_design_vars_lst : list
             names of all integer design variables
         """
-        self.int_design_vars_lst = int_design_vars_lst
+        self.int_design_vars_lst = int_design_vars_lst if int_design_vars_lst is not None else []
 
-    def __call__(self, desvar_dict):
+    def __call__(self, desvar_dict: Dict) -> Dict:
         for name, (values, lbound, ubound) in desvar_dict.items():
             if name in self.int_design_vars_lst:
                 if np.all(lbound == lbound[0]) and np.all(ubound == ubound[0]):
@@ -344,10 +345,10 @@ class RandomizeAllUniform():
 
 
 class RandomizeAllRelativeMaxStep():
-    def __init__(self, rel_max_step=.1):
+    def __init__(self, rel_max_step: float = 0.1):
         self.rel_max_step = rel_max_step
 
-    def __call__(self, desvar_dict):
+    def __call__(self, desvar_dict: Dict) -> Dict:
         for _, (values, lbound, ubound) in desvar_dict.items():
             if values.dtype.kind == 'i':
                 raise NotImplementedError()
@@ -358,7 +359,7 @@ class RandomizeAllRelativeMaxStep():
 
 
 class RandomizeNUniform():
-    def __init__(self, N, int_design_vars_lst=[]):
+    def __init__(self, N: int, int_design_vars_lst: Optional[List[str]] = None):
         """Initialize RandomizeNUniform
 
         Parameters
@@ -369,9 +370,9 @@ class RandomizeNUniform():
             names of all integer design variables
         """
         self.N = N
-        self.int_design_vars_lst = int_design_vars_lst
+        self.int_design_vars_lst = int_design_vars_lst if int_design_vars_lst is not None else []
 
-    def __call__(self, desvar_dict):
+    def __call__(self, desvar_dict: Dict) -> Dict:
 
         indexes = np.random.randint(0, len(list(desvar_dict.items())[0][1][0]), self.N)
         for name, (values, lbound, ubound) in desvar_dict.items():

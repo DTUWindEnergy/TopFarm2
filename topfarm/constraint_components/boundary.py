@@ -16,7 +16,10 @@ from matplotlib.pyplot import Circle
 
 class XYBoundaryConstraint(Constraint):
 
-    def __init__(self, boundary, boundary_type='convex_hull', units=None, relaxation=False, **kwargs):
+    def __init__(
+        self, boundary, boundary_type: str = 'convex_hull',
+        units: Optional[str] = None, relaxation: bool = False, **kwargs
+    ):
         """Initialize XYBoundaryConstraint
 
         Parameters
@@ -108,7 +111,7 @@ class XYBoundaryConstraint(Constraint):
 
 
 class CircleBoundaryConstraint(XYBoundaryConstraint):
-    def __init__(self, center, radius):
+    def __init__(self, center, radius: float):
         """Initialize CircleBoundaryConstraint
 
         Parameters
@@ -309,13 +312,13 @@ class ConvexBoundaryComp(BoundaryBaseComp):
         face_distance = np.sum(d_vec * unit_normals[:, na], 2)
         return face_distance.T
 
-    def distances(self, x, y):
+    def distances(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
         return self.calculate_distance_to_boundary(np.array([x, y]).T)
 
-    def gradients(self, x, y):
+    def gradients(self, x: np.ndarray, y: np.ndarray):
         return self.dfaceDistance_dx, self.dfaceDistance_dy
 
-    def satisfy(self, state, pad=1.1):
+    def satisfy(self, state: dict, pad: float = 1.1) -> dict:
         x, y = [np.asarray(state[xyz], dtype=float) for xyz in [topfarm.x_key, topfarm.y_key]]
         dist = self.distances(x, y)
         dist = np.where(dist < 0, np.minimum(dist, -.01), dist)

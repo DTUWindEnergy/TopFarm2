@@ -1,3 +1,4 @@
+from typing import Optional
 import numpy as np
 from numpy import newaxis as na
 from topfarm.constraint_components import Constraint, ConstraintComponent
@@ -5,7 +6,11 @@ import topfarm
 
 
 class SpacingConstraint(Constraint):
-    def __init__(self, min_spacing, units=None, aggregation_function=None, full_aggregation=False, name='spacing_comp'):
+    def __init__(
+        self, min_spacing: float, units: Optional[str] = None,
+        aggregation_function=None, full_aggregation: bool = False,
+        name: str = 'spacing_comp'
+    ):
         """Initialize SpacingConstraint
 
         Parameters

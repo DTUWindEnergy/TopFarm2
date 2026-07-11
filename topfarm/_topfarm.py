@@ -22,6 +22,7 @@ import time
 import numpy as np
 import warnings
 import copy
+from typing import Any, Dict, List, Optional, Tuple, Union
 from openmdao.api import Problem, IndepVarComp, Group, ParallelGroup, \
     ExplicitComponent, ListGenerator, DOEDriver, SimpleGADriver, OpenMDAOWarning
 from openmdao.drivers.doe_generators import DOEGenerator
@@ -51,8 +52,9 @@ __all__ = [
 
 
 class TopFarmBaseGroup(Group):
-    def __init__(self, comps=[], output_key=None, output_unit=''):
+    def __init__(self, comps=None, output_key=None, output_unit=''):
         super().__init__()
+        comps = [] if comps is None else comps
         self.comps = []
         self.obj_comp = None
         for i, comp in enumerate(comps):
@@ -66,14 +68,15 @@ class TopFarmBaseGroup(Group):
 
 
 class TopFarmGroup(TopFarmBaseGroup):
-    def __init__(self, comps=[], output_key=None, output_unit=''):
+    def __init__(self, comps=None, output_key=None, output_unit=''):
+        comps = [] if comps is None else comps
         super().__init__(comps, output_key, output_unit)
         for i, comp in enumerate(comps):
             self.add_subsystem('comp_{}'.format(i), comp, promotes=['*'])
 
 
 class TopFarmParallelGroup(TopFarmBaseGroup):
-    def __init__(self, comps=[], output_key=None, output_unit=''):
+    def __init__(self, comps=None, output_key=None, output_unit=''):
         super().__init__(comps, output_key, output_unit)
         parallel = ParallelGroup()
         for i, comp in enumerate(self.comps):
@@ -84,11 +87,22 @@ class TopFarmParallelGroup(TopFarmBaseGroup):
 
 class TopFarmProblem(Problem):
 
-    def __init__(self, design_vars, cost_comp=None, driver=EasyScipyOptimizeDriver(),
-                 constraints=[], plot_comp=NoPlot(), record_id=None,
-                 expected_cost=1, ext_vars={}, approx_totals=False,
-                 recorder=None, additional_recorders=None,
-                 n_wt=0, grid_layout_comp=None, penalty_comp=None, reports=False, **kwargs):
+    def __init__(self, design_vars: Union[Dict, List],
+                 cost_comp=None,
+                 driver=EasyScipyOptimizeDriver(),
+                 constraints: Optional[List] = None,
+                 plot_comp=NoPlot(),
+                 record_id: Optional[str] = None,
+                 expected_cost: Optional[float] = 1,
+                 ext_vars: Optional[Union[Dict, List]] = None,
+                 approx_totals: Union[bool, Dict] = False,
+                 recorder=None,
+                 additional_recorders: Optional[List] = None,
+                 n_wt: int = 0,
+                 grid_layout_comp=None,
+                 penalty_comp=None,
+                 reports: bool = False,
+                 **kwargs):
         """Initialize TopFarmProblem
 
         Parameters
@@ -173,6 +187,10 @@ class TopFarmProblem(Problem):
 
         self.main_recorder = recorder
         self._additional_recorders = additional_recorders
+        if constraints is None:
+            constraints = []
+        if ext_vars is None:
+            ext_vars = {}
         if not isinstance(constraints, list):
             constraints = [constraints]
         if 'post_constraints' in kwargs:
@@ -436,7 +454,7 @@ class TopFarmProblem(Problem):
                         except ValueError:
                             pass
 
-    def evaluate(self, state={}, disp=False):
+    def evaluate(self, state: Optional[Dict] = None, disp: bool = False) -> Tuple[float, Dict]:
         """Evaluate the cost model
 
         Parameters
@@ -456,7 +474,7 @@ class TopFarmProblem(Problem):
         tmp_recorder = TopFarmListRecorder()
         self.driver.add_recorder(tmp_recorder)
         self.setup()
-        self.update_state(state)
+        self.update_state(state or {})
         t = time.time()
         self.run_model()
         if disp:
@@ -464,7 +482,7 @@ class TopFarmProblem(Problem):
         self.driver._rec_mgr._recorders.remove(tmp_recorder)
         return self.cost, copy.deepcopy(self.state)
 
-    def evaluate_gradients(self, disp=False):
+    def evaluate_gradients(self, disp: bool = False) -> Dict:
         """Evaluate the gradients."""
         self.setup()
         t = time.time()
@@ -476,7 +494,7 @@ class TopFarmProblem(Problem):
             print("Gradients evaluated in\t%.3fs" % (time.time() - t))
         return res
 
-    def optimize(self, state={}, disp=False, recorder_as_list=False):
+    def optimize(self, state: Optional[Dict] = None, disp: bool = False, recorder_as_list: bool = False) -> Tuple[float, Dict, Any]:
         """Run the optimization problem
 
         Parameters
@@ -497,6 +515,7 @@ class TopFarmProblem(Problem):
         state : dict
         recorder : TopFarmListRecorder or NestedTopFarmListRecorder or [TopFarmListRecorder.__class__, attributes]
         """
+        state = {} if state is None else state
         self.load_recorder()
         self.update_state(state)
         if self.recorder.num_cases > 0:
@@ -635,10 +654,10 @@ class TopFarmProblem(Problem):
 class ProblemComponent(ExplicitComponent):
     """class used to wrap a TopFarmProblem as a cost_component"""
 
-    def __init__(self, problem, additional_inputs=[]):
+    def __init__(self, problem, additional_inputs=None):
         ExplicitComponent.__init__(self)
         self.problem = problem
-        self.additional_inputs = additional_inputs
+        self.additional_inputs = additional_inputs if additional_inputs is not None else []
 
     def setup(self):
         missing_in_problem_exceptions = ['constraint_violation']

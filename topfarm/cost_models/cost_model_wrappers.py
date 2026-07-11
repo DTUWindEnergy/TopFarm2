@@ -3,14 +3,20 @@ import numpy as np
 import time
 # from topfarm.constraint_components.post_constraint import PostConstraint
 import warnings
+from typing import Callable, Dict, List, Optional
 
 
 class CostModelComponent(ExplicitComponent):
     """Wrapper for pure-Python cost functions"""
 
-    def __init__(self, input_keys, n_wt, cost_function, cost_gradient_function=None,
-                 output_keys=["Cost"], output_unit="", additional_input=[], additional_output=[], max_eval=None,
-                 objective=True, maximize=False, output_vals=[0.0], input_units=[], step={}, use_constraint_violation=True, **kwargs):
+    def __init__(self, input_keys: List, n_wt: int, cost_function: Callable,
+                 cost_gradient_function: Optional[Callable] = None,
+                 output_keys: Optional[List] = None, output_unit: str = "",
+                 additional_input: Optional[List] = None, additional_output: Optional[List] = None,
+                 max_eval: Optional[int] = None, objective: bool = True,
+                 maximize: bool = False, output_vals: Optional[List] = None,
+                 input_units: Optional[List] = None, step: Optional[Dict] = None,
+                 use_constraint_violation: bool = True, **kwargs):
         """Initialize wrapper for pure-Python cost function
 
         Parameters
@@ -54,6 +60,18 @@ class CostModelComponent(ExplicitComponent):
                           DeprecationWarning, stacklevel=2)
             maximize = kwargs['income_model']
             kwargs.pop('income_model')
+        if output_keys is None:
+            output_keys = ["Cost"]
+        if additional_input is None:
+            additional_input = []
+        if additional_output is None:
+            additional_output = []
+        if output_vals is None:
+            output_vals = [0.0]
+        if input_units is None:
+            input_units = []
+        if step is None:
+            step = {}
         if 'output_key' in kwargs:
             warnings.warn("""output_key is deprecated; use keyword output_keys instead""",
                           DeprecationWarning, stacklevel=2)
@@ -205,7 +223,7 @@ class AEPCostModelComponent(CostModelComponent):
     """Wrapper for pure-Python cost functions"""
 
     def __init__(self, input_keys, n_wt, cost_function, cost_gradient_function=None,
-                 output_unit="", additional_input=[], additional_output=[], max_eval=None,
+                 output_unit="", additional_input=None, additional_output=None, max_eval=None,
                  output_key="AEP", **kwargs):
         """Initialize Sub class of the CostModelComponent for AEP maximization
 
@@ -246,7 +264,7 @@ class AEPMaxLoadCostModelComponent(CostModelComponent):
     """Wrapper for pure-Python cost functions"""
 
     def __init__(self, input_keys, n_wt, aep_load_function, max_loads,
-                 aep_load_gradient=None, output_keys=["AEP", 'loads'], step={},
+                 aep_load_gradient=None, output_keys=None, step=None,
                  maximize=True, **kwargs):
         """Initialize Sub class of the CostModelComponent for AEP maximization and load constraints
 
@@ -269,6 +287,10 @@ class AEPMaxLoadCostModelComponent(CostModelComponent):
             If False: Objective is minimized during optimization
         """
 
+        if output_keys is None:
+            output_keys = ["AEP", 'loads']
+        if step is None:
+            step = {}
         self.max_loads = max_loads
 
         def cost_function(**kwargs):

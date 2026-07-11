@@ -588,9 +588,9 @@ def _np2scalar(x, dtype=float):
     return dtype(x)
 
 
-def plot_list_recorder(recorder, x='counter', dont_plot=[]):
+def plot_list_recorder(recorder, x='counter', dont_plot=None):
     keys = recorder.keys()
-    dont_plot += ['counter', 'plot_counter', 'iteration_coordinate', 'success', 'msg']
+    dont_plot = list(dont_plot or []) + ['counter', 'plot_counter', 'iteration_coordinate', 'success', 'msg']
     do_plot = [k for k in keys if recorder[k].ndim == 1 and k not in dont_plot]
     n_plots = len(do_plot)
     rows = int(np.ceil(np.sqrt(n_plots)))
